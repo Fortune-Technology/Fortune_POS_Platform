@@ -30,7 +30,7 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
           cd /var/www/Fortune_POS_Platform/backend
-          nvm use
+          nvm use 20
           npm install
           npx prisma db push
           npm run db:seed -- default || true
@@ -45,7 +45,7 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
           cd /var/www/Fortune_POS_Platform/frontend
-          nvm use
+          nvm use 20
           npm install
           npm run build
           rm -rf /var/www/dashboard/*
@@ -59,7 +59,7 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
           cd /var/www/Fortune_POS_Platform/cashier-app
-          nvm use
+          nvm use 20
           npm install
           npm run build
           rm -rf /var/www/pos/*
