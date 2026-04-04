@@ -26,7 +26,7 @@ const Navbar = () => {
             <div className="container">
                 <div className="flex-between" style={{ padding: 'var(--space-lg) 0' }}>
                     <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                        <StoreveuLogo height={36} darkMode={true} />
+                        <StoreveuLogo height={32} darkMode={true} />
                     </Link>
 
                     <div style={{ display: 'flex', gap: 'var(--space-md)' }}>

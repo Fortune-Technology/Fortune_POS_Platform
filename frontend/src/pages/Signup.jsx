@@ -32,7 +32,9 @@ const Signup = () => {
           <Link to="/" style={{ display: 'inline-block', marginBottom: '1.5rem', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
             ← Back to Home
           </Link>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><StoreveuLogo height={40} darkMode={true} /></div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <StoreveuLogo height={44} darkMode={true} showTagline={true} />
+          </div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Create Account
           </h1>

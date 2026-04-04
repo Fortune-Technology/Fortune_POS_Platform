@@ -23,7 +23,7 @@ function StoreOption({ store, isActive, onSelect }) {
         cursor: isActive ? 'default' : 'pointer',
         textAlign: 'left',
         background: isActive
-          ? 'rgba(122,193,67,0.08)'
+          ? 'rgba(61,86,181,0.08)'
           : hovered
           ? 'rgba(255,255,255,0.04)'
           : 'transparent',
@@ -34,7 +34,7 @@ function StoreOption({ store, isActive, onSelect }) {
       {/* Avatar */}
       <div style={{
         width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-        background: isActive ? '#7ac143' : 'rgba(255,255,255,0.08)',
+        background: isActive ? '#3d56b5' : 'rgba(255,255,255,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '0.95rem', fontWeight: 800,
         color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
@@ -65,7 +65,7 @@ function StoreOption({ store, isActive, onSelect }) {
       {isActive && (
         <div style={{
           width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-          background: '#7ac143',
+          background: '#3d56b5',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Check size={11} color="#fff" strokeWidth={3} />
@@ -191,7 +191,7 @@ export default function StoreSwitcher() {
             borderBottom: '1px solid rgba(255,255,255,0.06)',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            <Store size={11} color="#7ac143" />
+            <Store size={11} color="#3d56b5" />
             <span style={{
               fontSize: '0.62rem', fontWeight: 700,
               color: 'rgba(255,255,255,0.4)',
@@ -228,7 +228,7 @@ const cardStyle = {
 const avatarStyle = {
   width: 36, height: 36,
   borderRadius: 10,
-  background: '#7ac143',
+  background: '#3d56b5',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontSize: '1.05rem', fontWeight: 900,
   color: '#fff',

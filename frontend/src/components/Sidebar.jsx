@@ -138,8 +138,8 @@ const Sidebar = () => {
         </button>
 
         {/* Logo */}
-        <div style={{ padding: '0.75rem 1rem 0.875rem', display: 'flex', justifyContent: 'center' }}>
-          <StoreveuLogo height={32} darkMode={true} />
+        <div style={{ padding: '1rem 1rem 0.75rem', display: 'flex', justifyContent: 'center' }}>
+          <StoreveuLogo height={34} darkMode={true} />
         </div>
 
         {/* ── Store Switcher ───────────────────────────────────────────── */}
