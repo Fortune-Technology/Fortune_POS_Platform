@@ -168,9 +168,13 @@ export const deleteCatalogDepartment= (id)     => api.delete(`/catalog/departmen
 
 // ── Catalog — Vendors ─────────────────────────────────────────────────────
 export const getCatalogVendors   = (params) => api.get('/catalog/vendors', { params }).then(r => r.data);
+export const getCatalogVendor    = (id)     => api.get(`/catalog/vendors/${id}`).then(r => r.data);
 export const createCatalogVendor = (data)   => api.post('/catalog/vendors', data).then(r => r.data);
 export const updateCatalogVendor = (id, d)  => api.put(`/catalog/vendors/${id}`, d).then(r => r.data);
 export const deleteCatalogVendor = (id)     => api.delete(`/catalog/vendors/${id}`).then(r => r.data);
+export const getVendorProducts   = (id, params) => api.get(`/catalog/vendors/${id}/products`, { params }).then(r => r.data);
+export const getVendorPayouts    = (id, params) => api.get(`/catalog/vendors/${id}/payouts`, { params }).then(r => r.data);
+export const getVendorStats      = (id)     => api.get(`/catalog/vendors/${id}/stats`).then(r => r.data);
 
 // ── Catalog — Tax Rules ───────────────────────────────────────────────────
 export const getCatalogTaxRules   = () => api.get('/catalog/tax-rules').then(r => r.data);
@@ -201,5 +205,10 @@ export const getCatalogPromotions    = (params) => api.get('/catalog/promotions'
 export const createCatalogPromotion  = (data)   => api.post('/catalog/promotions', data).then(r => r.data);
 export const updateCatalogPromotion  = (id, d)  => api.put(`/catalog/promotions/${id}`, d).then(r => r.data);
 export const deleteCatalogPromotion  = (id)     => api.delete(`/catalog/promotions/${id}`).then(r => r.data);
+export const evaluateCatalogPromotions = (items) => api.post('/catalog/promotions/evaluate', { items }).then(r => r.data);
+
+// ── Catalog — helper aliases ──────────────────────────────────────────────
+export const getMasterProducts = (params) => api.get('/catalog/products', { params }).then(r => r.data);
+export const getDepartments    = ()        => api.get('/catalog/departments').then(r => r.data);
 
 export default api;

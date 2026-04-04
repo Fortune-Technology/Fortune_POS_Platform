@@ -131,6 +131,7 @@ function PrintableReceipt({ tx, totals, change, cashier }) {
 
 export default function TenderModal({
   onClose,
+  onComplete,              // optional: called with (completedTx) after transaction saves
   taxRules       = [],
   initMethod     = null,
   initCashAmount = null,   // numeric dollar amount from quick-cash buttons
@@ -196,6 +197,7 @@ export default function TenderModal({
   const removeSplit = (id) => setSplits(prev => prev.filter(l => l.id !== id));
 
   const finish = (finalTx, cashChange) => {
+    onComplete?.(finalTx);           // notify POSScreen so it can reprint later
     if (cashChange > 0.005) {
       setCompletedTx(finalTx); setCompletedChg(cashChange); setScreen('change');
     } else {

@@ -11,6 +11,7 @@ export const DEFAULT_POS_CONFIG = {
   showDepartments: true,
   showQuickAdd: true,
   numpadEnabled: true,
+  ageVerification: true,
   cartSide: 'right',          // 'right' (default) | 'left'
   cashRounding: 'none',       // 'none' | '0.05'  (round cash change to nearest $0.05)
   shortcuts: {

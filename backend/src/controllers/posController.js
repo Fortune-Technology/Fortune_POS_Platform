@@ -142,7 +142,6 @@ export const getLocalProducts = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {
-      itRetailUpc: { not: null },
       deleted: false,
       ...(req.orgId ? { orgId: req.orgId } : {}),
     };
@@ -152,7 +151,6 @@ export const getLocalProducts = async (req, res, next) => {
         { name: { contains: search, mode: 'insensitive' } },
         { upc:  { contains: search } },
         { sku:  { contains: search } },
-        { itRetailUpc: { contains: search } },
       ];
     }
 

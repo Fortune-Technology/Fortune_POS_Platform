@@ -306,18 +306,29 @@ export const savePOSConfig = async (req, res) => {
 };
 
 // ── GET /api/pos-terminal/transactions ────────────────────────────────────
-// List transactions with filters: date, cashierId, status, limit, offset
+// List transactions with filters: date, dateFrom, dateTo, cashierId, status, limit, offset
 export const listTransactions = async (req, res) => {
   try {
     const orgId = getOrgId(req);
-    const { storeId, date, cashierId, status, limit = 50, offset = 0 } = req.query;
+    const { storeId, date, dateFrom, dateTo, cashierId, status, limit = 50, offset = 0 } = req.query;
 
     const where = { orgId };
     if (storeId)   where.storeId   = storeId;
     if (cashierId) where.cashierId = cashierId;
     if (status)    where.status    = status;
 
-    if (date) {
+    if (dateFrom || dateTo) {
+      // Date range query (used by refund modal "7 days", "30 days", etc.)
+      where.createdAt = {};
+      if (dateFrom) {
+        const d = new Date(dateFrom);
+        where.createdAt.gte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+      }
+      if (dateTo) {
+        const d = new Date(dateTo);
+        where.createdAt.lte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+      }
+    } else if (date) {
       const d     = new Date(date);
       const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
       const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
@@ -329,7 +340,7 @@ export const listTransactions = async (req, res) => {
       prisma.transaction.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take:    Math.min(parseInt(limit) || 50, 200),
+        take:    Math.min(parseInt(limit) || 50, 500),
         skip:    parseInt(offset) || 0,
         select: {
           id: true, txNumber: true, status: true,
@@ -426,6 +437,48 @@ export const createRefund = async (req, res) => {
         tenderLines:  tenderLines || [],
         changeGiven:  0,
         notes:        note || `Refund for ${orig.txNumber}`,
+        syncedAt:     new Date(),
+      },
+    });
+
+    res.status(201).json({ ...refund, grandTotal: Number(refund.grandTotal) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── POST /api/pos-terminal/transactions/open-refund ──────────────────────
+// No-receipt refund — creates a standalone refund transaction with no parent.
+export const createOpenRefund = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { storeId, lineItems, tenderLines, note, grandTotal, subtotal, taxTotal } = req.body;
+
+    if (!storeId)            return res.status(400).json({ error: 'storeId required' });
+    if (!lineItems?.length)  return res.status(400).json({ error: 'lineItems required' });
+    if (!grandTotal)         return res.status(400).json({ error: 'grandTotal required' });
+
+    const today   = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+    const count   = await prisma.transaction.count({ where: { orgId, storeId } });
+    const txNumber = `REF-${dateStr}-${String(count + 1).padStart(6, '0')}`;
+
+    const refund = await prisma.transaction.create({
+      data: {
+        orgId,
+        storeId,
+        cashierId:    req.user.id,
+        txNumber,
+        status:       'refund',
+        lineItems:    lineItems || [],
+        subtotal:     -(parseFloat(subtotal)  || parseFloat(grandTotal)),
+        taxTotal:     -(parseFloat(taxTotal)  || 0),
+        depositTotal: 0,
+        ebtTotal:     0,
+        grandTotal:   -(parseFloat(grandTotal)),
+        tenderLines:  tenderLines || [],
+        changeGiven:  0,
+        notes:        note || 'No-receipt return',
         syncedAt:     new Date(),
       },
     });

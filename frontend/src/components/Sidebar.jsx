@@ -22,6 +22,9 @@ import {
   Tv2,
   Receipt,
   Clock,
+  Layers,
+  Truck,
+  Tag,
 } from 'lucide-react';
 import StoreSwitcher from './StoreSwitcher';
 
@@ -38,16 +41,19 @@ const menuGroups = [
   {
     label: 'Catalog',
     items: [
-      { name: 'Products',    icon: <Package size={13} />,      path: '/portal/catalog' },
+      { name: 'Products',    icon: <Package size={13} />,  path: '/portal/catalog' },
+      { name: 'Departments', icon: <Layers size={13} />,   path: '/portal/departments' },
+      { name: 'Vendors',     icon: <Truck size={13} />,    path: '/portal/vendors' },
+      { name: 'Promotions',  icon: <Tag size={13} />,      path: '/portal/promotions' },
     ],
   },
   {
     label: 'Analytics',
     items: [
-      { name: 'Sales',       icon: <BarChart2 size={13} />,    path: '/portal/sales' },
-      { name: 'Departments', icon: <PieChart size={13} />,     path: '/portal/departments' },
-      { name: 'Products',    icon: <ShoppingCart size={13} />, path: '/portal/products-analytics' },
-      { name: 'Predictions', icon: <TrendingUp size={13} />,   path: '/portal/predictions' },
+      { name: 'Sales',          icon: <BarChart2 size={13} />,    path: '/portal/sales' },
+      { name: 'Dept Analytics', icon: <PieChart size={13} />,     path: '/portal/departments-analytics' },
+      { name: 'Products',       icon: <ShoppingCart size={13} />, path: '/portal/products-analytics' },
+      { name: 'Predictions',    icon: <TrendingUp size={13} />,   path: '/portal/predictions' },
     ],
   },
   {

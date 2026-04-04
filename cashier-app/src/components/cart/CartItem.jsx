@@ -1,5 +1,5 @@
 import React from 'react';
-import { Minus, Plus, Trash2, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, Tag, Zap } from 'lucide-react';
 import { fmt$ } from '../../utils/formatters.js';
 import { useCartStore } from '../../stores/useCartStore.js';
 
@@ -13,6 +13,10 @@ export default function CartItem({ item, selected, onSelect }) {
       ? `${item.discountValue}% OFF`
       : `-${fmt$(item.discountValue)}`
     : null;
+
+  const hasPromo    = !!item.promoAdjustment;
+  const promoLabel  = hasPromo ? (item.promoAdjustment?.badgeLabel || 'PROMO') : null;
+  const promoColor  = item.promoAdjustment?.badgeColor || '#10b981';
 
   return (
     <div
@@ -94,6 +98,18 @@ export default function CartItem({ item, selected, onSelect }) {
                 display: 'flex', alignItems: 'center', gap: 3,
               }}>
                 <Tag size={8} /> {discountLabel}
+              </span>
+            )}
+
+            {hasPromo && (
+              <span style={{
+                fontSize: '0.58rem', fontWeight: 800, padding: '1px 5px',
+                borderRadius: 4, background: promoColor + '22',
+                color: promoColor, letterSpacing: '0.04em',
+                display: 'flex', alignItems: 'center', gap: 3,
+                border: `1px solid ${promoColor}44`,
+              }}>
+                <Zap size={7} /> {promoLabel}
               </span>
             )}
 

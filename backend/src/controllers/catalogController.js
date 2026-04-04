@@ -53,7 +53,7 @@ export const createDepartment = async (req, res) => {
   try {
     const orgId = getOrgId(req);
     const { name, code, description, ageRequired, ebtEligible, taxClass,
-            bottleDeposit, sortOrder, color } = req.body;
+            bottleDeposit, sortOrder, color, showInPOS } = req.body;
 
     if (!name) return res.status(400).json({ success: false, error: 'name is required' });
 
@@ -69,6 +69,7 @@ export const createDepartment = async (req, res) => {
         bottleDeposit: Boolean(bottleDeposit),
         sortOrder:     parseInt(sortOrder) || 0,
         color:         color || null,
+        showInPOS:     showInPOS !== undefined ? Boolean(showInPOS) : true,
       },
     });
 
@@ -86,7 +87,7 @@ export const updateDepartment = async (req, res) => {
     const orgId = getOrgId(req);
     const id = parseInt(req.params.id);
     const { name, code, description, ageRequired, ebtEligible, taxClass,
-            bottleDeposit, sortOrder, color, active } = req.body;
+            bottleDeposit, sortOrder, color, showInPOS, active } = req.body;
 
     const dept = await prisma.department.update({
       where: { id, orgId },
@@ -100,6 +101,7 @@ export const updateDepartment = async (req, res) => {
         ...(bottleDeposit !== undefined && { bottleDeposit: Boolean(bottleDeposit) }),
         ...(sortOrder     !== undefined && { sortOrder: parseInt(sortOrder) }),
         ...(color         !== undefined && { color }),
+        ...(showInPOS     !== undefined && { showInPOS: Boolean(showInPOS) }),
         ...(active        !== undefined && { active: Boolean(active) }),
       },
     });
@@ -339,6 +341,117 @@ export const deleteVendor = async (req, res) => {
     res.json({ success: true, message: 'Vendor deactivated' });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Vendor not found' });
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── Vendor Detail Endpoints ─────────────────────────────────────────────────
+
+export const getVendor = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const id = parseInt(req.params.id);
+    const vendor = await prisma.vendor.findFirst({
+      where: { id, orgId },
+      include: {
+        products: {
+          select: { id: true, name: true, sku: true, upc: true, defaultRetailPrice: true, active: true, departmentId: true },
+          orderBy: { name: 'asc' },
+        },
+      },
+    });
+    if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found' });
+    res.json({ success: true, data: vendor });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const getVendorProducts = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const id = parseInt(req.params.id);
+    const { skip, take } = paginationParams(req.query);
+    const [products, total] = await Promise.all([
+      prisma.masterProduct.findMany({
+        where: { orgId, vendorId: id },
+        orderBy: { name: 'asc' },
+        skip, take,
+        include: { department: { select: { name: true, color: true } } },
+      }),
+      prisma.masterProduct.count({ where: { orgId, vendorId: id } }),
+    ]);
+    res.json({ success: true, data: products, total });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const getVendorPayouts = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const id = parseInt(req.params.id);
+    const { skip, take } = paginationParams(req.query);
+    const [payouts, total] = await Promise.all([
+      prisma.cashPayout.findMany({
+        where: { orgId, vendorId: id },
+        orderBy: { createdAt: 'desc' },
+        skip, take,
+        include: {
+          shift: { select: { id: true, openedAt: true, closedAt: true, status: true } },
+        },
+      }),
+      prisma.cashPayout.count({ where: { orgId, vendorId: id } }),
+    ]);
+    // Sum total paid out
+    const agg = await prisma.cashPayout.aggregate({
+      where: { orgId, vendorId: id },
+      _sum: { amount: true },
+      _count: { id: true },
+    });
+    res.json({ success: true, data: payouts, total, totalPaid: agg._sum.amount ?? 0, payoutCount: agg._count.id });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const getVendorStats = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const id = parseInt(req.params.id);
+
+    const [productCount, payoutAgg, recentPayouts] = await Promise.all([
+      prisma.masterProduct.count({ where: { orgId, vendorId: id } }),
+      prisma.cashPayout.aggregate({
+        where: { orgId, vendorId: id },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.cashPayout.findMany({
+        where: { orgId, vendorId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { amount: true, createdAt: true, payoutType: true },
+      }),
+    ]);
+
+    // Monthly spending for last 12 months
+    const monthlyMap = {};
+    recentPayouts.forEach(p => {
+      const key = new Date(p.createdAt).toISOString().slice(0, 7); // YYYY-MM
+      monthlyMap[key] = (monthlyMap[key] || 0) + parseFloat(p.amount || 0);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        productCount,
+        totalPaid:    parseFloat(payoutAgg._sum.amount ?? 0),
+        payoutCount:  payoutAgg._count.id,
+        monthlySpend: monthlyMap,
+      },
+    });
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -978,6 +1091,174 @@ export const deletePromotion = async (req, res) => {
 
     await prisma.promotion.delete({ where: { id } });
     res.json({ success: true, message: 'Promotion deleted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const evaluatePromotions = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { items } = req.body; // [{ lineId, productId, departmentId, qty, unitPrice, discountEligible }]
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.json({ success: true, data: { lineAdjustments: {}, totalSaving: 0, appliedPromos: [] } });
+    }
+
+    const now = new Date();
+    const promos = await prisma.promotion.findMany({
+      where: {
+        orgId,
+        active: true,
+        OR: [
+          { startDate: null },
+          { startDate: { lte: now } },
+        ],
+        AND: [
+          {
+            OR: [
+              { endDate: null },
+              { endDate: { gte: now } },
+            ],
+          },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Simple server-side evaluation (mirrors promoEngine.js logic)
+    const lineAdjustments = {};
+    const appliedPromos   = [];
+
+    const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+    const getQualifying = (promo) => items.filter(item => {
+      if (item.discountEligible === false) return false;
+      const hasProd = promo.productIds?.length > 0;
+      const hasDept = promo.departmentIds?.length > 0;
+      if (!hasProd && !hasDept) return true;
+      if (hasProd && promo.productIds.includes(item.productId)) return true;
+      if (hasDept && promo.departmentIds.includes(item.departmentId)) return true;
+      return false;
+    });
+
+    const makeAdj = (promo, dt, dv) => ({
+      discountType:  dt,
+      discountValue: round2(dv),
+      promoId:       promo.id,
+      promoName:     promo.name,
+      badgeLabel:    promo.badgeLabel || promo.name,
+      badgeColor:    promo.badgeColor || '#f59e0b',
+    });
+
+    for (const promo of promos) {
+      const cfg = promo.dealConfig || {};
+      const qualifying = getQualifying(promo);
+      if (!qualifying.length) continue;
+
+      const result = {};
+
+      if (promo.promoType === 'sale') {
+        for (const item of qualifying) {
+          if (item.qty < (cfg.minQty || 1)) continue;
+          result[item.lineId] = makeAdj(promo, cfg.discountType || 'percent', parseFloat(cfg.discountValue) || 0);
+        }
+      } else if (promo.promoType === 'bogo') {
+        const buyQty = cfg.buyQty || 1;
+        const getQty = cfg.getQty || 1;
+        const getDiscount = cfg.getDiscount != null ? cfg.getDiscount : 100;
+        const setSize = buyQty + getQty;
+        const units = [];
+        for (const item of qualifying) {
+          for (let i = 0; i < item.qty; i++) units.push({ lineId: item.lineId, price: parseFloat(item.unitPrice) });
+        }
+        units.sort((a, b) => b.price - a.price);
+        let numSets = Math.floor(units.length / setSize);
+        if (cfg.maxSets) numSets = Math.min(numSets, cfg.maxSets);
+        const lineDisc = {};
+        for (let s = 0; s < numSets; s++) {
+          const free = units.slice(s * setSize + buyQty, (s + 1) * setSize);
+          for (const u of free) lineDisc[u.lineId] = (lineDisc[u.lineId] || 0) + u.price * getDiscount / 100;
+        }
+        for (const item of qualifying) {
+          if (!lineDisc[item.lineId]) continue;
+          result[item.lineId] = makeAdj(promo, 'amount', round2(lineDisc[item.lineId] / item.qty));
+        }
+      } else if (promo.promoType === 'volume') {
+        const totalQty = qualifying.reduce((s, i) => s + i.qty, 0);
+        const tiers = (cfg.tiers || []).slice().sort((a, b) => b.minQty - a.minQty);
+        const tier  = tiers.find(t => totalQty >= t.minQty);
+        if (tier) {
+          for (const item of qualifying) {
+            result[item.lineId] = makeAdj(promo, tier.discountType || 'percent', parseFloat(tier.discountValue) || 0);
+          }
+        }
+      } else if (promo.promoType === 'mix_match') {
+        const groupSize   = cfg.groupSize   || 2;
+        const bundlePrice = parseFloat(cfg.bundlePrice) || 0;
+        const units = [];
+        for (const item of qualifying) {
+          for (let i = 0; i < item.qty; i++) units.push({ lineId: item.lineId, price: parseFloat(item.unitPrice) });
+        }
+        units.sort((a, b) => a.price - b.price);
+        const numGroups  = Math.floor(units.length / groupSize);
+        if (numGroups > 0) {
+          const groupUnits = units.slice(0, numGroups * groupSize);
+          const regTotal   = groupUnits.reduce((s, u) => s + u.price, 0);
+          const totalDisc  = Math.max(0, regTotal - numGroups * bundlePrice);
+          if (totalDisc > 0) {
+            const lineDiscTotal = {};
+            for (const u of groupUnits) lineDiscTotal[u.lineId] = (lineDiscTotal[u.lineId] || 0) + (u.price / regTotal) * totalDisc;
+            for (const item of qualifying) {
+              if (!lineDiscTotal[item.lineId]) continue;
+              result[item.lineId] = makeAdj(promo, 'amount', round2(lineDiscTotal[item.lineId] / item.qty));
+            }
+          }
+        }
+      } else if (promo.promoType === 'combo') {
+        const requiredGroups = cfg.requiredGroups || [];
+        let allSatisfied = true;
+        for (const group of requiredGroups) {
+          const ids = group.productIds || [];
+          const minQty = group.minQty || 1;
+          const qty = items.filter(i => ids.includes(i.productId)).reduce((s, i) => s + i.qty, 0);
+          if (qty < minQty) { allSatisfied = false; break; }
+        }
+        if (allSatisfied) {
+          const comboIds = requiredGroups.flatMap(g => g.productIds || []);
+          for (const item of items) {
+            if (!comboIds.includes(item.productId)) continue;
+            result[item.lineId] = makeAdj(promo, cfg.discountType || 'percent', parseFloat(cfg.discountValue) || 0);
+          }
+        }
+      }
+
+      if (Object.keys(result).length) {
+        // Merge: keep better discount per line
+        for (const [lineId, adj] of Object.entries(result)) {
+          const existing = lineAdjustments[lineId];
+          const item     = items.find(i => i.lineId === lineId);
+          if (!item) continue;
+          const newSav = adj.discountType === 'percent' ? item.unitPrice * adj.discountValue / 100 : adj.discountValue;
+          const exSav  = existing
+            ? (existing.discountType === 'percent' ? item.unitPrice * existing.discountValue / 100 : existing.discountValue)
+            : -1;
+          if (newSav > exSav) lineAdjustments[lineId] = adj;
+        }
+        appliedPromos.push({ id: promo.id, name: promo.name, promoType: promo.promoType, badgeLabel: promo.badgeLabel, badgeColor: promo.badgeColor });
+      }
+    }
+
+    let totalSaving = 0;
+    for (const [lineId, adj] of Object.entries(lineAdjustments)) {
+      const item = items.find(i => i.lineId === lineId);
+      if (!item) continue;
+      if (adj.discountType === 'percent') totalSaving += item.unitPrice * item.qty * adj.discountValue / 100;
+      else if (adj.discountType === 'amount') totalSaving += Math.min(adj.discountValue * item.qty, item.unitPrice * item.qty);
+      else if (adj.discountType === 'fixed') totalSaving += Math.max(0, item.unitPrice * item.qty - adj.discountValue * item.qty);
+    }
+
+    res.json({ success: true, data: { lineAdjustments, totalSaving: round2(totalSaving), appliedPromos } });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

@@ -65,6 +65,7 @@ model Department {
   // Display
   sortOrder       Int       @default(0)
   color           String?   // hex color for POS UI
+  showInPOS       Boolean   @default(true)  // whether dept appears as category filter in POS
   active          Boolean   @default(true)
 
   createdAt       DateTime  @default(now())
@@ -939,6 +940,88 @@ model DepositMap {
   updatedAt     DateTime @updatedAt
 
   @@map("deposit_maps")
+}
+
+// ─────────────────────────────────────────────────
+// SHIFT
+// Cash drawer open/close session per register per day.
+// ─────────────────────────────────────────────────
+model Shift {
+  id                   String       @id @default(cuid())
+  orgId                String
+  storeId              String
+  stationId            String?      // which register
+  cashierId            String       // who opened
+  closedById           String?      // who closed
+
+  status               String       @default("open")  // "open" | "closed"
+  openedAt             DateTime     @default(now())
+  closedAt             DateTime?
+
+  // Opening count
+  openingAmount        Decimal      @db.Decimal(10, 4)
+  openingDenominations Json?        // { "100": 2, "20": 5, "1": 3, "0.25": 8, ... }
+  openingNote          String?
+
+  // Closing count (filled in when shift is closed)
+  closingAmount        Decimal?     @db.Decimal(10, 4)
+  closingDenominations Json?
+  closingNote          String?
+
+  // Calculated at close
+  expectedAmount       Decimal?     @db.Decimal(10, 4)
+  variance             Decimal?     @db.Decimal(10, 4)  // closingAmount - expectedAmount
+  cashSales            Decimal?     @db.Decimal(10, 4)
+  cashRefunds          Decimal?     @db.Decimal(10, 4)
+  cashDropsTotal       Decimal?     @db.Decimal(10, 4)
+  payoutsTotal         Decimal?     @db.Decimal(10, 4)
+
+  drops                CashDrop[]
+  payouts              CashPayout[]
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([orgId, storeId, status])
+  @@index([orgId, storeId, openedAt])
+  @@map("shifts")
+}
+
+// ─────────────────────────────────────────────────
+// CASH DROP  (mid-shift safe drop)
+// ─────────────────────────────────────────────────
+model CashDrop {
+  id          String   @id @default(cuid())
+  orgId       String
+  shiftId     String
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+  amount      Decimal  @db.Decimal(10, 4)
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, shiftId])
+  @@map("cash_drops")
+}
+
+// ─────────────────────────────────────────────────
+// CASH PAYOUT  (paid out to vendor / driver)
+// ─────────────────────────────────────────────────
+model CashPayout {
+  id          String   @id @default(cuid())
+  orgId       String
+  shiftId     String
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+  amount      Decimal  @db.Decimal(10, 4)
+  recipient   String?  // vendor name / free-text recipient
+  vendorId    Int?     // optional FK to Vendor
+  payoutType  String?  // 'expense' | 'merchandise'
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, shiftId])
+  @@map("cash_payouts")
 }
 
 // ─────────────────────────────────────────────────

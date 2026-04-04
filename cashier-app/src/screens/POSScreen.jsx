@@ -32,6 +32,10 @@ import TransactionHistoryModal from '../components/modals/TransactionHistoryModa
 import VoidModal               from '../components/modals/VoidModal.jsx';
 import RefundModal             from '../components/modals/RefundModal.jsx';
 import EndOfDayModal           from '../components/modals/EndOfDayModal.jsx';
+import ReprintReceiptModal     from '../components/modals/ReprintReceiptModal.jsx';
+import OpenShiftModal          from '../components/modals/OpenShiftModal.jsx';
+import CloseShiftModal         from '../components/modals/CloseShiftModal.jsx';
+import CashDrawerModal         from '../components/modals/CashDrawerModal.jsx';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner.js';
 import { useProductLookup }  from '../hooks/useProductLookup.js';
@@ -41,7 +45,11 @@ import { useOnlineStatus }   from '../hooks/useOnlineStatus.js';
 import { usePOSConfig }      from '../hooks/usePOSConfig.js';
 import { useCartStore, selectTotals } from '../stores/useCartStore.js';
 import { useManagerStore }   from '../stores/useManagerStore.js';
-import { db, searchProducts } from '../db/dexie.js';
+import { useShiftStore }     from '../stores/useShiftStore.js';
+import { useStationStore }   from '../stores/useStationStore.js';
+import { useSyncStore }      from '../stores/useSyncStore.js';
+import { db, searchProducts, getActivePromotions } from '../db/dexie.js';
+import { evaluatePromotions }  from '../utils/promoEngine.js';
 import { fmt$ }              from '../utils/formatters.js';
 import { getSmartCashPresets } from '../utils/cashPresets.js';
 
@@ -56,10 +64,36 @@ export default function POSScreen() {
     verifiedAges,
   } = useCartStore();
 
+  const promotions        = useCartStore(s => s.promotions);
+  const setPromotions     = useCartStore(s => s.setPromotions);
+  const applyPromoResults = useCartStore(s => s.applyPromoResults);
+  const promoResults      = useCartStore(s => s.promoResults);
+
+  // Watch catalog sync timestamp so promos reload after every sync
+  const catalogSyncedAt   = useSyncStore(s => s.catalogSyncedAt);
+
   const requireManager = useManagerStore(s => s.requireManager);
   const { lookup }     = useProductLookup();
   const { manualSync } = useCatalogSync();
   const posConfig      = usePOSConfig();
+
+  // ── Shift / Cash Drawer ─────────────────────────────────────────────────
+  const storeId = useStationStore(s => s.station?.storeId);
+  const { shift, loading: shiftLoading, loadActiveShift } = useShiftStore();
+
+  // Load active shift on mount. Once load completes and shift is null → auto-show OpenShiftModal.
+  const [shiftChecked, setShiftChecked] = useState(false);
+  useEffect(() => {
+    if (!storeId) return;
+    loadActiveShift(storeId).then(() => setShiftChecked(true));
+  }, [storeId]); // eslint-disable-line
+
+  // Auto-open shift modal when: check is done AND no active shift
+  useEffect(() => {
+    if (shiftChecked && !shiftLoading && shift === null) {
+      setShowOpenShift(true);
+    }
+  }, [shiftChecked, shiftLoading, shift]);
 
   useOnlineStatus();
   useBranding();
@@ -75,8 +109,17 @@ export default function POSScreen() {
   const [showVoid,       setShowVoid]       = useState(false);
   const [showRefund,     setShowRefund]     = useState(false);
   const [showEndOfDay,   setShowEndOfDay]   = useState(false);
+  // Cash drawer / shift modals
+  const [showOpenShift,   setShowOpenShift]   = useState(false);
+  const [showCloseShift,  setShowCloseShift]  = useState(false);
+  const [showCashDrawer,  setShowCashDrawer]  = useState(false);
+  const [cashDrawerTab,   setCashDrawerTab]   = useState('drop'); // 'drop' | 'payout'
   // Discount modal: discountTarget = lineId string → line discount, null → order discount
   const [discountTarget,  setDiscountTarget]  = useState(undefined); // undefined = closed
+
+  // Last completed transaction — used by Reprint button to print without opening history
+  const [lastCompletedTx, setLastCompletedTx] = useState(null);
+  const [reprintTx,       setReprintTx]       = useState(null);
 
   // ── Numpad ─────────────────────────────────────────────────────────────
   // numpad: { mode, title, value, onConfirm } | null
@@ -92,12 +135,46 @@ export default function POSScreen() {
   const [taxRules, setTaxRules] = useState([]);
   useEffect(() => { db.taxRules.toArray().then(setTaxRules); }, []);
 
+  // ── Load promotions from IndexedDB ─────────────────────────────────────────
+  // Re-runs every time catalogSyncedAt changes (initial sync + every 15-min refresh)
+  // so newly created/edited promos are picked up without a page reload.
+  useEffect(() => {
+    getActivePromotions()
+      .then(promos => setPromotions(promos || []))
+      .catch(() => {});
+  }, [catalogSyncedAt, setPromotions]); // eslint-disable-line
+
+  // ── Re-evaluate promotions whenever cart items change ─────────────────────
+  useEffect(() => {
+    if (!promotions.length || !items.length) {
+      if (promoResults.appliedPromos?.length) {
+        applyPromoResults({ lineAdjustments: {}, totalSaving: 0, appliedPromos: [] });
+      }
+      return;
+    }
+    const cartItems = items.map(i => ({
+      lineId:          i.lineId,
+      productId:       i.productId,
+      departmentId:    i.departmentId || null,
+      qty:             i.qty,
+      unitPrice:       i.unitPrice,
+      discountEligible: i.discountEligible !== false,
+    }));
+    const results = evaluatePromotions(cartItems, promotions);
+    applyPromoResults(results);
+  }, [items.map(i => `${i.lineId}:${i.qty}`).join(','), promotions]); // eslint-disable-line
+
   // ── Derived ──────────────────────────────────────────────────────────────
   const totals       = selectTotals(items, taxRules, orderDiscount);
   const selectedItem = items.find(i => i.lineId === selectedLineId);
 
   // ── Age-check helper: skip if already verified this transaction ──────────
   const addWithAgeCheck = useCallback((product) => {
+    // If age verification is disabled in store settings, skip check entirely
+    if (!posConfig.ageVerification) {
+      addProduct(product);
+      return;
+    }
     if (product.ageRequired && verifiedAges.includes(product.ageRequired)) {
       addProduct(product); // same age threshold already cleared this transaction
     } else if (product.ageRequired) {
@@ -105,7 +182,7 @@ export default function POSScreen() {
     } else {
       addProduct(product);
     }
-  }, [verifiedAges, addProduct, requestAgeVerify]);
+  }, [posConfig.ageVerification, verifiedAges, addProduct, requestAgeVerify]);
 
   // ── Barcode scan ─────────────────────────────────────────────────────────
   const handleScan = useCallback(async (raw) => {
@@ -121,8 +198,8 @@ export default function POSScreen() {
   // ── Product search ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
-    searchProducts(searchQuery, null).then(setSearchResults);
-  }, [searchQuery]);
+    searchProducts(searchQuery, storeId).then(setSearchResults);
+  }, [searchQuery, storeId]);
 
   const handleSearchSelect = (product) => {
     addWithAgeCheck(product);
@@ -337,6 +414,7 @@ export default function POSScreen() {
               config={{
                 showDepartments: layoutCfg.showDepts,
                 showQuickAdd: layoutCfg.showQuick,
+                hiddenDepartments: posConfig.hiddenDepartments || [],
               }}
               onAddProduct={(product) => {
                 addWithAgeCheck(product);
@@ -900,13 +978,18 @@ export default function POSScreen() {
         enabledShortcuts={posConfig.shortcuts}
         onPriceCheck={() => setShowPriceCheck(true)}
         onHold={() => setShowHold(true)}
-        onReprint={() => setShowHistory(true)}
+        onReprint={() => lastCompletedTx ? setReprintTx(lastCompletedTx) : setShowHistory(true)}
         onNoSale={() => {}}
         onDiscount={openOrderDiscount}
         onRefund={() => setShowRefund(true)}
         onVoidTx={() => setShowVoid(true)}
         onEndOfDay={() => setShowEndOfDay(true)}
         onOpenCustomer={() => setShowCustomer(true)}
+        onOpenShift={() => setShowOpenShift(true)}
+        onCloseShift={() => requireManager('Close Shift', () => setShowCloseShift(true))}
+        onCashDrop={() => { setCashDrawerTab('drop'); setShowCashDrawer(true); }}
+        onPayout={() => { setCashDrawerTab('payout'); setShowCashDrawer(true); }}
+        shiftOpen={!!shift}
       />
 
       {/* ══ Modals ══ */}
@@ -921,6 +1004,7 @@ export default function POSScreen() {
           initCashAmount={tenderInitCash}
           cashRounding={posConfig.cashRounding || 'none'}
           onClose={closeTender}
+          onComplete={(tx) => setLastCompletedTx(tx)}
         />
       )}
 
@@ -957,11 +1041,23 @@ export default function POSScreen() {
       )}
 
       {showHistory && (
-        <TransactionHistoryModal onClose={() => setShowHistory(false)} />
+        <TransactionHistoryModal
+          onClose={() => setShowHistory(false)}
+          onPrintTx={(tx) => { setShowHistory(false); setReprintTx(tx); }}
+        />
+      )}
+
+      {reprintTx && (
+        <ReprintReceiptModal tx={reprintTx} onClose={() => setReprintTx(null)} />
       )}
 
       {showVoid && (
-        <VoidModal onClose={() => setShowVoid(false)} />
+        <VoidModal
+          items={items}
+          totals={totals}
+          onConfirm={() => { clearCart(); clearSelection(); }}
+          onClose={() => setShowVoid(false)}
+        />
       )}
 
       {showRefund && (
@@ -970,6 +1066,30 @@ export default function POSScreen() {
 
       {showEndOfDay && (
         <EndOfDayModal onClose={() => setShowEndOfDay(false)} />
+      )}
+
+      {/* ── Shift / Cash Drawer Modals ── */}
+      {/* When auto-shown (no shift), don't allow dismissal — cashier must open a shift */}
+      {showOpenShift && storeId && (
+        <OpenShiftModal
+          storeId={storeId}
+          onClose={shift ? () => setShowOpenShift(false) : null}
+          onOpened={() => setShowOpenShift(false)}
+        />
+      )}
+
+      {showCloseShift && (
+        <CloseShiftModal
+          onClose={() => setShowCloseShift(false)}
+          onClosed={() => setShowCloseShift(false)}
+        />
+      )}
+
+      {showCashDrawer && (
+        <CashDrawerModal
+          defaultTab={cashDrawerTab}
+          onClose={() => setShowCashDrawer(false)}
+        />
       )}
     </div>
   );

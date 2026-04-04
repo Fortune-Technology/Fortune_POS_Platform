@@ -44,6 +44,11 @@ import EmployeeReports from './pages/EmployeeReports';
 // Catalog Pages
 import ProductCatalog from './pages/ProductCatalog';
 import ProductForm    from './pages/ProductForm';
+import Departments    from './pages/Departments';
+import Vendors        from './pages/Vendors';
+import VendorDetail   from './pages/VendorDetail';
+import Promotions        from './pages/Promotions';
+import EcommIntegration  from './pages/EcommIntegration';
 
 // Legacy Pages
 import UploadPage from './pages/UploadPage';
@@ -108,9 +113,9 @@ function App() {
         <Route path="/portal/realtime"      element={<ProtectedRoute><RealTimeDashboard /></ProtectedRoute>} />
 
         {/* ── Analytics ───────────────────────────────────────────────── */}
-        <Route path="/portal/sales"              element={<ProtectedRoute><SalesAnalytics /></ProtectedRoute>} />
-        <Route path="/portal/departments"        element={<ProtectedRoute><DepartmentAnalytics /></ProtectedRoute>} />
-        <Route path="/portal/products-analytics" element={<ProtectedRoute><ProductAnalytics /></ProtectedRoute>} />
+        <Route path="/portal/sales"                   element={<ProtectedRoute><SalesAnalytics /></ProtectedRoute>} />
+        <Route path="/portal/departments-analytics"   element={<ProtectedRoute><DepartmentAnalytics /></ProtectedRoute>} />
+        <Route path="/portal/products-analytics"      element={<ProtectedRoute><ProductAnalytics /></ProtectedRoute>} />
         <Route path="/portal/predictions"        element={<ProtectedRoute><SalesPredictions /></ProtectedRoute>} />
         <Route path="/portal/vendor-orders"      element={<ProtectedRoute><VendorOrderSheet /></ProtectedRoute>} />
 
@@ -136,9 +141,13 @@ function App() {
         <Route path="/portal/catalog"          element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />
         <Route path="/portal/catalog/new"      element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
         <Route path="/portal/catalog/edit/:id" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+        <Route path="/portal/departments"      element={<ProtectedRoute><Departments /></ProtectedRoute>} />
+        <Route path="/portal/vendors"          element={<ProtectedRoute><Vendors /></ProtectedRoute>} />
+        <Route path="/portal/vendors/:id"      element={<ProtectedRoute><VendorDetail /></ProtectedRoute>} />
+        <Route path="/portal/promotions"       element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
 
         {/* ── Placeholders ────────────────────────────────────────────── */}
-        <Route path="/portal/ecomm"    element={<ProtectedRoute><Placeholder name="eComm Integration" /></ProtectedRoute>} />
+        <Route path="/portal/ecomm"    element={<ProtectedRoute><EcommIntegration /></ProtectedRoute>} />
         <Route path="/portal/products" element={<ProtectedRoute><Placeholder name="Products" /></ProtectedRoute>} />
 
         {/* ── Fallback ────────────────────────────────────────────────── */}
