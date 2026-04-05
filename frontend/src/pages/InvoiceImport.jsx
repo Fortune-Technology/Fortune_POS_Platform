@@ -1163,9 +1163,18 @@ const InvoiceImport = () => {
         const { data } = await queueInvoice(fd);
         const real = data.invoices?.[0];
         if (real) setInvoices(prev => prev.map(inv => inv.id === stubId ? real : inv));
-      } catch {
+      } catch (err) {
         setInvoices(prev => prev.filter(inv => inv._id !== stubId));
-        toast.error(`Failed to queue ${file.name}`);
+        const msg = err.response?.data?.message || err.response?.data?.error || err.message || '';
+        if (err.response?.status === 413) {
+          toast.error(`${file.name}: File too large. Maximum size is 10 MB.`);
+        } else if (err.response?.status === 400 && msg.toLowerCase().includes('only pdf')) {
+          toast.error(`${file.name}: Invalid file type — please upload a PDF, PNG, or JPG.`);
+        } else if (msg.toLowerCase().includes('format') || msg.toLowerCase().includes('pdf')) {
+          toast.error(`${file.name}: Preview failed — please upload a valid PDF or invoice file.`);
+        } else {
+          toast.error(msg ? `${file.name}: ${msg}` : `Failed to queue ${file.name} — check file format and try again.`);
+        }
       }
     }
     setIsUploading(false);

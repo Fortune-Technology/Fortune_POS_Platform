@@ -47,9 +47,9 @@ export default function PinLoginScreen() {
     if (p.length < 4 || loading) return;
     try {
       await pinLogin(p, station?.stationToken);
-      // App.jsx will re-render to POSScreen automatically
-    } catch {
+    } catch (err) {
       triggerShake();
+      // error is stored in useAuthStore and displayed by the error block below
     }
   }, [pinLogin, loading, station]);
 
@@ -126,7 +126,7 @@ export default function PinLoginScreen() {
       {/* Store + station identity */}
       <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
         <div style={{ color: 'var(--green)', fontWeight: 900, fontSize: '1.6rem', letterSpacing: '0.04em' }}>
-          {station?.storeName || 'FF POS'}
+          {station?.storeName || 'StoreVeu POS'}
         </div>
         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
           {station?.stationName || 'Register'}

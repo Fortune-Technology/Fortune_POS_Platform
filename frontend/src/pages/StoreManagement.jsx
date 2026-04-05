@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import './analytics.css';
 import {
   Store, Plus, X, Loader, AlertCircle, RefreshCw,
   MapPin, Clock, Pencil, PowerOff, Eye, EyeOff, Save,
-  Monitor, DollarSign, Zap, CheckCircle2, Radio, Palette,
+  Monitor, DollarSign, Zap, CheckCircle2, Radio,
 } from 'lucide-react';
 import { getStores, createStore, updateStore, deactivateStore } from '../services/api';
 import { useStore } from '../contexts/StoreContext';
@@ -404,7 +403,6 @@ function StoreModal({ store, onClose, onSaved, onLimitHit }) {
 function StoreCard({ store, onEdit, onDeactivate }) {
   const [removing, setRemoving] = useState(false);
   const { activeStoreId, switchStore } = useStore();
-  const navigate = useNavigate();
   const isActive = store.id === activeStoreId;
 
   const tzLabel = TIMEZONES.find(t => t.value === store.timezone)?.label || store.timezone;
@@ -459,18 +457,6 @@ function StoreCard({ store, onEdit, onDeactivate }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.35rem' }} onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => navigate(`/portal/branding?store=${store.id}`)}
-            title="Customize POS branding"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.3rem',
-              background: 'rgba(122,193,67,.08)', border: '1px solid rgba(122,193,67,.3)',
-              borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer',
-              color: '#7ac143', fontSize: '0.72rem', fontWeight: 700,
-            }}
-          >
-            <Palette size={12} /> Branding
-          </button>
           <button onClick={() => onEdit(store)} title="Edit"
             style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.3rem 0.45rem', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
             <Pencil size={13} />
