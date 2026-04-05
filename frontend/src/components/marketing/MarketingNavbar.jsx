@@ -36,7 +36,7 @@ const MarketingNavbar = () => {
     <nav className={`mkt-navbar ${isScrolled ? 'scrolled' : ''}`}>
       <div className="mkt-navbar-container">
         <Link to="/" className="mkt-navbar-logo" onClick={() => setIsMobileMenuOpen(false)}>
-          <StoreveuLogo height={32} darkMode={true} />
+          <StoreveuLogo height={64} darkMode={false} />
         </Link>
 
         {/* Desktop Menu */}
