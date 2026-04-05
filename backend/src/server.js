@@ -23,6 +23,8 @@ import weatherRoutes from './routes/weatherRoutes.js';
 import catalogRoutes     from './routes/catalogRoutes.js';
 import posTerminalRoutes from './routes/posTerminalRoutes.js';
 import reportsRoutes     from './routes/reportsRoutes.js';
+import lotteryRoutes     from './routes/lotteryRoutes.js';
+import paymentRoutes     from './routes/paymentRoutes.js';
 import { startTokenRefreshScheduler } from './utils/posScheduler.js';
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
 
@@ -35,9 +37,23 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map(s => s.trim());
+
 app.use(cors({
-  origin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
-    .split(',').map(s => s.trim()),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    // Check if '*' is in allowedOrigins or if origin is in the list
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '15mb' }));
@@ -58,6 +74,8 @@ app.use('/api/weather',      weatherRoutes);
 app.use('/api/catalog',       catalogRoutes);
 app.use('/api/pos-terminal', posTerminalRoutes);
 app.use('/api/reports',      reportsRoutes);
+app.use('/api/lottery',      lotteryRoutes);
+app.use('/api/payment',      paymentRoutes);
 app.use('/api',              apiRoutes);
 
 // Health check
@@ -98,7 +116,7 @@ const startServer = async () => {
   app.listen(PORT, () => {
     console.log(`✓ Server running on port ${PORT}`);
     console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`✓ CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173, http://localhost:5174'}`);
+    console.log(`✓ CORS enabled for: ${allowedOrigins.join(', ')}`);
     console.log('✓ Database: PostgreSQL (Prisma)');
   });
 };

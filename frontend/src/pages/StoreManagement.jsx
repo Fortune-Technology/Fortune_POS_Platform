@@ -21,16 +21,11 @@ const TIMEZONES = [
   { label: 'Hawaii   (HI)',  value: 'Pacific/Honolulu'    },
 ];
 
-/**
- * One POS per store.
- * IT Retail and MarktPOS are the same system — unified under 'itretail'.
- */
 const POS_OPTIONS = [
   { value: 'none',       label: 'No POS connected',         color: 'var(--text-muted)'   },
-  { value: 'itretail',   label: 'IT Retail / MarktPOS',     color: '#7ac143'              },
   { value: 'square',     label: 'Square',                   color: '#3b82f6'              },
   { value: 'clover',     label: 'Clover',                   color: '#f97316'              },
-  { value: 'toast',      label: 'Toast',                    color: '#e30613'              },
+  { value: 'toast',      label: 'Toast',                    color: 'var(--error)'              },
   { value: 'lightspeed', label: 'Lightspeed',               color: '#8b5cf6'              },
 ];
 
@@ -87,12 +82,6 @@ function PosCredentials({ posType, pos, setPos }) {
   );
 
   const fields = {
-    itretail: [
-      { key: 'username',  label: 'Username',            type: 'text',     hint: null },
-      { key: 'password',  label: 'Password',            type: 'password', hint: null },
-      { key: 'storeCode', label: 'IT Retail Store Code', type: 'text',    hint: "IT Retail's ID for this store in their system" },
-      { key: 'chainCode', label: 'IT Retail Chain Code', type: 'text',    hint: "IT Retail's ID for your company/chain in their system" },
-    ],
     square: [
       { key: 'locationId', label: 'Location ID', type: 'text'     },
       { key: 'apiKey',     label: 'API Key',     type: 'password' },
@@ -157,8 +146,8 @@ function StoreModal({ store, onClose, onSaved, onLimitHit }) {
       type:           s?.pos?.type           || 'none',
       username:       s?.pos?.username       || s?.marktPOSUsername  || '',
       password:       '',  // never pre-fill passwords
-      storeCode:      s?.pos?.storeCode      || s?.itRetailStoreId   || '',
-      chainCode:      s?.pos?.chainCode      || s?.itRetailTenantId  || '',
+      storeCode:      s?.pos?.storeCode      || '',
+      chainCode:      s?.pos?.chainCode      || '',
       locationId:     s?.pos?.locationId     || '',
       merchantId:     s?.pos?.merchantId     || '',
       restaurantGuid: s?.pos?.restaurantGuid || '',
@@ -344,7 +333,7 @@ function StoreModal({ store, onClose, onSaved, onLimitHit }) {
           {section === 'pos' && (
             <>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                One POS system per store. IT Retail and MarktPOS are the same platform — select <strong>IT Retail / MarktPOS</strong>.
+                Select your store's POS system type.
               </p>
 
               {/* POS selector tiles */}
@@ -429,7 +418,7 @@ function StoreCard({ store, onEdit, onDeactivate }) {
       className="analytics-stat-card"
       style={{
         flexDirection: 'column', alignItems: 'flex-start', gap: '0.875rem', padding: '1.25rem',
-        border: isActive ? '1.5px solid rgba(122,193,67,0.45)' : '1px solid var(--border-color)',
+        border: isActive ? '1.5px solid var(--brand-40)' : '1px solid var(--border-color)',
         cursor: 'pointer',
         transition: 'border-color 0.2s',
       }}
@@ -441,7 +430,7 @@ function StoreCard({ store, onEdit, onDeactivate }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <div style={{
             width: 38, height: 38, borderRadius: '10px',
-            background: isActive ? 'rgba(122,193,67,0.2)' : 'rgba(122,193,67,0.1)',
+            background: isActive ? 'var(--brand-20)' : 'var(--brand-10)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <Store size={18} color="var(--accent-primary)" />
@@ -457,6 +446,18 @@ function StoreCard({ store, onEdit, onDeactivate }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.35rem' }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => navigate(`/portal/branding?store=${store.id}`)}
+            title="Customize POS branding"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              background: 'var(--brand-08)', border: '1px solid var(--brand-30)',
+              borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer',
+              color: 'var(--accent-primary)', fontSize: '0.72rem', fontWeight: 700,
+            }}
+          >
+            <Palette size={12} /> Branding
+          </button>
           <button onClick={() => onEdit(store)} title="Edit"
             style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.3rem 0.45rem', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
             <Pencil size={13} />
@@ -598,7 +599,7 @@ export default function StoreManagement() {
         {/* KPI row */}
         <div className="analytics-stats-row" style={{ marginBottom: '1.75rem' }}>
           {[
-            { label: 'Active stores',    value: stores.length,          color: '#7ac143', bg: 'rgba(122,193,67,0.12)', icon: <Store size={20} /> },
+            { label: 'Active stores',    value: stores.length,          color: 'var(--accent-primary)', bg: 'var(--brand-12)', icon: <Store size={20} /> },
             { label: 'Total registers',  value: totalRegisters,         color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: <Monitor size={20} /> },
             { label: 'Monthly total',    value: fmt(totalMonthly),      color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: <DollarSign size={20} /> },
             { label: 'Annual total',     value: fmt(totalMonthly * 12), color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: <DollarSign size={20} /> },

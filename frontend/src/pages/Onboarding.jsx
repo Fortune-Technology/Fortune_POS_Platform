@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { createTenant, createStore } from '../services/api';
 import { toast } from 'react-toastify';
-import logoImg from '../assets/future-foods-logo.jpg';
+import StoreveuLogo from '../components/StoreveuLogo';
 
 const TIMEZONES = [
   { label: 'Eastern  (ET)',  value: 'America/New_York'   },
@@ -37,7 +37,7 @@ function StepDots({ current, total }) {
             background: i === current
               ? 'var(--accent-primary)'
               : i < current
-                ? 'rgba(122,193,67,0.4)'
+                ? 'var(--brand-40)'
                 : 'var(--border-color)',
             transition: 'all 0.3s ease',
           }}
@@ -147,7 +147,7 @@ export default function Onboarding() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'radial-gradient(circle at top right, #7ac14310, transparent), radial-gradient(circle at bottom left, #e3061310, transparent)',
+      background: 'radial-gradient(circle at top right, var(--accent-primary)10, transparent), radial-gradient(circle at bottom left, var(--error)10, transparent)',
       padding: '2rem 1rem',
     }}>
       <div className="glass-card animate-fade-in" style={{
@@ -158,7 +158,7 @@ export default function Onboarding() {
         boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <img src={logoImg} alt="Logo" style={{ maxHeight: '56px', width: 'auto', marginBottom: '1rem' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><StoreveuLogo height={40} darkMode={true} /></div>
         </div>
         <StepDots current={step} total={3} />
         {content}
@@ -172,7 +172,7 @@ export default function Onboarding() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
         <div style={{
           width: 40, height: 40, borderRadius: '10px',
-          background: 'rgba(122,193,67,0.12)',
+          background: 'var(--brand-12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Building2 size={20} color="var(--accent-primary)" />
@@ -192,7 +192,7 @@ export default function Onboarding() {
       <Field label="Organisation name" hint="required">
         <input
           className="form-input"
-          placeholder="e.g. Future Foods Inc."
+          placeholder="e.g. My Store Inc."
           value={orgName}
           onChange={(e) => setOrgName(e.target.value)}
           required
@@ -211,7 +211,7 @@ export default function Onboarding() {
           <input
             className="form-input"
             style={{ paddingLeft: '2.75rem' }}
-            placeholder="future-foods"
+            placeholder="my-store"
             value={slug}
             onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSlugEdited(true); }}
           />
@@ -348,7 +348,7 @@ export default function Onboarding() {
     <div style={{ textAlign: 'center' }}>
       <div style={{
         width: 72, height: 72, borderRadius: '50%',
-        background: 'rgba(122,193,67,0.12)',
+        background: 'var(--brand-12)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 1.5rem',
       }}>

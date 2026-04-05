@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, ChevronRight, Loader } from 'lucide-react';
 import { login } from '../services/api';
 import { toast } from 'react-toastify';
-import logoImg from '../assets/future-foods-logo.jpg';
+import StoreveuLogo from '../components/StoreveuLogo';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -26,13 +26,15 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top right, #7ac14310, transparent), radial-gradient(circle at bottom left, #e3061310, transparent)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top right, var(--accent-primary)10, transparent), radial-gradient(circle at bottom left, var(--error)10, transparent)' }}>
       <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '3rem', background: '#ffffff', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <Link to="/" style={{ display: 'inline-block', marginBottom: '1.5rem', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
             ← Back to Home
           </Link>
-          <img src={logoImg} alt="FutureFoods Logo" style={{ display: 'block', margin: '0 auto 1rem', maxWidth: '100%', height: 'auto', maxHeight: '80px' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <StoreveuLogo height={44} darkMode={true} showTagline={true} />
+          </div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Portal Login
           </h1>
