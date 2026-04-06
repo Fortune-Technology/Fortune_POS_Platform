@@ -54,7 +54,7 @@ import { useShiftStore }     from '../stores/useShiftStore.js';
 import { useStationStore }   from '../stores/useStationStore.js';
 import { useSyncStore }      from '../stores/useSyncStore.js';
 import { useAuthStore }      from '../stores/useAuthStore.js';
-import { db, searchProducts, getActivePromotions } from '../db/dexie.js';
+import { db, searchProducts, getActivePromotions, getHeldTransactions } from '../db/dexie.js';
 import { evaluatePromotions }  from '../utils/promoEngine.js';
 import { fmt$ }              from '../utils/formatters.js';
 import { getSmartCashPresets } from '../utils/cashPresets.js';
@@ -214,6 +214,13 @@ export default function POSScreen() {
   const [lotteryActiveBoxes, setLotteryActiveBoxes] = useState([]);
   // Discount modal: discountTarget = lineId string → line discount, null → order discount
   const [discountTarget,  setDiscountTarget]  = useState(undefined); // undefined = closed
+
+  // Held transaction count — shown as badge on the Hold button
+  const [heldCount, setHeldCount] = useState(0);
+  const refreshHeldCount = useCallback(() => {
+    getHeldTransactions().then(list => setHeldCount(list.length)).catch(() => {});
+  }, []);
+  useEffect(() => { refreshHeldCount(); }, [refreshHeldCount]);
 
   // Last completed transaction — used by Reprint button to print without opening history
   const [lastCompletedTx, setLastCompletedTx] = useState(null);
@@ -1116,6 +1123,7 @@ export default function POSScreen() {
         enabledShortcuts={posConfig.shortcuts}
         onPriceCheck={() => setShowPriceCheck(true)}
         onHold={() => setShowHold(true)}
+        onHistory={() => setShowHistory(true)}
         onReprint={() => lastCompletedTx ? setReprintTx(lastCompletedTx) : setShowHistory(true)}
         onNoSale={() => {}}
         onDiscount={openOrderDiscount}
@@ -1129,6 +1137,7 @@ export default function POSScreen() {
         onPayout={() => { setCashDrawerTab('payout'); setShowCashDrawer(true); }}
         onLottery={() => setShowLottery(true)}
         shiftOpen={!!shift}
+        heldCount={heldCount}
       />
 
       {/* ══ Modals ══ */}
@@ -1180,7 +1189,7 @@ export default function POSScreen() {
       )}
 
       {showHold && (
-        <HoldRecallModal onClose={() => setShowHold(false)} />
+        <HoldRecallModal onClose={() => { setShowHold(false); refreshHeldCount(); }} />
       )}
 
       {showCustomer && (
