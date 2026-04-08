@@ -38,7 +38,8 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           cd /var/www/Storv_POS_All/backend
-          npm ci
+          rm -f package-lock.json
+          npm install
           npx prisma generate
           npx prisma db push --accept-data-loss
           npx prisma migrate deploy
@@ -60,7 +61,8 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           cd /var/www/Storv_POS_All/frontend
           rm -rf dist
-          npm ci
+          rm -f package-lock.json
+          npm install
           npm run build
           sudo systemctl reload nginx
 
@@ -72,7 +74,8 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           cd /var/www/Storv_POS_All/cashier-app
           rm -rf dist
-          npm ci
+          rm -f package-lock.json
+          npm install
           npm run build
           sudo systemctl reload nginx
 
@@ -84,7 +87,8 @@ jobs:
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           cd /var/www/Storv_POS_All/admin-app
           rm -rf dist
-          npm ci
+          rm -f package-lock.json
+          npm install
           npm run build
           sudo systemctl reload nginx
 
