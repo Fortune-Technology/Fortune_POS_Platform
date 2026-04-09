@@ -1,5 +1,5 @@
 /**
- * Shared Redis client singleton for the Storv POS platform.
+ * Shared Redis client singleton for the Storeveu POS platform.
  *
  * OPTIONAL: If Redis is not available, all operations degrade gracefully.
  * The POS system continues to work without Redis — e-commerce sync

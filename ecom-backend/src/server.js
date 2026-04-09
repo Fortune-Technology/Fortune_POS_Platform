@@ -1,5 +1,5 @@
 /**
- * E-commerce backend server for the Storv POS platform.
+ * E-commerce backend server for the Storeveu POS platform.
  * Separate Express app with its own PostgreSQL database.
  *
  * Redis is OPTIONAL: if not available, sync worker doesn't start

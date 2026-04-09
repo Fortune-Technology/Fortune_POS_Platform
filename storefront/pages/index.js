@@ -64,8 +64,8 @@ function StoreDiscovery({ stores }) {
   return (
     <>
       <Head>
-        <title>Discover Stores — Storv</title>
-        <meta name="description" content="Browse online stores powered by Storv. Order groceries, snacks, and essentials for pickup or delivery." />
+        <title>Discover Stores — Storeveu</title>
+        <meta name="description" content="Browse online stores powered by Storeveu. Order groceries, snacks, and essentials for pickup or delivery." />
       </Head>
 
       {/* Hero */}
@@ -130,7 +130,7 @@ function StoreDiscovery({ stores }) {
 
       <footer className="sf-footer">
         <div className="sf-container">
-          <p>Powered by Storv</p>
+          <p>Powered by Storeveu</p>
         </div>
       </footer>
     </>
