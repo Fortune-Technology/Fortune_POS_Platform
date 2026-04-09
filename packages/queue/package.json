@@ -1,7 +1,7 @@
 {
   "name": "@storv/queue",
   "version": "1.0.0",
-  "description": "Shared BullMQ queue definitions and producers for Storv POS platform",
+  "description": "Shared BullMQ queue definitions and producers for Storeveu POS platform",
   "type": "module",
   "main": "index.js",
   "exports": {

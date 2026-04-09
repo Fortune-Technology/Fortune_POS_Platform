@@ -1,5 +1,5 @@
 /**
- * Shared BullMQ queue definitions for the Storv POS platform.
+ * Shared BullMQ queue definitions for the Storeveu POS platform.
  *
  * OPTIONAL: If Redis is not available, queues return null and all
  * queue operations are no-ops. The POS system works without queues —

@@ -191,12 +191,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: cashier-app/package-lock.json
 
       - name: Install dependencies
         working-directory: cashier-app
-        run: npm ci
+        run: npm install
 
       - name: Build Vite + Electron installer
         working-directory: cashier-app

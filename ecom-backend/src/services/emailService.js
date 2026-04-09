@@ -70,7 +70,7 @@ function wrap(storeName, body) {
     ${body}
   </div>
   <div class="footer">
-    <p>${storeName} — Powered by Storv</p>
+    <p>${storeName} — Powered by Storeveu</p>
   </div>
 </div>
 </body></html>`;

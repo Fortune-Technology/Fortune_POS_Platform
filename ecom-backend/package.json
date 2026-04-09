@@ -1,7 +1,7 @@
 {
   "name": "storv-ecom-backend",
   "version": "1.0.0",
-  "description": "E-commerce backend API for Storv POS platform",
+  "description": "E-commerce backend API for Storeveu POS platform",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

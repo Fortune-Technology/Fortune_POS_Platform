@@ -2,7 +2,7 @@
 
 ## Overview
 
-A complete e-commerce add-on module for the Storv POS platform, enabling any organization to launch a branded online store for their retail stores.
+A complete e-commerce add-on module for the Storeveu POS platform, enabling any organization to launch a branded online store for their retail stores.
 
 ### Architecture
 
