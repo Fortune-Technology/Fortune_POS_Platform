@@ -1,0 +1,259 @@
+/* HardwareSettingsModal.css — Station hardware configuration */
+/* Prefix: hsm- */
+
+.hsm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.hsm-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #13161e;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 1.75rem;
+  position: relative;
+}
+
+.hsm-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.hsm-header { margin-bottom: 1.5rem; }
+.hsm-header-title { margin: 0; color: #e8eaf0; font-size: 1.1rem; font-weight: 800; }
+.hsm-header-sub { margin: 4px 0 0; color: #6b7280; font-size: 0.82rem; }
+
+/* Form fields */
+.hsm-field {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #e8eaf0;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.hsm-field--narrow { width: 90px; }
+
+.hsm-select {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1a1d27;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #e8eaf0;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hsm-label {
+  display: block;
+  color: #6b7280;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* Auth step */
+.hsm-auth-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  margin-bottom: 20px;
+  font-size: 0.82rem;
+  color: #f87171;
+}
+
+.hsm-auth-warning-icon { flex-shrink: 0; margin-top: 1px; }
+
+.hsm-auth-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  margin-bottom: 14px;
+  color: #f87171;
+  font-size: 0.85rem;
+}
+
+.hsm-auth-form { display: grid; gap: 14px; }
+
+.hsm-auth-btn {
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  background: #3d56b5;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hsm-auth-btn--loading { opacity: 0.7; cursor: not-allowed; }
+
+/* Hardware sections */
+.hsm-hw-section {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.hsm-hw-section--open {
+  border-color: rgba(61, 86, 181, 0.4);
+  background: rgba(61, 86, 181, 0.04);
+}
+
+.hsm-hw-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hsm-hw-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(61, 86, 181, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hsm-hw-title { flex: 1; font-weight: 700; color: #e8eaf0; font-size: 0.88rem; }
+
+.hsm-hw-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.hsm-hw-dot--ok { background: #4ade80; }
+.hsm-hw-dot--err { background: #f87171; }
+.hsm-hw-dot--idle { background: #374151; }
+
+.hsm-hw-status { font-size: 0.7rem; margin-right: 6px; }
+.hsm-hw-status--ok { color: #4ade80; }
+.hsm-hw-status--err { color: #f87171; }
+.hsm-hw-status--idle { color: #374151; }
+
+.hsm-hw-body { padding: 0 14px 14px; }
+.hsm-hw-grid { display: grid; gap: 10px; }
+.hsm-hw-grid-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+
+/* Detect/test buttons */
+.hsm-test-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hsm-test-btn--ok { background: rgba(22, 163, 74, 0.15); color: #4ade80; }
+.hsm-test-btn--err { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+
+/* Checkbox row */
+.hsm-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hsm-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.hsm-checkbox-text { color: #e8eaf0; font-size: 0.88rem; }
+
+/* Detect row */
+.hsm-detect-row { display: flex; gap: 8px; }
+
+/* Footer */
+.hsm-footer { display: flex; gap: 10px; margin-top: 20px; }
+
+.hsm-save-btn {
+  flex: 1;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  background: #3d56b5;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hsm-save-btn--loading { cursor: not-allowed; }
+
+.hsm-cancel-btn {
+  padding: 0.9rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: none;
+  color: #6b7280;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .hsm-modal { max-width: 100%; padding: 1.25rem; border-radius: 16px; }
+  .hsm-hw-grid-row { grid-template-columns: 1fr; }
+}

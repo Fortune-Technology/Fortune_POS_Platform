@@ -1,0 +1,37 @@
+/* PreviewPage.css — prefix: pp- */
+
+.pp-badge-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pp-badge-ml {
+  margin-left: 0.5rem;
+}
+.pp-deposit-flex {
+  gap: 1rem;
+  align-items: center;
+}
+.pp-deposit-select {
+  flex: 1;
+}
+.pp-td-removed {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .pp-deposit-flex {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+@media (max-width: 480px) {
+  .pp-badge-wrap {
+    gap: 0.35rem;
+  }
+}

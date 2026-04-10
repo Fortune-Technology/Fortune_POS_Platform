@@ -1345,3 +1345,40 @@
 .pf-banner-wrap {
   padding: 0.75rem 1.75rem 0;
 }
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .pf-pricing-row {
+    grid-template-columns: 1fr 1fr 62px 72px 86px auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .pf-pricing-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .pf-pack-table-header,
+  .pf-pack-row {
+    grid-template-columns: 1fr 70px 60px 60px 60px 28px;
+    font-size: 0.6rem;
+  }
+  .pf-topbar,
+  .pf-topbar-inner {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pf-pricing-row {
+    grid-template-columns: 1fr;
+  }
+  .pf-pack-table-header,
+  .pf-pack-row {
+    grid-template-columns: 1fr 60px 50px 28px;
+  }
+  .pf-age-btns {
+    flex-wrap: wrap;
+  }
+}

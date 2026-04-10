@@ -1,0 +1,171 @@
+/* ReceiptModal.css — prefix: rm- */
+
+.rm-card {
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Success header */
+.rm-header {
+  text-align: center;
+  padding: 1.5rem 1.5rem 0.5rem;
+}
+
+.rm-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--green-dim);
+  border: 2px solid var(--green-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+}
+
+.rm-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--green);
+}
+
+.rm-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Receipt body */
+.rm-body {
+  padding: 1rem 1.5rem;
+}
+
+.rm-items {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.rm-item {
+  margin-bottom: 0.4rem;
+}
+
+.rm-item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.rm-item-name { color: var(--text-primary); }
+.rm-item-total { font-weight: 600; }
+
+.rm-item-deposit {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-deposit);
+  padding-left: 12px;
+}
+
+/* Summary rows */
+.rm-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+
+.rm-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.rm-total-value { color: var(--green); }
+
+/* Tender section */
+.rm-tender {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.rm-tender-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+
+.rm-change-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--green);
+  margin-top: 4px;
+}
+
+/* Cashier footer */
+.rm-footer {
+  margin-top: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Actions */
+.rm-actions {
+  padding: 0 1.5rem 1.5rem;
+  display: flex;
+  gap: 8px;
+}
+
+.rm-print-btn {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.rm-done-btn {
+  flex: 2;
+  padding: 0.875rem;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .rm-card {
+    max-width: 360px;
+  }
+
+  .rm-body {
+    padding: 0.75rem 1rem;
+  }
+}

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
+import { Users } from 'lucide-react';
 import './EcomSetup.css';
 import './EcomOrders.css';
+import './EcomCustomers.css';
 
 const API = '/api/ecom';
 
@@ -44,60 +45,71 @@ export default function EcomCustomers() {
   if (selected) {
     const orders = selected.orders || [];
     return (
-      <div className="layout-container"><Sidebar /><main className="main-content">
-        <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', cursor: 'pointer', marginBottom: 16, fontSize: 13 }}>← Back to Customers</button>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--brand-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700 }}>
+      <div className="p-page">
+        <button onClick={() => setSelected(null)} className="ecust-back-btn">← Back to Customers</button>
+        <div className="ecust-profile-row">
+          <div className="ecust-avatar">
             {selected.firstName?.charAt(0) || selected.name?.charAt(0) || '?'}
           </div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>{selected.firstName || ''} {selected.lastName || ''}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{selected.email}{selected.phone ? ` · ${selected.phone}` : ''}</div>
+            <div className="ecust-name">{selected.firstName || ''} {selected.lastName || ''}</div>
+            <div className="ecust-email">{selected.email}{selected.phone ? ` · ${selected.phone}` : ''}</div>
           </div>
         </div>
-        <div className="es-analytics-kpis" style={{ marginBottom: 20 }}>
+        <div className="es-analytics-kpis ecust-kpis-mb">
           <div className="es-kpi"><div><span className="es-kpi-num">{selected.orderCount}</span><span className="es-kpi-label">Orders</span></div></div>
           <div className="es-kpi"><div><span className="es-kpi-num">{fmt(selected.totalSpent)}</span><span className="es-kpi-label">Total Spent</span></div></div>
           <div className="es-kpi"><div><span className="es-kpi-num">{new Date(selected.createdAt).toLocaleDateString()}</span><span className="es-kpi-label">Joined</span></div></div>
         </div>
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Order History</h3>
-        {orders.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No orders</p> : (
+        <h3 className="ecust-section-title">Order History</h3>
+        {orders.length === 0 ? <p className="ecust-no-data">No orders</p> : (
           <table className="eo-table">
             <thead><tr><th>Order</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
             <tbody>{orders.map(o => (
               <tr key={o.id}>
-                <td style={{ fontWeight: 600 }}>{o.orderNumber}</td>
+                <td className="ecust-td-bold">{o.orderNumber}</td>
                 <td><span className={`eo-badge eo-badge--${o.status}`}>{o.status}</span></td>
                 <td>{fmt(o.grandTotal)}</td>
-                <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                <td className="ecust-td-date">{new Date(o.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}</tbody>
           </table>
         )}
-      </main></div>
+      </div>
     );
   }
 
   return (
-    <div className="layout-container"><Sidebar /><main className="main-content">
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Customers</h1>
-      <input className="es-input" placeholder="Search by name, email, phone..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
-      {loading ? <p style={{ color: 'var(--text-muted)' }}>Loading...</p> : customers.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No customers found</p>
+    <div className="p-page">
+      <div className="p-header">
+        <div className="p-header-left">
+          <div className="p-header-icon">
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="p-title">Customers</h1>
+            <p className="p-subtitle">Online store customer accounts and order history</p>
+          </div>
+        </div>
+        <div className="p-header-actions"></div>
+      </div>
+      <input className="es-input ecust-search" placeholder="Search by name, email, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+      {loading ? <p className="ecust-loading">Loading...</p> : customers.length === 0 ? (
+        <p className="ecust-no-data">No customers found</p>
       ) : (
         <table className="eo-table">
           <thead><tr><th>Name</th><th>Email</th><th>Orders</th><th>Spent</th><th>Joined</th></tr></thead>
           <tbody>{customers.map(c => (
             <tr key={c.id} onClick={() => selectCustomer(c.id)}>
-              <td style={{ fontWeight: 600 }}>{c.firstName || c.name || '—'} {c.lastName || ''}</td>
+              <td className="ecust-td-bold">{c.firstName || c.name || '—'} {c.lastName || ''}</td>
               <td>{c.email}</td>
               <td>{c.orderCount}</td>
               <td>{fmt(c.totalSpent)}</td>
-              <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+              <td className="ecust-td-date">{new Date(c.createdAt).toLocaleDateString()}</td>
             </tr>
           ))}</tbody>
         </table>
       )}
-    </main></div>
+    </div>
   );
 }

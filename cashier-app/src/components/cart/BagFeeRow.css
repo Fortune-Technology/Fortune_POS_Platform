@@ -1,0 +1,110 @@
+/* BagFeeRow.css — prefix: bfr- */
+
+.bfr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.875rem;
+  border-top: 1px solid var(--border);
+}
+
+.bfr-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bfr-label-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.bfr-label-price {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.bfr-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bfr-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bfr-btn-dec {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.bfr-btn-dec:not(:disabled):hover {
+  background: var(--bg-hover);
+}
+
+.bfr-btn-dec:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bfr-btn-dec--active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.bfr-btn-inc {
+  border: 1px solid var(--accent-primary);
+  background: rgba(122, 193, 67, 0.1);
+  color: var(--accent-primary);
+}
+
+.bfr-btn-inc:hover {
+  background: rgba(122, 193, 67, 0.2);
+}
+
+.bfr-count {
+  min-width: 24px;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.bfr-count--zero {
+  color: var(--text-muted);
+}
+
+.bfr-count--active {
+  color: var(--text-primary);
+}
+
+.bfr-total {
+  min-width: 52px;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.bfr-total--zero {
+  color: var(--text-muted);
+}
+
+.bfr-total--active {
+  color: var(--text-primary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .bfr-row {
+    padding: 0.4rem 0.625rem;
+  }
+}

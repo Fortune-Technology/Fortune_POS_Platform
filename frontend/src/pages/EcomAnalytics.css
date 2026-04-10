@@ -1,0 +1,29 @@
+/* EcomAnalytics.css — prefix: ean- */
+
+.ean-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.ean-loading {
+  color: var(--text-muted);
+}
+.ean-grid-mb {
+  margin-bottom: 20px;
+}
+.ean-no-data {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .es-analytics-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .es-analytics-kpis {
+    grid-template-columns: 1fr;
+  }
+}

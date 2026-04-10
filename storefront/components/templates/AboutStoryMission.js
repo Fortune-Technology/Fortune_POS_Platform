@@ -3,6 +3,8 @@
  * Hero image with story text, followed by mission/values cards.
  */
 
+import { Target, Handshake, Heart } from 'lucide-react';
+
 const ECOM_URL = process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005';
 
 export default function AboutStoryMission({ content, store }) {
@@ -41,9 +43,9 @@ export default function AboutStoryMission({ content, store }) {
       {/* Values */}
       <section className="tpl-values">
         <div className="tpl-values-grid">
-          <div className="tpl-value-card"><div className="tpl-value-icon">🎯</div><h4>Quality First</h4><p>We source only the best products for our community.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">🤝</div><h4>Community</h4><p>We're more than a store — we're your neighbors.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">💚</div><h4>Sustainability</h4><p>Committed to reducing waste and supporting local.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Target size={28} /></div><h4>Quality First</h4><p>We source only the best products for our community.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Handshake size={28} /></div><h4>Community</h4><p>We're more than a store — we're your neighbors.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Heart size={28} /></div><h4>Sustainability</h4><p>Committed to reducing waste and supporting local.</p></div>
         </div>
       </section>
     </div>

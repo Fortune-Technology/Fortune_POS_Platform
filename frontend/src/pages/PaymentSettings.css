@@ -1,0 +1,191 @@
+/* PaymentSettings.css — prefix: pms- */
+
+/* ── Admin notice ── */
+.pms-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  background: rgba(59, 130, 246, 0.07);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.pms-notice-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pms-notice-title {
+  font-weight: 700;
+  font-size: 0.87rem;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+.pms-notice-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* ── Badge ── */
+.pms-badge {
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* ── Filters ── */
+.pms-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pms-filter-input {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+.pms-btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.pms-record-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ── Table ── */
+.pms-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-panel);
+}
+.pms-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.pms-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+.pms-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pms-table tbody tr {
+  border-bottom: 1px solid var(--border-light);
+}
+.pms-table td {
+  padding: 10px 14px;
+}
+.pms-td-date {
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.pms-td-card {
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+.pms-td-amount {
+  font-weight: 700;
+}
+.pms-td-amount--refund {
+  color: #ef4444;
+}
+.pms-td-auth {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.pms-td-mode {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.pms-td-empty {
+  text-align: center;
+  padding: 2.5rem;
+  color: var(--text-muted);
+}
+.pms-td-loading {
+  text-align: center;
+  padding: 2.5rem;
+  color: var(--text-muted);
+}
+.pms-td-loading .spin {
+  margin-right: 8px;
+}
+
+/* ── Pagination ── */
+.pms-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: center;
+}
+.pms-page-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.pms-page-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.pms-page-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .pms-filters {
+    gap: 8px;
+  }
+}
+@media (max-width: 768px) {
+  .pms-table-wrap {
+    border-radius: 8px;
+  }
+  .pms-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+@media (max-width: 480px) {
+  .pms-notice {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pms-pagination {
+    flex-wrap: wrap;
+  }
+}

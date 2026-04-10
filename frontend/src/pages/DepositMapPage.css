@@ -1,0 +1,23 @@
+/* DepositMapPage.css — prefix: dmp- */
+
+.dmp-spinner-center {
+  margin: 20px auto;
+}
+.dmp-example-pre {
+  background: var(--bg-tertiary);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  overflow: auto;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  line-height: 1.7;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .dmp-example-pre {
+    font-size: 0.78rem;
+    padding: 1rem;
+  }
+}

@@ -99,9 +99,9 @@ export default function BottleRedemptionModal({ onClose, onComplete }) {
               <div className="brm-loading">Loading deposit rules…</div>
             ) : rules.length === 0 ? (
               <div className="brm-empty">
-                <AlertCircle size={28} style={{ opacity: 0.4 }} />
+                <AlertCircle size={28} className="brm-icon-faded" />
                 No deposit rules configured.
-                <span style={{ fontSize: '0.75rem' }}>Set them up in Back Office → Deposit Rules.</span>
+                <span className="brm-empty-hint">Set them up in Back Office → Deposit Rules.</span>
               </div>
             ) : (
               rules.map(rule => {
@@ -149,10 +149,9 @@ export default function BottleRedemptionModal({ onClose, onComplete }) {
               {NUMPAD_KEYS.map((k, i) => (
                 <button
                   key={i}
-                  className={`brm-nkey${k === 'C' ? ' brm-nkey--clear' : ''}${k === '⌫' ? ' brm-nkey--back' : ''}`}
+                  className={`brm-nkey${k === 'C' ? ' brm-nkey--clear' : ''}${k === '⌫' ? ' brm-nkey--back' : ''}${!k ? ' brm-nkey--hidden' : ''}`}
                   onClick={() => k && handleNumKey(k)}
                   disabled={!k || !activeId}
-                  style={!k ? { visibility: 'hidden' } : {}}
                 >
                   {k === '⌫' ? <Delete size={16} /> : k}
                 </button>

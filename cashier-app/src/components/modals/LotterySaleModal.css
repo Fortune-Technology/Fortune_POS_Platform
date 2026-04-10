@@ -1,0 +1,213 @@
+/* LotterySaleModal.css — Lottery sale entry */
+/* Prefix: lsam- */
+
+.lsam-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lsam-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e5e7eb;
+}
+
+.lsam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.lsam-header-left { display: flex; align-items: center; gap: 10px; }
+
+.lsam-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.lsam-header-title { font-weight: 700; font-size: 1rem; color: #111827; }
+.lsam-header-sub { font-size: 0.72rem; color: #6b7280; }
+
+.lsam-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+}
+
+.lsam-body { padding: 16px 20px 20px; }
+
+/* Game selector */
+.lsam-games-section { margin-bottom: 14px; }
+
+.lsam-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.lsam-games { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.lsam-game-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  transition: all 0.1s;
+}
+
+.lsam-game-btn--active {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.lsam-game-price { margin-left: 5px; font-size: 0.68rem; opacity: 0.7; }
+
+/* Display */
+.lsam-display {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  text-align: right;
+  border: 1.5px solid #e5e7eb;
+}
+
+.lsam-display-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.03em;
+}
+
+/* Presets */
+.lsam-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.lsam-preset-btn {
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* Numpad */
+.lsam-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.lsam-numkey {
+  padding: 13px 0;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  transition: background 0.08s;
+}
+
+.lsam-numkey:hover { background: #f3f4f6; }
+.lsam-numkey--backspace { background: #fff1f2; color: #ef4444; }
+.lsam-numkey--backspace:hover { background: #ffe4e6; }
+
+/* Add button */
+.lsam-add-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: background 0.12s;
+}
+
+.lsam-add-btn--active { background: #16a34a; color: #fff; cursor: pointer; }
+.lsam-add-btn--disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+
+/* Added list */
+.lsam-added-list {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.lsam-added-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #15803d;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.lsam-added-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #166534;
+  padding: 2px 0;
+}
+
+.lsam-added-amount { font-weight: 700; }
+
+.lsam-done-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  margin-top: 10px;
+  border: 2px solid #16a34a;
+  background: #fff;
+  color: #16a34a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .lsam-modal { max-width: 100%; border-radius: 16px; }
+  .lsam-presets { grid-template-columns: repeat(3, 1fr); }
+}

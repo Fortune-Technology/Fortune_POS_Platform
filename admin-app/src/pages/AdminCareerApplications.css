@@ -1,0 +1,26 @@
+/* AdminCareerApplications.css — prefix: aca- */
+
+.aca-save-btn-disabled {
+  opacity: 0.6;
+}
+.aca-option-dark {
+  background: #1e1e2e;
+  color: #fff;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-expand-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-expand-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+@media (max-width: 480px) {
+  .admin-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

@@ -17,7 +17,7 @@ export default function HomeCenteredHero({ content, store, products = [], depart
 
   return (
     <>
-      <section className="tpl-hero tpl-hero--centered" style={heroImg ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)), url(${heroImg})` } : {}}>
+      <section className="tpl-hero tpl-hero--centered" style={heroImg ? { '--tpl-hero-bg': `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)), url(${heroImg})`, backgroundImage: 'var(--tpl-hero-bg)' } : {}}>
         <div className="tpl-hero-content">
           <h1 className="tpl-hero-title">{hero.heading || branding.logoText || store?.storeName || 'Welcome'}</h1>
           <p className="tpl-hero-desc">{hero.subheading || 'Fresh products, everyday essentials — order online for pickup or delivery.'}</p>

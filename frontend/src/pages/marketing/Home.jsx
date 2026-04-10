@@ -5,15 +5,19 @@ import MarketingFooter from '../../components/marketing/MarketingFooter';
 import MarketingSection from '../../components/marketing/MarketingSection';
 import MarketingButton from '../../components/marketing/MarketingButton';
 import heroMockup from '../../assets/pos-hero-mockup.png';
-import { 
-  Zap, 
-  BarChart3, 
-  TrendingUp, 
-  Package, 
-  Users, 
-  Globe, 
-  ShieldCheck, 
-  Cpu 
+import {
+  Zap,
+  BarChart3,
+  TrendingUp,
+  Package,
+  Users,
+  Globe,
+  ShieldCheck,
+  Cpu,
+  WifiOff,
+  ShoppingCart,
+  Store,
+  Building2
 } from 'lucide-react';
 import './Home.css';
 
@@ -23,61 +27,61 @@ const Home = () => {
   const industries = {
     grocery: {
       title: 'Grocery & Supermarket',
-      desc: 'Handle thousands of SKUs with ease. AI-powered invoice import and real-time inventory management.',
-      features: ['EBT/SNAP Support', 'Scale Integration', 'AI Invoice Import']
+      desc: 'Handle thousands of SKUs with multi-UPC barcodes, EBT/SNAP compliance, and AI-powered invoice import that turns vendor PDFs into catalog data in seconds.',
+      features: ['EBT/SNAP Compliance', 'AI Invoice Import (OCR)', 'Bulk CSV/Excel Import']
     },
     retail: {
       title: 'General Retail',
-      desc: 'Seamless checkout and deep analytics. Understand your best sellers and customer behavior.',
-      features: ['PAX Terminal Direct', 'Customer Loyalty Points', 'Promotions Engine']
+      desc: 'Fast checkout with split tender, customer loyalty lookup, and a promotions engine that handles BOGO, volume discounts, and mix-and-match deals automatically.',
+      features: ['PAX Terminal Integration', 'Promotions Engine', 'Customer Loyalty & Points']
     },
     liquor: {
       title: 'Liquor & Wine',
-      desc: 'Complex tax handling and vendor-specific mappings for spirits and beer distributors.',
-      features: ['Age Verification', 'Lottery Module', 'Case-to-Unit Conversion']
+      desc: 'Built-in age verification, full lottery management with shift reconciliation, bottle deposit tracking, and case-to-unit conversion for every product.',
+      features: ['Age Verification (21+)', 'Lottery Sales & Payouts', 'Bottle Deposit / CRV']
     },
     meat: {
       title: 'Meat & Food',
-      desc: 'Weight-based pricing and cold-chain management for fresh departments.',
-      features: ['Scale Sync (CAS/Mettler)', 'Weight-Based Pricing', 'Department Tax Rules']
+      desc: 'Weight-based pricing, department-level tax rules, and perishable-aware auto-ordering that caps quantities to shelf life so you never over-order fresh stock.',
+      features: ['Weight-Based Pricing', 'Department Tax Rules', 'Shelf-Life Auto-Ordering']
     }
   };
 
   const coreFeatures = [
     {
-      icon: <Cpu size={32} />,
-      title: 'AI Invoice Import',
-      desc: 'Convert PDF/JPEG invoices into structured POS data using Hybrid AI (Azure + GPT-4o).',
-      path: '/features#ocr'
+      icon: <WifiOff size={32} />,
+      title: 'Offline-First POS',
+      desc: 'A full cashier terminal that works without internet. Barcode scanning, multi-payment (cash, card, EBT), lottery, age verification, and customer display — all in one Electron desktop app.',
+      path: '/features#pos'
     },
     {
-      icon: <Zap size={32} />,
-      title: 'Live Dashboard',
-      desc: 'Real-time sales updates every 60 seconds with weather correlation and data alerts.',
+      icon: <BarChart3 size={32} />,
+      title: 'Live Dashboard & Analytics',
+      desc: 'Real-time KPIs, hourly sales charts, payment breakdowns, and weather-correlated insights. Department and product analytics with CSV and PDF export.',
       path: '/features#dashboard'
     },
     {
       icon: <TrendingUp size={32} />,
       title: 'Sales Predictions',
-      desc: 'Holt-Winters 14-day forecasting to anticipate demand before you run out.',
+      desc: 'Holt-Winters triple exponential smoothing with day-of-week, holiday, and weather adjustments. Get a 14-day forecast so you can staff and stock with confidence.',
       path: '/features#analytics'
     },
     {
+      icon: <ShoppingCart size={32} />,
+      title: 'E-Commerce & Online Store',
+      desc: 'Launch a branded online storefront for each store. 15 premium templates, real-time product sync from your POS, shopping cart, checkout, and order management built in.',
+      path: '/features#ecommerce'
+    },
+    {
       icon: <Package size={32} />,
-      title: 'Storv POS',
-      desc: 'A complete cashier app with barcode scanning, EBT/SNAP, lottery, age verification, and PAX card processing.',
-      path: '/features#inventory'
+      title: 'Smart Auto-Ordering',
+      desc: 'A 14-factor algorithm analyzes sales velocity, weather forecasts, holidays, shelf life, and stockout history to generate purchase orders automatically — grouped by vendor.',
+      path: '/features#ordering'
     },
     {
-      icon: <Users size={32} />,
-      title: 'Customer Loyalty',
-      desc: 'Manage points and rewards synchronized directly with your POS.',
-      path: '/features#loyalty'
-    },
-    {
-      icon: <Globe size={32} />,
-      title: 'Hardware Integration',
-      desc: 'Receipt printers, cash drawers, PAX terminals, and scales — all configured in a simple setup wizard.',
+      icon: <Building2 size={32} />,
+      title: 'Multi-Store Management',
+      desc: 'Manage multiple locations from one portal. Per-store pricing, inventory, employees, POS stations, and analytics — all scoped by role-based permissions from cashier to owner.',
       path: '/features#stores'
     }
   ];
@@ -91,12 +95,12 @@ const Home = () => {
         <div className="mkt-container">
           <div className="hero-grid">
             <div className="hero-content">
-              <span className="hero-badge">Retail Technology, Reimagined</span>
+              <span className="hero-badge">POS + E-Commerce + Analytics in One Platform</span>
               <h1 className="hero-title">
-                The POS System That <span className="text-gradient">Thinks</span> Like You Do
+                The Retail Platform That <span className="text-gradient">Runs</span> Your Entire Business
               </h1>
               <p className="hero-subtitle">
-                StoreVeu is the complete retail platform built by store owners who got tired of overpaying for bad software. Run your POS, manage lottery, track inventory, and process payments — all without the middleman markup.
+                Storeveu is the all-in-one platform for independent retailers. Offline-first POS, live analytics, AI-powered predictions, e-commerce storefronts, smart auto-ordering, and multi-store management — built by store owners who got tired of paying for five different systems.
               </p>
               <div className="hero-actions">
                 <MarketingButton href="/contact" size="lg">Book a Free Demo</MarketingButton>
@@ -104,7 +108,7 @@ const Home = () => {
               </div>
               <div className="hero-trust">
                 <ShieldCheck size={20} />
-                <span>Trusted by independent retailers across North America</span>
+                <span>Trusted by independent grocery, liquor, and retail stores across North America</span>
               </div>
             </div>
             <div className="hero-visual">
@@ -112,11 +116,11 @@ const Home = () => {
                 <img src={heroMockup} alt="Storeveu Dashboard Mockup" className="hero-mockup" />
                 <div className="stats-bubble floating-1">
                   <BarChart3 size={18} />
-                  <span>+24% Sales Target</span>
+                  <span>Live Sales Dashboard</span>
                 </div>
                 <div className="stats-bubble floating-2">
                   <Zap size={18} />
-                  <span>AI Sync Live</span>
+                  <span>Offline-Ready POS</span>
                 </div>
               </div>
             </div>
@@ -126,30 +130,30 @@ const Home = () => {
 
       {/* Problem Section */}
       <MarketingSection
-        title="Stop Paying the Middleman"
-        subtitle="Traditional POS companies take a cut of every card swipe. StoreVeu connects directly to your PAX terminal — you keep more of every dollar."
+        title="One Platform Instead of Five"
+        subtitle="Most retailers juggle separate tools for POS, inventory, analytics, e-commerce, and ordering. Storeveu replaces them all with a single integrated system."
         bgVariant="white"
       >
         <div className="problem-grid">
           <div className="problem-card old">
-            <h4>Old Ways</h4>
+            <h4>The Old Way</h4>
             <ul>
               <li>Paying 2.9%+ card processing through your POS vendor</li>
-              <li>Manual invoice entry (hours of office work)</li>
-              <li>Separate systems for POS, lottery, and inventory</li>
-              <li>Cookie-cutter software that doesn't understand retail</li>
+              <li>Manual invoice entry and spreadsheet inventory</li>
+              <li>Separate systems for POS, lottery, e-commerce, and ordering</li>
+              <li>No demand forecasting — you guess what to reorder</li>
             </ul>
           </div>
           <div className="problem-divider">
             <div className="arrow-right">→</div>
           </div>
           <div className="problem-card new">
-            <h4>StoreVeu</h4>
+            <h4>Storeveu</h4>
             <ul>
-              <li>Direct PAX terminal integration at interchange rates</li>
-              <li>AI scans vendor invoices in seconds</li>
-              <li>POS + lottery + inventory + hardware in one platform</li>
-              <li>Built by retailers who know your daily challenges</li>
+              <li>Direct PAX terminal integration — keep more of every dollar</li>
+              <li>AI invoice import and automated purchase orders</li>
+              <li>POS, lottery, e-commerce, analytics, and ordering in one login</li>
+              <li>14-day sales predictions with weather and holiday adjustments</li>
             </ul>
           </div>
         </div>
@@ -157,8 +161,8 @@ const Home = () => {
 
       {/* Feature Grid */}
       <MarketingSection 
-        title="Everything You Need to Scale" 
-        subtitle="Built from the ground up for grocery, liquor, and retail businesses."
+        title="Everything You Need to Run and Grow"
+        subtitle="From the cash register to the online storefront — every tool your store needs, built into one platform."
         bgVariant="light"
       >
         <div className="main-feature-grid">
@@ -205,10 +209,10 @@ const Home = () => {
             </div>
             <div className="tab-visual">
               <div className="industry-placeholder-icon">
-                {activeTab === 'grocery' && <Package size={120} />}
-                {activeTab === 'retail' && <Zap size={120} />}
-                {activeTab === 'liquor' && <BarChart3 size={120} />}
-                {activeTab === 'meat' && <Cpu size={120} />}
+                {activeTab === 'grocery' && <ShoppingCart size={120} />}
+                {activeTab === 'retail' && <Store size={120} />}
+                {activeTab === 'liquor' && <ShieldCheck size={120} />}
+                {activeTab === 'meat' && <Package size={120} />}
               </div>
             </div>
           </div>
@@ -224,17 +228,17 @@ const Home = () => {
         <div className="testimonial-teaser-grid">
           <div className="teaser-card">
             <div className="stars">★★★★★</div>
-            <p>"Switching from Square to StoreVeu cut our card fees by nearly 1%. On our volume, that's thousands a year."</p>
+            <p>"We replaced three different systems with Storeveu. POS, lottery, and vendor ordering all in one place. Our cashiers were trained in a day."</p>
             <div className="author">— David P., Grocery Owner</div>
           </div>
           <div className="teaser-card">
             <div className="stars">★★★★★</div>
-            <p>"The lottery module alone saved us 3 hours of paperwork every week. Our cashiers love the shift scan feature."</p>
+            <p>"The auto-ordering feature cut our out-of-stocks in half. It even factors in weather and holidays. We stopped guessing and started knowing."</p>
             <div className="author">— Priya M., Liquor Store Owner</div>
           </div>
           <div className="teaser-card">
             <div className="stars">★★★★★</div>
-            <p>"AI invoice import is unreal. I used to spend Sunday nights entering vendor invoices. Now it takes 10 minutes."</p>
+            <p>"We launched an online store for our shop in under an hour. Products synced straight from our POS catalog. Orders show up right in the portal."</p>
             <div className="author">— James T., Independent Market Owner</div>
           </div>
         </div>
@@ -244,8 +248,8 @@ const Home = () => {
       <section className="final-cta-banner">
         <div className="mkt-container">
           <div className="cta-banner-content">
-            <h2>Ready to stop paying the middleman?</h2>
-            <p>Join retailers keeping more of every dollar they earn.</p>
+            <h2>Ready to run your store on one platform?</h2>
+            <p>POS, analytics, e-commerce, and auto-ordering — all included. See it in action.</p>
             <div className="cta-banner-actions">
               <MarketingButton href="/contact" size="xl">Book Your Free Demo</MarketingButton>
               <MarketingButton href="/pricing" variant="ghost" size="xl" className="text-white">See Pricing</MarketingButton>

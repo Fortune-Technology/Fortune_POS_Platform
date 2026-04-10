@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import StoreveuLogo from './StoreveuLogo';
+import './AdminSidebar.css';
 import {
   LayoutDashboard,
   Users,
@@ -120,18 +121,12 @@ const AdminSidebar = () => {
         </button>
 
         {/* Logo */}
-        <div style={{ padding: '0.5rem 0.5rem 0.75rem', display: 'flex', justifyContent: 'center' }}>
+        <div className="asb-logo-wrap">
           <StoreveuLogo height={70} darkMode={false} />
         </div>
 
         {/* Admin badge */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
-          padding: '0.375rem 0.75rem', margin: '0 0.75rem 0.75rem',
-          background: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px',
-          color: '#ef4444', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em',
-          border: '1px solid rgba(239, 68, 68, 0.15)',
-        }}>
+        <div className="asb-admin-badge">
           <Shield size={11} />
           SUPER ADMIN PANEL
         </div>

@@ -1,0 +1,179 @@
+/* WeatherWidget.css — prefix: ww- */
+
+.ww-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Current ── */
+.ww-current {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 179, 237, 0.04) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.ww-current-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ww-temp {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  font-family: var(--font-heading);
+}
+.ww-condition {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.ww-current-right {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.ww-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Hourly ── */
+.ww-hourly-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ww-hourly-row {
+  display: flex;
+  gap: 2px;
+  min-width: max-content;
+  padding: 0.5rem 0;
+}
+.ww-hour-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  min-width: 48px;
+}
+.ww-hour-cell--now {
+  background: rgba(59, 130, 246, 0.08);
+}
+.ww-hour-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ww-hour-temp {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ww-hour-precip {
+  font-size: 0.6rem;
+  color: var(--info);
+  font-weight: 600;
+}
+
+/* ── 10-day ── */
+.ww-ten-day-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.25rem 0;
+}
+.ww-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  min-width: 64px;
+  flex-shrink: 0;
+}
+.ww-day-cell--today {
+  background: rgba(59, 130, 246, 0.06);
+}
+.ww-day-cell--default {
+  background: var(--bg-secondary);
+}
+.ww-day-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.ww-day-name--today {
+  color: var(--info);
+}
+.ww-day-name--default {
+  color: var(--text-muted);
+}
+.ww-day-temps {
+  display: flex;
+  gap: 4px;
+  font-size: 0.75rem;
+}
+.ww-day-high {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ww-day-low {
+  color: var(--text-muted);
+}
+.ww-day-precip {
+  font-size: 0.6rem;
+  color: var(--info);
+  font-weight: 600;
+}
+.ww-precip-icon {
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+/* ── Historical ── */
+.ww-historical {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.ww-historical-main {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ww-historical-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ww-current {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ww-current-right {
+    margin-left: 0;
+  }
+}
+@media (max-width: 480px) {
+  .ww-temp {
+    font-size: 1.4rem;
+  }
+}

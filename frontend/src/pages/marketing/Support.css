@@ -1,0 +1,262 @@
+/* ── Support Page ── prefix: msup- ── */
+
+.msup-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+/* Hero */
+.msup-hero {
+  background: linear-gradient(135deg, #eef2ff 0%, #e8eaf6 50%, #f0f9ff 100%);
+  padding: 120px 24px 80px;
+  text-align: center;
+}
+
+.msup-hero-inner {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.msup-hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 20px;
+  line-height: 1.1;
+}
+
+.msup-hero-accent {
+  color: #3d56b5;
+}
+
+.msup-hero-subtitle {
+  font-size: 1.2rem;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+/* Form section */
+.msup-section {
+  padding: 60px 24px 100px;
+}
+
+.msup-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Form card */
+.msup-form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+/* Info bar */
+.msup-info-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.msup-info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+/* Form */
+.msup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.msup-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.msup-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.msup-required {
+  color: #ef4444;
+}
+
+.msup-input {
+  padding: 11px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.msup-input:focus {
+  border-color: #3d56b5;
+}
+
+.msup-input--error {
+  border-color: #ef4444;
+}
+
+.msup-textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.msup-error-text {
+  font-size: 0.8rem;
+  color: #ef4444;
+}
+
+/* Submit button */
+.msup-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 28px;
+  background: #3d56b5;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 4px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.msup-submit-btn:hover {
+  background: #3452a0;
+}
+
+.msup-submit-btn--submitting {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.msup-spinner {
+  animation: msup-spin 0.8s linear infinite;
+}
+
+@keyframes msup-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Success card */
+.msup-success-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 60px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.msup-success-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 20px;
+  margin-bottom: 12px;
+}
+
+.msup-success-text {
+  font-size: 1.05rem;
+  color: #4b5563;
+  line-height: 1.7;
+  max-width: 420px;
+  margin-bottom: 28px;
+}
+
+.msup-new-ticket-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #3d56b5;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.msup-new-ticket-btn:hover {
+  background: #3452a0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .msup-hero {
+    padding: 100px 20px 60px;
+  }
+
+  .msup-hero-title {
+    font-size: 2.2rem;
+  }
+
+  .msup-hero-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .msup-section {
+    padding: 40px 16px 80px;
+  }
+
+  .msup-form-card {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .msup-hero {
+    padding: 90px 16px 50px;
+  }
+
+  .msup-hero-title {
+    font-size: 1.8rem;
+  }
+
+  .msup-form-card {
+    padding: 20px 16px;
+  }
+
+  .msup-success-card {
+    padding: 40px 20px;
+  }
+
+  .msup-success-title {
+    font-size: 1.3rem;
+  }
+
+  .msup-info-bar {
+    padding: 12px 14px;
+  }
+}

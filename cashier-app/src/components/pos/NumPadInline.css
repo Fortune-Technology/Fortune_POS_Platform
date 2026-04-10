@@ -1,0 +1,105 @@
+/* NumPadInline.css — prefix: npi- */
+
+.npi-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  width: 100%;
+}
+
+/* Display */
+.npi-display {
+  padding: 0.65rem 1rem;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 3px;
+  min-height: 68px;
+}
+
+.npi-prefix {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.npi-prefix--empty { color: var(--text-muted); }
+
+.npi-value {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.npi-value--empty { color: var(--text-muted); }
+.npi-value--active { color: var(--text-primary); }
+
+/* Key grid */
+.npi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-base);
+}
+
+/* Single key */
+.npi-key {
+  height: 62px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.06s, transform 0.07s, border-color 0.06s;
+}
+
+.npi-key:active {
+  background: rgba(122, 193, 67, 0.22);
+  border-color: rgba(122, 193, 67, 0.55);
+  transform: scale(0.91);
+}
+
+.npi-key--back {
+  background: rgba(224, 63, 63, 0.07);
+  border-color: rgba(224, 63, 63, 0.22);
+  color: #f87171;
+}
+
+.npi-key--back:active {
+  background: rgba(224, 63, 63, 0.18);
+  border-color: rgba(224, 63, 63, 0.55);
+}
+
+.npi-key:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.npi-key:disabled:active {
+  transform: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .npi-key {
+    height: 52px;
+    font-size: 1.2rem;
+  }
+
+  .npi-value {
+    font-size: 2rem;
+  }
+}

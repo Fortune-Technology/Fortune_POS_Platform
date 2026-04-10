@@ -135,10 +135,10 @@ export default function VendorPayoutModal({ onClose, onComplete }) {
             </div>
             <p className="vpm-success-title">Payout Recorded</p>
             <p className="vpm-success-detail">
-              <strong style={{ color: '#a855f7' }}>${success.amount.toFixed(2)}</strong> paid out to{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>{success.vendorName}</strong>
+              <strong className="vpm-success-amount-highlight">${success.amount.toFixed(2)}</strong> paid out to{' '}
+              <strong className="vpm-success-vendor-highlight">{success.vendorName}</strong>
               <br />
-              <span style={{ textTransform: 'capitalize' }}>{success.type}</span> · via {tenderLabel} · {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              <span className="vpm-success-type-cap">{success.type}</span> · via {tenderLabel} · {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
             </p>
             <div className="vpm-success-actions">
               <button className="vpm-btn-print" onClick={() => handleDone(true)}>
@@ -239,7 +239,7 @@ export default function VendorPayoutModal({ onClose, onComplete }) {
               <div className="vpm-right-col">
                 <div className="vpm-amount-display">
                   <span className="vpm-amount-value">
-                    {amountStr ? `$${amountStr}` : <span style={{ opacity: 0.3 }}>$0.00</span>}
+                    {amountStr ? `$${amountStr}` : <span className="vpm-amount-placeholder">$0.00</span>}
                   </span>
                   <span className="vpm-amount-hint">Tap digits to enter amount</span>
                 </div>

@@ -1,0 +1,18 @@
+/* DocumentUploader.css — prefix: du- */
+
+.du-spinner-mr {
+  margin-right: 8px;
+}
+.du-textarea-tall {
+  min-height: 150px;
+  white-space: pre-wrap;
+  font-size: 13px;
+  padding-top: 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

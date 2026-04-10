@@ -1,0 +1,30 @@
+/* OCRPage.css — prefix: ocr- */
+
+.ocr-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.ocr-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+.ocr-subtitle {
+  color: var(--text-secondary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ocr-header {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .ocr-title {
+    font-size: 1.5rem;
+  }
+}

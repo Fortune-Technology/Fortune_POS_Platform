@@ -1,0 +1,165 @@
+/* ══════════════════════════════════════════════════════════════
+   POSSettings.css — POS Configuration page styles
+   Prefix: pss-
+══════════════════════════════════════════════════════════════ */
+
+/* ── Toggle Switch ───────────────────────────────────── */
+.pss-toggle-label { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+
+.pss-toggle-track {
+  width: 36px; height: 20px; border-radius: 10px; flex-shrink: 0;
+  position: relative; transition: background 0.2s; cursor: pointer;
+}
+.pss-toggle-track--on {
+  background: var(--accent-primary); border: 1px solid var(--accent-primary);
+}
+.pss-toggle-track--off {
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+}
+
+.pss-toggle-thumb {
+  position: absolute; top: 1px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: left 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.pss-toggle-thumb--on  { left: 17px; }
+.pss-toggle-thumb--off { left: 1px; }
+
+.pss-toggle-text { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+
+/* ── Chip Toggle ─────────────────────────────────────── */
+.pss-chip {
+  padding: 0.4rem 0.85rem; border-radius: 20px;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; border: 1px solid;
+}
+.pss-chip--on {
+  border-color: var(--accent-primary); background: var(--brand-12); color: var(--accent-primary);
+}
+.pss-chip--off {
+  border-color: var(--border-color); background: var(--bg-tertiary); color: var(--text-muted);
+}
+
+/* ── Section ─────────────────────────────────────────── */
+.pss-section {
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem;
+}
+
+.pss-section-title {
+  font-size: 0.78rem; font-weight: 800; color: var(--text-muted);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem;
+}
+
+.pss-section-desc {
+  font-size: 0.8rem; color: var(--text-muted); margin-top: -0.5rem; margin-bottom: 1rem;
+}
+
+/* ── Layout Presets ──────────────────────────────────── */
+.pss-layout-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+
+.pss-layout-card {
+  border: 2px solid var(--border-color); border-radius: var(--radius-md);
+  padding: 1rem; cursor: pointer; transition: all 0.15s;
+  background: var(--bg-tertiary);
+}
+.pss-layout-card--active {
+  border-color: var(--accent-primary); background: var(--brand-08);
+  box-shadow: 0 0 0 3px var(--brand-15);
+}
+.pss-layout-card:hover:not(.pss-layout-card--active) {
+  border-color: var(--text-muted);
+}
+
+.pss-layout-diagram { margin-bottom: 0.75rem; }
+
+.pss-layout-name { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); margin-bottom: 2px; }
+.pss-layout-desc { font-size: 0.72rem; color: var(--text-muted); }
+
+/* ── Action Bar Height ───────────────────────────────── */
+.pss-height-grid { display: flex; gap: 0.75rem; }
+
+.pss-height-card {
+  flex: 1; border: 2px solid var(--border-color); border-radius: var(--radius-md);
+  padding: 1rem; cursor: pointer; transition: all 0.15s;
+  text-align: center; background: var(--bg-tertiary);
+}
+.pss-height-card--active {
+  border-color: var(--accent-primary); background: var(--brand-08);
+}
+
+.pss-height-preview {
+  width: 100%; border-radius: 4px; margin-bottom: 8px;
+  background: var(--accent-primary); opacity: 0.6;
+}
+
+.pss-height-label { font-weight: 700; font-size: 0.82rem; color: var(--text-primary); }
+.pss-height-px { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Toggles grid ────────────────────────────────────── */
+.pss-toggles-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+}
+
+.pss-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem; border-radius: var(--radius-sm);
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+}
+
+.pss-toggle-row-label {
+  font-size: 0.84rem; color: var(--text-secondary); font-weight: 500;
+}
+
+/* ── Bag Fee ─────────────────────────────────────────── */
+.pss-bag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+
+.pss-bag-input { max-width: 120px; }
+.pss-bag-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+
+/* ── Quick Tender ────────────────────────────────────── */
+.pss-tender-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ── Color Picker ────────────────────────────────────── */
+.pss-color-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pss-color-swatch {
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s;
+}
+.pss-color-swatch--active { border-color: #fff; box-shadow: 0 0 0 2px var(--accent-primary); }
+
+/* ── Save bar ────────────────────────────────────────── */
+.pss-save-bar {
+  position: sticky; bottom: 0; padding: 1rem 0;
+  background: var(--bg-primary); border-top: 1px solid var(--border-color);
+  display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;
+}
+
+/* ── Store selector ──────────────────────────────────── */
+.pss-store-select-wrap {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;
+}
+.pss-store-select {
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  color: var(--text-primary); font-size: 0.875rem; min-width: 200px;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .pss-layout-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .pss-toggles-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .pss-section { padding: 1rem; }
+  .pss-height-grid { flex-direction: column; }
+  .pss-bag-grid { grid-template-columns: 1fr; }
+  .pss-layout-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .pss-section { padding: 0.75rem; margin-bottom: 1rem; }
+  .pss-layout-grid { grid-template-columns: 1fr; }
+  .pss-tender-row { flex-direction: column; }
+}

@@ -3,6 +3,8 @@
  * Alternating text-left/image-right and image-left/text-right sections.
  */
 
+import { Target, Handshake, Heart } from 'lucide-react';
+
 const ECOM_URL = process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005';
 
 export default function AboutMultiSection({ content, store }) {
@@ -15,8 +17,8 @@ export default function AboutMultiSection({ content, store }) {
 
   return (
     <div className="sf-container">
-      <section className="tpl-section" style={{ textAlign: 'center', paddingBottom: 16 }}>
-        <h1 className="tpl-about-heading" style={{ fontSize: 40 }}>{story.heading || 'About Us'}</h1>
+      <section className="tpl-section tpl-section--centered-heading">
+        <h1 className="tpl-about-heading tpl-about-heading--xl">{story.heading || 'About Us'}</h1>
       </section>
 
       {/* Section 1: Text left, image right */}
@@ -33,13 +35,13 @@ export default function AboutMultiSection({ content, store }) {
       {/* Section 2: Image left, text right (reversed) */}
       {(mission.heading || mission.text) && (
         <section className="tpl-about-hero">
-          <div className="tpl-about-split" style={{ flexDirection: 'row-reverse' }}>
+          <div className="tpl-about-split tpl-about-split--reverse">
             <div className="tpl-about-text">
               <h2 className="tpl-about-heading">{mission.heading || 'Our Mission'}</h2>
               <p className="tpl-about-body">{mission.text || ''}</p>
             </div>
-            <div className="tpl-about-image" style={{ flex: '0 0 300px' }}>
-              <div style={{ width: '100%', aspectRatio: '1', background: 'linear-gradient(135deg, var(--sf-primary-light), var(--sf-primary))', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🎯</div>
+            <div className="tpl-about-image tpl-about-image--narrow">
+              <div className="tpl-about-icon-block"><Target size={32} /></div>
             </div>
           </div>
         </section>
@@ -60,9 +62,9 @@ export default function AboutMultiSection({ content, store }) {
 
       <section className="tpl-values">
         <div className="tpl-values-grid">
-          <div className="tpl-value-card"><div className="tpl-value-icon">🎯</div><h4>Quality First</h4><p>We source only the best.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">🤝</div><h4>Community</h4><p>More than a store — your neighbors.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">💚</div><h4>Sustainability</h4><p>Reducing waste, supporting local.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Target size={28} /></div><h4>Quality First</h4><p>We source only the best.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Handshake size={28} /></div><h4>Community</h4><p>More than a store — your neighbors.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Heart size={28} /></div><h4>Sustainability</h4><p>Reducing waste, supporting local.</p></div>
         </div>
       </section>
     </div>

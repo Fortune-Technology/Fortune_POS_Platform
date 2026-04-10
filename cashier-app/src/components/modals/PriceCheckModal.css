@@ -1,0 +1,164 @@
+/* PriceCheckModal.css — Product price lookup */
+/* Prefix: pcm- */
+
+.pcm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.pcm-modal {
+  background: var(--bg-panel);
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.pcm-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pcm-header-title { flex: 1; font-weight: 800; color: var(--text-primary); }
+
+.pcm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pcm-body { padding: 1rem 1.5rem; }
+
+.pcm-search-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.pcm-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pcm-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 2.25rem;
+  height: 48px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+/* Product result */
+.pcm-product-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  padding: 1.25rem;
+}
+
+.pcm-product-name {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.pcm-product-brand {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.pcm-product-price {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--green);
+  margin-bottom: 0.75rem;
+}
+
+.pcm-product-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.pcm-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pcm-badge--ebt { background: rgba(122, 193, 67, 0.2); color: var(--green); }
+.pcm-badge--age { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
+.pcm-badge--notax { background: var(--bg-input); color: var(--text-muted); }
+
+.pcm-add-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--green);
+  color: #0f1117;
+  border: none;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Search results */
+.pcm-results { max-height: 280px; overflow-y: auto; }
+
+.pcm-result-row {
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pcm-result-row:hover { background: var(--bg-hover); }
+
+.pcm-result-name { font-weight: 600; color: var(--text-primary); font-size: 0.88rem; }
+.pcm-result-upc { font-size: 0.7rem; color: var(--text-muted); }
+.pcm-result-price { font-weight: 800; color: var(--green); font-size: 0.9rem; }
+
+/* Not found */
+.pcm-not-found {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+}
+
+.pcm-not-found-icon { margin-bottom: 8px; opacity: 0.5; }
+.pcm-not-found-text { font-size: 0.85rem; }
+
+@media (max-width: 768px) {
+  .pcm-modal { max-width: 100%; border-radius: 16px; }
+}

@@ -1,0 +1,473 @@
+/* LotteryModal.css — Combined Sale + Payout lottery modal */
+/* Prefix: lm- */
+
+.lm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.lm-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 96vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.lm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.lm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lm-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lm-header-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.lm-header-sub {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.lm-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+}
+
+/* ── Tab switcher ── */
+.lm-tabs {
+  display: flex;
+  padding: 10px 20px 0;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lm-tab {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.88rem;
+  transition: all 0.12s;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.lm-tab--active-sale {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.lm-tab--active-payout {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.lm-tab-desc {
+  font-size: 0.68rem;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+/* ── Body ── */
+.lm-body {
+  padding: 14px 20px 20px;
+  flex: 1;
+}
+
+/* ── Game selector ── */
+.lm-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.lm-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.lm-game-btn {
+  padding: 6px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.79rem;
+  font-weight: 600;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  transition: all 0.1s;
+}
+
+.lm-game-btn--active {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.lm-game-price {
+  margin-left: 5px;
+  font-size: 0.67rem;
+  opacity: 0.65;
+}
+
+/* ── Qty selector (sale with game) ── */
+.lm-qty-info {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.lm-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.lm-qty-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lm-qty-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #111827;
+  text-align: center;
+}
+
+.lm-qty-label {
+  font-size: 0.72rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.lm-qty-total-box {
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.lm-qty-total-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.lm-qty-total-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.lm-qty-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.lm-qty-preset {
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.lm-qty-preset--active {
+  border: 2px solid #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+/* ── Amount display ── */
+.lm-display {
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 9px;
+  text-align: right;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.lm-display--sale {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.lm-display--payout {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.lm-display-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.6;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.lm-display-label--sale { color: #111827; }
+.lm-display-label--payout { color: #92400e; }
+
+.lm-display-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.lm-display-value--sale { color: #111827; }
+.lm-display-value--payout { color: #92400e; }
+
+/* ── Presets ── */
+.lm-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.lm-preset-btn {
+  padding: 7px 0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.lm-preset-btn--sale {
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #15803d;
+}
+
+.lm-preset-btn--payout {
+  border: 1.5px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* ── Numpad ── */
+.lm-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.lm-numkey {
+  padding: 14px 0;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  transition: background 0.08s;
+}
+
+.lm-numkey:hover {
+  background: #f3f4f6;
+}
+
+.lm-numkey--backspace {
+  background: #fff1f2;
+  color: #ef4444;
+}
+
+.lm-numkey--backspace:hover {
+  background: #ffe4e6;
+}
+
+/* ── Note input ── */
+.lm-note-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin-bottom: 9px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 0.87rem;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+
+/* ── Add button ── */
+.lm-add-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: background 0.12s;
+}
+
+.lm-add-btn--active {
+  cursor: pointer;
+  color: #fff;
+}
+
+.lm-add-btn--sale { background: #16a34a; }
+.lm-add-btn--payout { background: #d97706; }
+
+.lm-add-btn--disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* ── Session summary ── */
+.lm-session {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.lm-session-label {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.lm-session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.lm-session-item + .lm-session-item {
+  border-top: 1px solid #f3f4f6;
+}
+
+.lm-session-item-label {
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.lm-session-item-amount {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.lm-session-item-amount--sale { color: #16a34a; }
+.lm-session-item-amount--payout { color: #d97706; }
+
+.lm-session-totals {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.78rem;
+}
+
+.lm-session-totals-sale {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.lm-session-totals-payout {
+  color: #b45309;
+  font-weight: 700;
+}
+
+/* ── Done button ── */
+.lm-done-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+  border: 2px solid #e5e7eb;
+  color: #9ca3af;
+}
+
+.lm-done-btn--has-items {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .lm-modal { max-width: 100%; border-radius: 16px; }
+  .lm-presets { grid-template-columns: repeat(3, 1fr); }
+}

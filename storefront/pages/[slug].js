@@ -19,7 +19,7 @@ export default function CmsPage({ store, storeSlug, page }) {
       <>
         <Header />
         <main className="sf-container">
-          <div className="sf-empty" style={{ paddingTop: 60 }}>
+          <div className="sf-empty cms-empty">
             <div className="sf-empty-icon">📄</div>
             <h2>Page Not Found</h2>
           </div>

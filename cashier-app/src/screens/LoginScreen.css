@@ -1,0 +1,147 @@
+/* LoginScreen.css — prefix: ls- */
+
+.ls-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.ls-app-id {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ls-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-panel);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border-light);
+  padding: 2.5rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.ls-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+/* Network error */
+.ls-net-error {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ls-net-error-text {
+  font-size: 0.78rem;
+  color: var(--amber);
+  line-height: 1.5;
+}
+
+.ls-net-error-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+}
+
+/* Form fields */
+.ls-field {
+  margin-bottom: 1rem;
+}
+
+.ls-field--pw {
+  margin-bottom: 1.5rem;
+}
+
+.ls-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ls-pw-wrap {
+  position: relative;
+}
+
+.ls-pw-toggle {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 4px;
+  cursor: pointer;
+}
+
+/* Auth error */
+.ls-auth-error {
+  margin-bottom: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Submit button */
+.ls-submit {
+  width: 100%;
+  padding: 1rem;
+  background: var(--green);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ls-submit:disabled {
+  opacity: 0.7;
+}
+
+.ls-hint {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .ls-card {
+    padding: 1.5rem;
+  }
+
+  .ls-app-id {
+    display: none;
+  }
+}

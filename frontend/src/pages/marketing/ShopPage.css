@@ -1,0 +1,284 @@
+/* ── Shop Page ── prefix: msp- ── */
+
+.msp-page {
+  min-height: 100vh;
+  background: #0f1117;
+  color: #e5e7eb;
+  font-family: system-ui, sans-serif;
+}
+
+/* Header */
+.msp-header {
+  border-bottom: 1px solid #1f2937;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.msp-heading {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.msp-subheading {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.msp-cart-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1d4ed8;
+  color: #fff;
+  padding: 0.5rem 1.1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.msp-cart-btn:hover {
+  background: #1e40af;
+}
+
+.msp-cart-badge {
+  background: #ef4444;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Content */
+.msp-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Category filter */
+.msp-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.msp-filter-btn {
+  padding: 0.4rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  transition: background 0.15s;
+}
+
+.msp-filter-btn--active {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.msp-filter-btn--inactive {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+.msp-filter-btn--inactive:hover {
+  background: #374151;
+}
+
+/* Loading / empty */
+.msp-status {
+  text-align: center;
+  padding: 4rem;
+  color: #9ca3af;
+}
+
+/* Product grid */
+.msp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Product card */
+.msp-card {
+  background: #1a1d27;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.msp-card:hover {
+  border-color: #374151;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.msp-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.msp-card-image {
+  height: 180px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.msp-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msp-card-image-placeholder {
+  font-size: 3rem;
+}
+
+.msp-card-body {
+  padding: 1rem;
+}
+
+.msp-card-category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.msp-card-name {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.msp-card-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.msp-card-footer {
+  padding: 0 1rem 1rem;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.msp-card-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.msp-add-btn {
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+
+.msp-add-btn--active {
+  background: #1d4ed8;
+  cursor: pointer;
+}
+
+.msp-add-btn--active:hover {
+  background: #1e40af;
+}
+
+.msp-add-btn--oos {
+  background: #374151;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .msp-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .msp-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .msp-cart-btn {
+    align-self: flex-end;
+  }
+
+  .msp-content {
+    padding: 1.5rem;
+  }
+
+  .msp-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .msp-card-image {
+    height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .msp-header {
+    padding: 0.75rem;
+  }
+
+  .msp-heading {
+    font-size: 1.2rem;
+  }
+
+  .msp-content {
+    padding: 1rem;
+  }
+
+  .msp-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .msp-card-image {
+    height: 200px;
+  }
+
+  .msp-filters {
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .msp-filter-btn {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.75rem;
+  }
+}

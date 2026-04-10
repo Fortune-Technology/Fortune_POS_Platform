@@ -5,6 +5,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { SearchX } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
@@ -104,10 +105,10 @@ export default function ProductsPage({ store, products, departments, total, page
           </>
         ) : (
           <div className="sf-empty">
-            <div className="sf-empty-icon">🔍</div>
+            <div className="sf-empty-icon"><SearchX size={48} strokeWidth={1.5} /></div>
             <p>No products found</p>
             {(filters.search || filters.department) && (
-              <Link href={`/products?${sq}`} className="sc-continue-btn" style={{ marginTop: 12 }}>
+              <Link href={`/products?${sq}`} className="sc-continue-btn sc-continue-btn--mt12">
                 Clear Filters
               </Link>
             )}

@@ -1,0 +1,173 @@
+/* NumpadModal.css — prefix: npm- */
+
+.npm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.npm-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title */
+.npm-title {
+  padding: 0.875rem 1.25rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Display */
+.npm-display {
+  padding: 0.75rem 1.25rem;
+  text-align: right;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.npm-display-prefix {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+/* Key grid */
+.npm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px 12px 8px;
+}
+
+/* Single key */
+.npm-key {
+  min-height: 72px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.08s, border-color 0.08s, transform 0.08s;
+}
+
+.npm-key:active {
+  background: rgba(122, 193, 67, 0.15);
+  border-color: rgba(122, 193, 67, 0.4);
+  transform: scale(0.94);
+}
+
+.npm-key--back {
+  color: var(--red);
+}
+
+.npm-key--back:hover {
+  background: rgba(224, 63, 63, 0.08);
+  border-color: rgba(224, 63, 63, 0.25);
+}
+
+.npm-key--back:active {
+  background: rgba(224, 63, 63, 0.18);
+}
+
+.npm-key:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.npm-key:disabled:active {
+  transform: none;
+}
+
+/* Action buttons */
+.npm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px 12px 14px;
+}
+
+.npm-cancel-btn {
+  height: 52px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.npm-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.npm-confirm-btn {
+  height: 52px;
+  border-radius: 10px;
+  background: var(--green);
+  border: 1px solid var(--green);
+  color: #0f1117;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.1s;
+}
+
+.npm-confirm-btn:hover {
+  opacity: 0.88;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .npm-card {
+    max-width: 300px;
+  }
+
+  .npm-key {
+    min-height: 60px;
+    font-size: 1.3rem;
+  }
+
+  .npm-cancel-btn,
+  .npm-confirm-btn {
+    height: 46px;
+  }
+}

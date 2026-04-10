@@ -208,7 +208,7 @@ export default function LotteryShiftModal({
                     </div>
                     <div className="lsm-variance-right">
                       <div className="lsm-variance-num-label">Variance</div>
-                      <div className="lsm-variance-num" style={{ color: varColor }}>
+                      <div className={`lsm-variance-num ${varOk ? 'lsm-variance-num--green' : Math.abs(variance) < 5 ? 'lsm-variance-num--amber' : 'lsm-variance-num--red'}`}>
                         {variance >= 0 ? '+' : ''}{fmt(variance)}
                       </div>
                     </div>

@@ -340,9 +340,9 @@
 
 .coming-soon-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -420,5 +420,9 @@
   .features-bottom-cta .cta-card { padding: 3rem 1.5rem; border-radius: var(--radius-lg); }
   .quick-features-grid { grid-template-columns: 1fr; }
   .integrations-logos  { gap: 2rem; }
+  .coming-soon-grid    { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
   .coming-soon-grid    { grid-template-columns: 1fr; }
 }

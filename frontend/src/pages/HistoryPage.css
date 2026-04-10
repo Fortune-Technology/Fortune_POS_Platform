@@ -1,0 +1,31 @@
+/* HistoryPage.css — prefix: hp- */
+
+.hp-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.hp-empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+.hp-transform-id {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-family: monospace;
+}
+.hp-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .hp-actions {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .hp-title {
+    font-size: 1.5rem;
+  }
+}

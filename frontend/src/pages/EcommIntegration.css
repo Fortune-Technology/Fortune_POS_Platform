@@ -1,0 +1,248 @@
+/* EcommIntegration.css — prefix: ei- */
+
+.ei-main {
+}
+.ei-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.ei-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.ei-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--brand-10);
+  border: 1px solid var(--brand-30);
+  border-radius: 99px;
+  padding: 5px 14px;
+  margin-bottom: 20px;
+}
+.ei-badge-text {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  letter-spacing: 0.06em;
+}
+.ei-title {
+  margin: 0 0 12px;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 900;
+  color: var(--text-primary, #f1f5f9);
+  line-height: 1.15;
+}
+.ei-title-accent {
+  color: var(--accent-primary);
+}
+.ei-desc {
+  margin: 0 auto;
+  max-width: 540px;
+  font-size: 1rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.6;
+}
+
+/* ── Platform Cards Grid ── */
+.ei-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 16px;
+  margin-bottom: 3rem;
+}
+.ei-platform-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.4rem 1.25rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-width: 1.5px;
+  border-style: solid;
+}
+.ei-platform-card:hover {
+  transform: translateY(-3px);
+}
+.ei-glow {
+  position: absolute;
+  top: -24px;
+  right: -24px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  opacity: 0.10;
+  filter: blur(22px);
+  pointer-events: none;
+}
+.ei-logo-wrap {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  padding: 0 12px;
+}
+.ei-platform-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.ei-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  border-radius: 6px;
+  padding: 3px 10px;
+  border-width: 1px;
+  border-style: solid;
+}
+.ei-soon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ei-soon-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ei-svg-logo {
+  width: 110px;
+  height: 36px;
+}
+.ei-svg-logo--wide {
+  width: 120px;
+}
+.ei-svg-logo--xwide {
+  width: 135px;
+}
+.ei-svg-logo--narrow {
+  width: 100px;
+}
+
+/* ── What's included ── */
+.ei-features-card {
+  background: #ffffff;
+  border: 1.5px solid var(--brand-30);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.ei-features-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ei-features-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  letter-spacing: 0.06em;
+}
+.ei-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem 2rem;
+}
+.ei-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ei-feature-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.ei-feature-text {
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* ── Notify CTA ── */
+.ei-notify {
+  background: linear-gradient(135deg, var(--brand-08) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid var(--brand-20);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.ei-notify-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ei-notify-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ei-notify-title {
+  font-weight: 800;
+  color: var(--text-primary, #f1f5f9);
+  font-size: 0.95rem;
+  margin-bottom: 3px;
+}
+.ei-notify-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted, #94a3b8);
+}
+.ei-notify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 10px;
+  cursor: default;
+  background: var(--brand-15);
+  border: 1px solid var(--brand-30);
+  color: var(--accent-primary);
+  font-weight: 700;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+}
+@media (max-width: 768px) {
+  .ei-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ei-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .ei-notify {
+    flex-direction: column;
+    text-align: center;
+  }
+  .ei-notify-left {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .ei-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

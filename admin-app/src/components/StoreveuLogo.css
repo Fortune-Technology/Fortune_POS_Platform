@@ -1,0 +1,6 @@
+/* StoreveuLogo.css — prefix: svl- */
+
+.svl-svg {
+  display: block;
+  flex-shrink: 0;
+}

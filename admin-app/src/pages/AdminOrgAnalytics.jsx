@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, ArrowUpDown, Loader } from 'lucide-react';
-import AdminSidebar from '../components/AdminSidebar';
+import { Search, ArrowUpDown, Loader, PieChart as PieIcon } from 'lucide-react';
+
 import { getAdminOrgAnalytics } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminOrgAnalytics.css';
 
 const PLAN_COLORS = {
   free: '#6b7280', starter: '#3b82f6', pro: '#8b5cf6', enterprise: '#f59e0b',
@@ -57,19 +58,20 @@ const AdminOrgAnalytics = () => {
     <th className="sortable" onClick={() => handleSort(field)}>
       <span className="admin-header-icon">
         {children}
-        <ArrowUpDown size={12} style={{ opacity: sortField === field ? 1 : 0.3 }} />
+        <ArrowUpDown size={12} className={sortField === field ? 'aoa-sort-icon-active' : 'aoa-sort-icon-dim'} />
       </span>
     </th>
   );
 
   return (
-    <div className="layout-container">
-      <AdminSidebar />
-      <main className="main-content admin-page">
+    <>
         <div className="admin-header">
           <div className="admin-header-left">
-            <h1>Organization Analytics</h1>
-            <p>Performance metrics by organization</p>
+            <div className="admin-header-icon"><PieIcon size={22} /></div>
+            <div>
+              <h1>Organization Analytics</h1>
+              <p>Performance metrics by organization</p>
+            </div>
           </div>
         </div>
 
@@ -134,8 +136,7 @@ const AdminOrgAnalytics = () => {
             </div>
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 };
 

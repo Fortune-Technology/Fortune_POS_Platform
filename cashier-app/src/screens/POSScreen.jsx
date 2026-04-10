@@ -66,6 +66,7 @@ import { db, searchProducts, getActivePromotions, getHeldTransactions } from '..
 import { evaluatePromotions }  from '../utils/promoEngine.js';
 import { fmt$ }              from '../utils/formatters.js';
 import { getSmartCashPresets } from '../utils/cashPresets.js';
+import './POSScreen.css';
 
 export default function POSScreen() {
   const {
@@ -602,58 +603,30 @@ export default function POSScreen() {
   }, [posConfig.layout, posConfig.showDepartments, posConfig.showQuickAdd]);
 
   return (
-    <div style={{
-      height: '100vh', display: 'flex', flexDirection: 'column',
-      background: 'var(--bg-base)', overflow: 'hidden',
-    }}>
+    <div className="pos-shell">
       <StatusBar onRefresh={manualSync} />
 
       {/* ── Midnight shift warning ───────────────────────────────────────── */}
       {shift?._crossedMidnight && (
-        <div style={{
-          background: 'rgba(245,158,11,.12)',
-          borderBottom: '1px solid rgba(245,158,11,.3)',
-          color: '#fbbf24',
-          padding: '0.45rem 1rem',
-          fontSize: '0.78rem', fontWeight: 700,
-          display: 'flex', alignItems: 'center', gap: 8,
-          flexShrink: 0,
-        }}>
-          ⚠ This shift was opened before midnight — please close it and open a new shift for today.
+        <div className="pos-midnight-warn">
+          \u26A0 This shift was opened before midnight — please close it and open a new shift for today.
         </div>
       )}
 
       {/* ── Scan-error toast ─────────────────────────────────────────────── */}
       {scanError && (
-        <div style={{
-          position: 'fixed', top: '60px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9999,
-          background: '#7f1d1d', color: '#fff',
-          padding: '0.55rem 1rem 0.55rem 1.25rem',
-          borderRadius: '10px',
-          fontSize: '0.9rem', fontWeight: 600,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
-          display: 'flex', alignItems: 'center', gap: '0.75rem',
-          animation: 'slideDown 0.2s ease',
-          border: '1px solid rgba(255,255,255,.1)',
-        }}>
-          <span style={{ fontSize: '1rem' }}>⚠</span>
+        <div className="pos-scan-error">
+          <span style={{ fontSize: '1rem' }}>\u26A0</span>
           <span>
-            Not found: <span style={{ fontFamily: 'monospace' }}>{scanError.upc}</span>
+            Not found: <span className="pos-scan-error-upc">{scanError.upc}</span>
           </span>
-          {/* Manager (or active manager session) can create product inline */}
           <button
             onClick={() => {
               const upc = scanError.upc;
               setScanError(null);
               requireManager('Add New Product', () => setAddProductUpc(upc));
             }}
-            style={{
-              background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)',
-              borderRadius: 6, color: '#fff', fontSize: '0.78rem', fontWeight: 700,
-              padding: '0.3rem 0.7rem', cursor: 'pointer', whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
+            className="pos-scan-error-add"
           >
             + Add Product
           </button>
@@ -661,18 +634,20 @@ export default function POSScreen() {
       )}
 
       {/* ── Content row ── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="pos-content">
 
         {/* ══════════════════════════════════════════
             LEFT PANE — Search + Category / Quick-Add
         ══════════════════════════════════════════ */}
-        <div style={{
-          width: layoutCfg.searchWidth, display: 'flex', flexDirection: 'column',
-          order: layoutCfg.searchOrder,
-          borderRight: layoutCfg.searchOrder === 1 ? '1px solid var(--border)' : 'none',
-          borderLeft: layoutCfg.searchOrder === 2 ? '1px solid var(--border)' : 'none',
-          ...flashBg,
-        }}>
+        <div
+          className={`pos-left-pane ${flashState === 'hit' ? 'pos-left-pane--flash-hit' : flashState === 'miss' ? 'pos-left-pane--flash-miss' : ''}`}
+          style={{
+            width: layoutCfg.searchWidth,
+            order: layoutCfg.searchOrder,
+            borderRight: layoutCfg.searchOrder === 1 ? '1px solid var(--border)' : 'none',
+            borderLeft: layoutCfg.searchOrder === 2 ? '1px solid var(--border)' : 'none',
+          }}
+        >
 
           {/* Search bar */}
           <div style={{

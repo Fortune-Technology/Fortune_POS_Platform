@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Monitor, Save, Check, Palette, Sun, Moon, ShoppingBag } from 'lucide-react';
+import { Monitor, Save, Check, Palette, Sun, Moon, ShoppingBag, Settings } from 'lucide-react';
 import { getStores } from '../services/api.js';
 import api from '../services/api.js';
-import Sidebar from '../components/Sidebar.jsx';
+
+import './POSSettings.css';
 
 // ── Branding constants ─────────────────────────────────────────────────────
 
@@ -163,25 +164,14 @@ const LAYOUT_PRESETS = [
 
 function Toggle({ checked, onChange, label }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+    <label className="pss-toggle-label">
       <div
         onClick={() => onChange(!checked)}
-        style={{
-          width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-          background: checked ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-          position: 'relative', transition: 'background .2s', cursor: 'pointer',
-          border: `1px solid ${checked ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-        }}
+        className={`pss-toggle-track ${checked ? 'pss-toggle-track--on' : 'pss-toggle-track--off'}`}
       >
-        <div style={{
-          position: 'absolute', top: 1,
-          left: checked ? 17 : 1,
-          width: 16, height: 16, borderRadius: '50%',
-          background: '#fff', transition: 'left .15s',
-          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-        }} />
+        <div className={`pss-toggle-thumb ${checked ? 'pss-toggle-thumb--on' : 'pss-toggle-thumb--off'}`} />
       </div>
-      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+      <span className="pss-toggle-text">{label}</span>
     </label>
   );
 }
@@ -192,16 +182,7 @@ function ChipToggle({ checked, onChange, label }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      style={{
-        padding: '0.4rem 0.85rem',
-        borderRadius: 20,
-        border: checked ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-        background: checked ? 'var(--brand-12)' : 'var(--bg-tertiary)',
-        color: checked ? 'var(--accent-primary)' : 'var(--text-muted)',
-        fontSize: '0.78rem', fontWeight: 600,
-        cursor: 'pointer', transition: 'all .15s',
-        display: 'flex', alignItems: 'center', gap: 5,
-      }}
+      className={`pss-chip ${checked ? 'pss-chip--on' : 'pss-chip--off'}`}
     >
       {checked && <Check size={10} />}
       {label}
@@ -562,41 +543,33 @@ export default function POSSettings({ embedded }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', minWidth: 0 }}>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: 'var(--brand-12)', border: '1px solid var(--brand-20)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Monitor size={18} color="var(--accent-primary)" />
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <Settings size={22} />
             </div>
             <div>
-              <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                POS Settings
-              </h1>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                Configure your Point of Sale terminal layout and features
-              </p>
+              <h1 className="p-title">POS Settings</h1>
+              <p className="p-subtitle">Configure your Point of Sale terminal layout and features</p>
             </div>
           </div>
-
-          {/* Store selector */}
-          {stores.length > 1 && (
-            <select
-              value={storeId}
-              onChange={e => setStoreId(e.target.value)}
-              style={{
-                background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)', borderRadius: 8,
-                padding: '0.55rem 0.875rem', fontSize: '0.85rem', cursor: 'pointer',
-              }}
-            >
-              {stores.map(s => (
-                <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
-              ))}
-            </select>
-          )}
+          <div className="p-header-actions">
+            {stores.length > 1 && (
+              <select
+                value={storeId}
+                onChange={e => setStoreId(e.target.value)}
+                style={{
+                  background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)', borderRadius: 8,
+                  padding: '0.55rem 0.875rem', fontSize: '0.85rem', cursor: 'pointer',
+                }}
+              >
+                {stores.map(s => (
+                  <option key={s.id || s.id} value={s.id || s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -1265,11 +1238,8 @@ export default function POSSettings({ embedded }) {
   if (embedded) return <div className="p-tab-content">{content}</div>;
 
   return (
-    <div className="layout-container">
-      <Sidebar />
-      <div className="main-content" style={{ display: 'flex', gap: 0, flex: 1, overflow: 'hidden' }}>
+      <div className="p-page" style={{ display: 'flex', gap: 0, flex: 1, overflow: 'hidden' }}>
         {content}
       </div>
-    </div>
   );
 }

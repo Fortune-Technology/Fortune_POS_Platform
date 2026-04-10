@@ -1,0 +1,415 @@
+/* PinLoginScreen.css — prefix: pls- */
+
+.pls-page {
+  min-height: 100vh;
+  background: var(--bg-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  user-select: none;
+  overflow-y: auto;
+}
+
+/* Store + station identity */
+.pls-identity {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.pls-store-name {
+  color: var(--text-primary);
+  font-weight: 900;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+}
+
+.pls-station-name {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+/* Mode tabs */
+.pls-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 4px;
+  width: 260px;
+}
+
+.pls-mode-tab {
+  flex: 1;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.pls-mode-tab--active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.pls-mode-tab--inactive {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* Clock done */
+.pls-clock-done {
+  text-align: center;
+  padding: 2rem 1rem;
+  width: 260px;
+}
+
+.pls-clock-done-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.pls-clock-done-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.pls-clock-done-title--in { color: var(--green); }
+.pls-clock-done-title--out { color: var(--text-primary); }
+
+.pls-clock-done-name {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.pls-done-btn {
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Clock warn */
+.pls-clock-warn {
+  text-align: center;
+  padding: 2rem 1rem;
+  width: 280px;
+}
+
+.pls-warn-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.pls-warn-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.pls-warn-title--amber { color: var(--amber, #f59e0b); }
+.pls-warn-title--red { color: var(--red, #ef4444); }
+
+.pls-warn-name {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.pls-warn-duration {
+  margin-top: 10px;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pls-warn-hint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+.pls-warn-switch-btn {
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Clock hint */
+.pls-clock-hint {
+  width: 260px;
+  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Clock type toggle */
+.pls-clock-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+  width: 260px;
+}
+
+.pls-clock-toggle-btn {
+  flex: 1;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pls-clock-toggle-btn--in-active {
+  background: rgba(122, 193, 67, 0.15);
+  border: 1.5px solid rgba(122, 193, 67, 0.5);
+  color: var(--green);
+}
+
+.pls-clock-toggle-btn--in-inactive {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+
+.pls-clock-toggle-btn--out-active {
+  background: rgba(224, 63, 63, 0.12);
+  border: 1.5px solid rgba(224, 63, 63, 0.4);
+  color: var(--red);
+}
+
+.pls-clock-toggle-btn--out-inactive {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* PIN dots */
+.pls-pin-dots {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 2rem;
+}
+
+.pls-pin-dots--shake {
+  animation: shake 0.5s ease;
+}
+
+.pls-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.pls-dot--filled {
+  background: var(--green);
+  border: 2px solid var(--green);
+}
+
+.pls-dot--empty {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Error */
+.pls-error {
+  color: var(--red);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  min-height: 20px;
+}
+
+.pls-error-spacer {
+  margin-bottom: 1rem;
+  min-height: 20px;
+}
+
+/* Numpad */
+.pls-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pls-numpad-key {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, transform 0.08s;
+}
+
+.pls-numpad-key:active {
+  transform: scale(0.93);
+}
+
+.pls-numpad-key--digit {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 1.5rem;
+}
+
+.pls-numpad-key--del {
+  background: rgba(224, 63, 63, 0.12);
+  border: 1px solid rgba(224, 63, 63, 0.2);
+  color: var(--red);
+  font-size: 1rem;
+}
+
+.pls-numpad-key--empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.pls-numpad-key:disabled {
+  opacity: 0.5;
+}
+
+/* Submit buttons */
+.pls-submit {
+  margin-top: 20px;
+  width: 260px;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 1rem;
+  transition: background 0.15s;
+}
+
+.pls-submit--ready {
+  background: var(--green);
+  color: #0f1117;
+  cursor: pointer;
+}
+
+.pls-submit--clock-in {
+  background: var(--green);
+  color: #0f1117;
+  cursor: pointer;
+}
+
+.pls-submit--clock-out {
+  background: var(--red);
+  color: #fff;
+  cursor: pointer;
+}
+
+.pls-submit--disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Reset station */
+.pls-reset-section {
+  margin-top: 3rem;
+}
+
+.pls-reset-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.6;
+}
+
+.pls-reset-confirm {
+  text-align: center;
+}
+
+.pls-reset-warning {
+  color: var(--red);
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+
+.pls-reset-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pls-reset-yes {
+  padding: 0.5rem 1.25rem;
+  background: rgba(224, 63, 63, 0.15);
+  border: 1px solid rgba(224, 63, 63, 0.3);
+  border-radius: 8px;
+  color: var(--red);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.pls-reset-cancel {
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pls-numpad-key {
+    width: 68px;
+    height: 68px;
+    border-radius: 14px;
+  }
+
+  .pls-numpad-key--digit {
+    font-size: 1.3rem;
+  }
+
+  .pls-submit {
+    width: 220px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pls-numpad-key {
+    width: 60px;
+    height: 60px;
+  }
+
+  .pls-store-name {
+    font-size: 1.3rem;
+  }
+}

@@ -1,0 +1,67 @@
+/* UploadPage.css — prefix: up- */
+
+.up-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.up-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+  color: var(--text-primary);
+}
+.up-subtitle {
+  color: var(--text-secondary);
+}
+.up-vendor-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+.up-vendor-info {
+  padding: 1rem;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+}
+.up-vendor-info p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+.up-spinner-center {
+  margin: 20px auto;
+}
+.up-step-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+.up-step-desc {
+  font-size: 0.9rem;
+}
+.up-rules-list {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding-left: 1.2rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .up-header {
+    flex-direction: column;
+  }
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .up-title {
+    font-size: 1.5rem;
+  }
+}

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Save, RefreshCw, AlertCircle, CheckCircle, Package, ArrowUpRight } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
+import { Search, Save, RefreshCw, AlertCircle, CheckCircle, Package, ArrowUpRight, DollarSign } from 'lucide-react';
 import { getProducts, bulkUpdatePrices } from '../services/api';
 import { toast } from 'react-toastify';
+import './PriceUpdate.css';
 
 const PriceUpdate = () => {
   const [products, setProducts] = useState([]);
-  const [updates, setUpdates] = useState({}); // { id: newPrice }
+  const [updates, setUpdates] = useState({});
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -31,18 +31,15 @@ const PriceUpdate = () => {
     if (Object.keys(updates).length === 0) return;
     setSyncing(true);
     const updateArray = Object.keys(updates).map(id => ({ id: id, price: updates[id] }));
-    
+
     try {
       const { data } = await bulkUpdatePrices(updateArray);
-      
       const failed = data.results.filter(r => r.status === 'error' || r.status === 'failed');
-      
       if (failed.length === 0) {
         toast.success(`Successfully updated and synced ${updateArray.length} products`);
       } else {
         toast.warning(`Updates saved, but ${failed.length} products failed to sync with POS`);
       }
-      
       setUpdates({});
       fetchProducts();
     } catch (error) {
@@ -53,31 +50,35 @@ const PriceUpdate = () => {
   };
 
   return (
-    <div className="layout-container">
-      <Sidebar />
-      <main className="main-content animate-fade-in">
-        <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Price Update Module</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Bulk update prices and sync with MarktPOS API.</p>
+      <div className="p-page animate-fade-in">
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <DollarSign size={22} />
+            </div>
+            <div>
+              <h1 className="p-title">Price Update Module</h1>
+              <p className="p-subtitle">Bulk update prices and sync with MarktPOS API.</p>
+            </div>
           </div>
-          <button 
-            onClick={handleBulkUpdate} 
-            className="btn btn-primary" 
-            disabled={syncing || Object.keys(updates).length === 0}
-            style={{ padding: '0.875rem 2rem' }}
-          >
-            {syncing ? <RefreshCw className="animate-spin" /> : <>Save & Sync to POS <Save size={18} style={{ marginLeft: '0.5rem' }} /></>}
-          </button>
-        </header>
+          <div className="p-header-actions">
+            <button
+              onClick={handleBulkUpdate}
+              className="btn btn-primary pu-sync-btn"
+              disabled={syncing || Object.keys(updates).length === 0}
+            >
+              {syncing ? <RefreshCw className="animate-spin" /> : <>Save & Sync to POS <Save size={18} className="pu-save-icon" /></>}
+            </button>
+          </div>
+        </div>
 
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', background: 'var(--bg-tertiary)', padding: '0.75rem 1rem', borderRadius: '12px' }}>
+        <div className="glass-card pu-card">
+          <div className="pu-search-bar">
             <Search size={20} color="var(--text-muted)" />
-            <input 
-              type="text" 
-              placeholder="Search products by SKU or name..." 
-              style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }}
+            <input
+              type="text"
+              placeholder="Search products by SKU or name..."
+              className="pu-search-input"
             />
           </div>
 
@@ -89,7 +90,7 @@ const PriceUpdate = () => {
                   <th>SKU</th>
                   <th>Category</th>
                   <th>Current Price</th>
-                  <th style={{ width: '200px' }}>New Price</th>
+                  <th className="pu-th-price">New Price</th>
                   <th>Sync Status</th>
                 </tr>
               </thead>
@@ -97,24 +98,23 @@ const PriceUpdate = () => {
                 {products.map((product) => (
                   <tr key={product.id}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                      <div className="pu-product-cell">
+                        <div className="pu-product-icon">
                             <Package size={20} />
                         </div>
-                        <span style={{ fontWeight: 500 }}>{product.name}</span>
+                        <span className="pu-product-name">{product.name}</span>
                       </div>
                     </td>
-                    <td><code style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{product.sku}</code></td>
-                    <td><span style={{ color: 'var(--text-secondary)' }}>{product.category || 'Uncategorized'}</span></td>
-                    <td style={{ fontWeight: 600 }}>${product.price.toFixed(2)}</td>
+                    <td><code className="pu-sku-code">{product.sku}</code></td>
+                    <td><span className="pu-category">{product.category || 'Uncategorized'}</span></td>
+                    <td className="pu-current-price">${product.price.toFixed(2)}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>$</span>
-                        <input 
-                          type="number" 
+                      <div className="pu-price-input-row">
+                        <span className="pu-dollar-sign">$</span>
+                        <input
+                          type="number"
                           step="0.01"
-                          className="form-input" 
-                          style={{ padding: '0.4rem 0.6rem', background: updates[product.id] ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-tertiary)' }}
+                          className={`form-input pu-price-input ${updates[product.id] ? 'pu-price-input--active' : 'pu-price-input--default'}`}
                           placeholder={product.price}
                           value={updates[product.id] || ''}
                           onChange={(e) => handlePriceChange(product.id, e.target.value)}
@@ -123,15 +123,15 @@ const PriceUpdate = () => {
                     </td>
                     <td>
                         {product.posSyncStatus === 'synced' ? (
-                            <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '13px' }}>
+                            <span className="pu-sync-status pu-sync-status--synced">
                                 <CheckCircle size={14} /> Synced
                             </span>
                         ) : product.posSyncStatus === 'error' ? (
-                            <span style={{ color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '13px' }}>
+                            <span className="pu-sync-status pu-sync-status--error">
                                 <AlertCircle size={14} /> Error
                             </span>
                         ) : (
-                            <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '13px' }}>
+                            <span className="pu-sync-status pu-sync-status--pending">
                                 <RefreshCw size={14} /> Pending
                             </span>
                         )}
@@ -140,7 +140,7 @@ const PriceUpdate = () => {
                 ))}
                 {products.length === 0 && (
                     <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                        <td colSpan="6" className="pu-empty">
                             No products found in the database.
                         </td>
                     </tr>
@@ -149,8 +149,7 @@ const PriceUpdate = () => {
             </table>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
   );
 };
 

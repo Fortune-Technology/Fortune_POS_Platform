@@ -1,0 +1,39 @@
+/* AdminDashboard.css — prefix: adsh- */
+
+.adsh-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.adsh-ticket-row {
+  cursor: pointer;
+}
+.adsh-tooltip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e293b;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .admin-dash-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-dash-grid-half {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

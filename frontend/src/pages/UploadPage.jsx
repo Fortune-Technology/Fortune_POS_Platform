@@ -6,7 +6,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
+import { FileSpreadsheet } from 'lucide-react';
 import { uploadFile, getVendors } from '../services/api';
+import './UploadPage.css';
 
 const UploadPage = () => {
     const navigate = useNavigate();
@@ -16,7 +18,6 @@ const UploadPage = () => {
     const [selectedVendor, setSelectedVendor] = useState('');
     const [loadingVendors, setLoadingVendors] = useState(true);
 
-    // Load available vendors on mount
     useEffect(() => {
         const loadVendors = async () => {
             try {
@@ -29,20 +30,16 @@ const UploadPage = () => {
                 setLoadingVendors(false);
             }
         };
-
         loadVendors();
     }, []);
 
     const onDrop = useCallback(async (acceptedFiles) => {
         if (acceptedFiles.length === 0) return;
-
         const file = acceptedFiles[0];
         setUploading(true);
         setError(null);
-
         try {
             const response = await uploadFile(file, selectedVendor);
-            // Navigate to preview page with uploadId
             navigate(`/preview/${response.uploadId}`);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to upload file');
@@ -62,17 +59,19 @@ const UploadPage = () => {
         disabled: uploading,
     });
 
-    // Get current vendor config for display
     const currentVendor = vendors.find(v => v.vendorId === selectedVendor);
 
     return (
         <div className="container section">
-        <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>CSV/Excel Transformer</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Upload your CSV or Excel file to transform it according to vendor-specific business rules</p>
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon"><FileSpreadsheet size={22} /></div>
+            <div>
+              <h1 className="p-title">CSV/Excel Transformer</h1>
+              <p className="p-subtitle">Upload your CSV or Excel file to transform it according to vendor-specific business rules</p>
+            </div>
           </div>
-        </header>
+        </div>
 
             {/* Vendor Selection */}
             <div className="card">
@@ -82,13 +81,13 @@ const UploadPage = () => {
                 <div className="card-body">
                     {loadingVendors ? (
                         <div className="text-center">
-                            <div className="spinner" style={{ margin: '20px auto' }}></div>
+                            <div className="spinner up-spinner-center"></div>
                             <p className="text-secondary">Loading vendors...</p>
                         </div>
                     ) : (
                         <>
                             <div className="form-group">
-                                <label htmlFor="vendor-select" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                <label htmlFor="vendor-select" className="up-vendor-label">
                                     Choose transformation vendor:
                                 </label>
                                 <select
@@ -107,13 +106,8 @@ const UploadPage = () => {
                             </div>
 
                             {currentVendor && (
-                                <div className="mt-md" style={{
-                                    padding: '1rem',
-                                    backgroundColor: 'var(--color-bg-secondary)',
-                                    borderRadius: 'var(--border-radius)',
-                                    fontSize: 'var(--font-size-sm)'
-                                }}>
-                                    <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+                                <div className="mt-md up-vendor-info">
+                                    <p>
                                         <strong>Supported formats:</strong> {currentVendor.supportedFormats.join(', ').toUpperCase()}
                                     </p>
                                 </div>
@@ -131,36 +125,25 @@ const UploadPage = () => {
                         className={`dropzone ${isDragActive ? 'dropzone-active' : ''}`}
                     >
                         <input {...getInputProps()} />
-
-                        <div className="dropzone-icon">
-                            {uploading ? '⏳' : '📁'}
-                        </div>
-
+                        <div className="dropzone-icon">{uploading ? '⏳' : '📁'}</div>
                         {uploading ? (
                             <>
                                 <div className="dropzone-text">Uploading...</div>
-                                <div className="spinner" style={{ margin: '20px auto' }}></div>
+                                <div className="spinner up-spinner-center"></div>
                             </>
                         ) : (
                             <>
                                 <div className="dropzone-text">
-                                    {isDragActive
-                                        ? 'Drop the file here'
-                                        : 'Drag & drop a file here, or click to select'}
+                                    {isDragActive ? 'Drop the file here' : 'Drag & drop a file here, or click to select'}
                                 </div>
-                                <div className="dropzone-hint">
-                                    Supports CSV, XLS, and XLSX files (max 100MB)
-                                </div>
+                                <div className="dropzone-hint">Supports CSV, XLS, and XLSX files (max 100MB)</div>
                             </>
                         )}
                     </div>
                 </div>
-
                 {error && (
                     <div className="card-body pt-0">
-                        <div className="alert alert-error">
-                            <strong>Error:</strong> {error}
-                        </div>
+                        <div className="alert alert-error"><strong>Error:</strong> {error}</div>
                     </div>
                 )}
             </div>
@@ -173,25 +156,23 @@ const UploadPage = () => {
                 <div className="card-body">
                     <div className="grid grid-3">
                         <div className="text-center">
-                            <div style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>👁️</div>
+                            <div className="up-step-icon">👁️</div>
                             <h4 className="mb-md">1. Preview</h4>
-                            <p className="text-secondary" style={{ fontSize: '0.9rem' }}>
+                            <p className="text-secondary up-step-desc">
                                 Review the first 50 rows and see which columns will be transformed
                             </p>
                         </div>
-
                         <div className="text-center">
-                            <div style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>⚙️</div>
+                            <div className="up-step-icon">⚙️</div>
                             <h4 className="mb-md">2. Transform</h4>
-                            <p className="text-secondary" style={{ fontSize: '0.9rem' }}>
+                            <p className="text-secondary up-step-desc">
                                 Apply vendor-specific business rules and transformations to your data
                             </p>
                         </div>
-
                         <div className="text-center">
-                            <div style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>⬇️</div>
+                            <div className="up-step-icon">⬇️</div>
                             <h4 className="mb-md">3. Download</h4>
-                            <p className="text-secondary" style={{ fontSize: '0.9rem' }}>
+                            <p className="text-secondary up-step-desc">
                                 Download the transformed CSV file ready for import
                             </p>
                         </div>
@@ -209,16 +190,15 @@ const UploadPage = () => {
                         <div className="grid grid-2">
                             <div>
                                 <h5 className="mb-md">Columns Removed</h5>
-                                <ul style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', paddingLeft: '1.2rem' }}>
+                                <ul className="up-rules-list">
                                     {currentVendor.transformationRules.columnsRemoved?.map((col, idx) => (
                                         <li key={idx} className="mb-sm">{col}</li>
                                     ))}
                                 </ul>
                             </div>
-
                             <div>
                                 <h5 className="mb-md">Transformations Applied</h5>
-                                <ul style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', paddingLeft: '1.2rem' }}>
+                                <ul className="up-rules-list">
                                     {currentVendor.transformationRules.transformations?.map((rule, idx) => (
                                         <li key={idx} className="mb-sm">{rule}</li>
                                     ))}

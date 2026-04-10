@@ -43,9 +43,9 @@ const CareerDetail = () => {
       <MarketingNavbar />
       <div className="cd-center">
         <Briefcase size={56} color="#d1d5db" />
-        <h2 style={{ color: '#374151', marginTop: 16 }}>Job Not Found</h2>
-        <p style={{ color: '#6b7280', marginTop: 8 }}>This position may have been filled or removed.</p>
-        <Link to="/careers" className="cd-back-link" style={{ marginTop: 20 }}><ArrowLeft size={16} /> Back to All Jobs</Link>
+        <h2 className="cd-not-found-title">Job Not Found</h2>
+        <p className="cd-not-found-text">This position may have been filled or removed.</p>
+        <Link to="/careers" className="cd-back-link cd-back-link--spaced"><ArrowLeft size={16} /> Back to All Jobs</Link>
       </div>
       <MarketingFooter />
     </div>
@@ -168,7 +168,7 @@ const ApplicationModal = ({ job, onClose }) => {
             <label>Resume</label>
             <label className="cd-file-label">
               <Upload size={18} /> {resume ? resume.name : 'Choose file (.pdf, .doc, .docx)'}
-              <input type="file" accept=".pdf,.doc,.docx" onChange={e => setResume(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+              <input type="file" accept=".pdf,.doc,.docx" onChange={e => setResume(e.target.files?.[0] || null)} className="cd-file-hidden" />
             </label>
           </div>
           <button type="submit" disabled={submitting} className="cd-submit-btn">

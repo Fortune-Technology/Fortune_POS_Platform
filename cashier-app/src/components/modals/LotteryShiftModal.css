@@ -263,6 +263,10 @@
   font-weight: 800;
 }
 
+.lsm-variance-num--green { color: #16a34a; }
+.lsm-variance-num--amber { color: #d97706; }
+.lsm-variance-num--red   { color: #ef4444; }
+
 /* ── Notes input ── */
 .lsm-notes-input {
   width: 100%;

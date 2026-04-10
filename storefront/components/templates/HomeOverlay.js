@@ -13,7 +13,7 @@ export default function HomeOverlay({ content, store, products = [], departments
 
   return (
     <>
-      <section className="tpl-hero tpl-hero--overlay" style={heroImg ? { backgroundImage: `url(${heroImg})` } : {}}>
+      <section className="tpl-hero tpl-hero--overlay" style={heroImg ? { '--tpl-hero-bg': `url(${heroImg})`, backgroundImage: 'var(--tpl-hero-bg)' } : {}}>
         <div className="tpl-overlay-gradient" />
         <div className="tpl-overlay-content sf-container">
           <span className="tpl-hero-badge">{hero.badge || 'Now Online'}</span>

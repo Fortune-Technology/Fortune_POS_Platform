@@ -1,0 +1,165 @@
+/* ReprintReceiptModal.css — Receipt reprint preview */
+/* Prefix: rrm- */
+
+.rrm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.rrm-modal {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-panel);
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.rrm-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rrm-header-title { font-weight: 800; font-size: 1rem; }
+.rrm-header-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+.rrm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.rrm-body {
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Line items */
+.rrm-items {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.rrm-item { margin-bottom: 0.35rem; }
+
+.rrm-item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.rrm-item-name { color: var(--text-primary); }
+.rrm-item-total { font-weight: 600; }
+
+.rrm-item-deposit {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding-left: 12px;
+}
+
+/* Total */
+.rrm-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.rrm-total-label { color: var(--text-primary); }
+.rrm-total-value { color: var(--green); }
+
+/* Tender lines */
+.rrm-tenders {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.rrm-tender-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+
+.rrm-change-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--green);
+  margin-top: 4px;
+}
+
+/* Footer */
+.rrm-cashier-footer {
+  margin-top: 0.875rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+}
+
+.rrm-actions {
+  padding: 0 1.5rem 1.5rem;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rrm-btn-print {
+  flex: 2;
+  padding: 0.875rem;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.rrm-btn-close {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .rrm-modal { max-width: 100%; border-radius: 16px; }
+}

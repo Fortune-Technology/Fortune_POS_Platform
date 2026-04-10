@@ -14,16 +14,16 @@ export default function AboutOverlay({ content, store }) {
 
   return (
     <>
-      <section className="tpl-hero tpl-hero--centered" style={storyImg ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url(${storyImg})`, minHeight: 380 } : { minHeight: 300 }}>
+      <section className={`tpl-hero tpl-hero--centered ${storyImg ? 'tpl-hero--centered-overlay' : 'tpl-hero--centered-short'}`} style={storyImg ? { '--tpl-hero-bg': `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url(${storyImg})`, backgroundImage: 'var(--tpl-hero-bg)' } : {}}>
         <div className="tpl-hero-content">
-          <h1 className="tpl-hero-title" style={{ fontSize: 42 }}>{story.heading || 'Our Story'}</h1>
+          <h1 className="tpl-hero-title tpl-hero-title--md">{story.heading || 'Our Story'}</h1>
           <p className="tpl-hero-desc">{story.subheading || story.text?.slice(0, 120) || ''}</p>
         </div>
       </section>
 
       <div className="sf-container">
         {story.text && (
-          <section className="tpl-section" style={{ maxWidth: 700 }}>
+          <section className="tpl-section tpl-section--narrow">
             <p className="tpl-about-body">{story.text}</p>
           </section>
         )}

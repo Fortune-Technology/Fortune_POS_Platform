@@ -14,8 +14,8 @@ export default function AboutTimeline({ content, store }) {
   return (
     <div className="sf-container">
       <section className="tpl-section">
-        <h2 className="tpl-about-heading" style={{ textAlign: 'center', marginBottom: 32 }}>{about.heading || 'About Us'}</h2>
-        {about.text && <p className="tpl-about-body" style={{ textAlign: 'center', maxWidth: 650, margin: '0 auto 40px' }}>{about.text}</p>}
+        <h2 className="tpl-about-heading tpl-about-heading--centered">{about.heading || 'About Us'}</h2>
+        {about.text && <p className="tpl-about-body tpl-about-body--tl-centered">{about.text}</p>}
       </section>
 
       {/* Timeline */}
@@ -28,9 +28,9 @@ export default function AboutTimeline({ content, store }) {
 
       {/* Team */}
       {(team.heading || teamImg) && (
-        <section className="tpl-section" style={{ textAlign: 'center' }}>
+        <section className="tpl-section tpl-section--team-centered">
           <h2 className="tpl-about-heading">{team.heading || 'Our Team'}</h2>
-          {teamImg && <img src={teamImg} alt="" className="tpl-about-img" style={{ maxWidth: 600, margin: '20px auto' }} />}
+          {teamImg && <img src={teamImg} alt="" className="tpl-about-img tpl-about-img--team" />}
         </section>
       )}
     </div>

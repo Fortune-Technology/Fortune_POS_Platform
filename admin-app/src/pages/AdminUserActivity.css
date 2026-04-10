@@ -1,0 +1,25 @@
+/* AdminUserActivity.css — prefix: aua- */
+
+.aua-tooltip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #1e293b;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .admin-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .admin-table-wrap {
+    overflow-x: auto;
+  }
+}
+@media (max-width: 480px) {
+  .admin-chart-card {
+    padding: 0.75rem;
+  }
+}

@@ -9,8 +9,8 @@ export default function ContactMinimal({ content, store, storeSlug }) {
     <div className="sf-container">
       <section className="tpl-contact-minimal">
         <div className="tpl-contact-minimal-card">
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>Get in Touch</h1>
-          <p style={{ color: 'var(--sf-text-muted)', marginBottom: 24 }}>We typically respond within a few hours.</p>
+          <h1 className="tpl-cm-title">Get in Touch</h1>
+          <p className="tpl-cm-desc">We typically respond within a few hours.</p>
           <ContactForm storeSlug={storeSlug} />
           {(info.phone || info.email) && (
             <div className="tpl-contact-minimal-footer">

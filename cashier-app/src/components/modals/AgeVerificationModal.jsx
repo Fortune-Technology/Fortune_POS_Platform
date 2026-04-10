@@ -4,18 +4,18 @@ import { useBarcodeScanner } from '../../hooks/useBarcodeScanner.js';
 import { parseAAMVALicense, meetsAgeRequirement, looksLikeLicense } from '../../utils/pdf417Parser.js';
 import { useCartStore } from '../../stores/useCartStore.js';
 import { useManagerStore } from '../../stores/useManagerStore.js';
+import './AgeVerificationModal.css';
 
 export default function AgeVerificationModal() {
   const { pendingProduct, confirmAgeVerify, cancelAgeVerify } = useCartStore();
   const requireManager = useManagerStore(s => s.requireManager);
   const required = pendingProduct?.ageRequired || 21;
 
-  const [result,    setResult]    = useState(null); // 'pass' | 'fail'
+  const [result,    setResult]    = useState(null);
   const [resultMsg, setResultMsg] = useState('');
   const [manualDOB, setManualDOB] = useState('');
   const [showManual,setShowManual]= useState(false);
 
-  // Listen for 2D scanner reading a driver's license
   useBarcodeScanner((raw) => {
     if (!looksLikeLicense(raw)) return;
     try {
@@ -36,7 +36,6 @@ export default function AgeVerificationModal() {
   }, true);
 
   const checkManual = () => {
-    // Expect MM/DD/YYYY or MMDDYYYY
     const s = manualDOB.replace(/\D/g, '');
     if (s.length !== 8) { setResultMsg('Enter date as MM/DD/YYYY'); return; }
     const mm = s.slice(0, 2), dd = s.slice(2, 4), yyyy = s.slice(4, 8);
@@ -53,45 +52,30 @@ export default function AgeVerificationModal() {
     }
   };
 
-  const resultColor = result === 'pass' ? 'var(--green)' : result === 'fail' ? 'var(--red)' : 'var(--amber)';
-
   return (
     <div className="modal-backdrop">
       <div className="modal-box" style={{ maxWidth: 440 }}>
         {/* Header */}
-        <div style={{
-          padding: '1.5rem', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 12,
-            background: 'rgba(245,158,11,.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+        <div className="avm-header">
+          <div className="avm-header-icon">
             <ShieldAlert size={24} color="var(--amber)" />
           </div>
           <div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700 }}>Age Verification Required</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-              {pendingProduct?.name} · Must be {required}+
+            <div className="avm-header-title">Age Verification Required</div>
+            <div className="avm-header-sub">
+              {pendingProduct?.name} - Must be {required}+
             </div>
           </div>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '1.5rem' }}>
+        <div className="avm-body">
           {/* Scan prompt */}
           {!showManual && result !== 'pass' && (
-            <div style={{
-              textAlign: 'center', padding: '1.5rem',
-              border: '2px dashed rgba(245,158,11,.3)',
-              borderRadius: 12, marginBottom: '1rem',
-            }}>
-              <CreditCard size={40} color="var(--amber)" style={{ opacity: 0.6, marginBottom: 8 }} />
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>
-                Scan customer's ID
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <div className="avm-scan-prompt">
+              <CreditCard size={40} color="var(--amber)" className="avm-scan-icon" />
+              <div className="avm-scan-title">Scan customer's ID</div>
+              <div className="avm-scan-desc">
                 Use the 2D scanner to scan the barcode on the back of the driver's license
               </div>
             </div>
@@ -99,85 +83,52 @@ export default function AgeVerificationModal() {
 
           {/* Result banner */}
           {result && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '0.875rem 1rem',
-              borderRadius: 10, background: result === 'pass' ? 'var(--green-dim)' : 'var(--red-dim)',
-              border: `1px solid ${result === 'pass' ? 'var(--green-border)' : 'rgba(224,63,63,.35)'}`,
-              marginBottom: '1rem',
-            }}>
+            <div className={`avm-result${result === 'pass' ? ' avm-result--pass' : ' avm-result--fail'}`}>
               {result === 'pass'
                 ? <CheckCircle size={20} color="var(--green)" />
                 : <XCircle    size={20} color="var(--red)" />}
-              <span style={{ fontWeight: 700, color: resultColor }}>{resultMsg}</span>
+              <span className={`avm-result-text${result === 'pass' ? ' avm-result-text--pass' : ' avm-result-text--fail'}`}>{resultMsg}</span>
             </div>
           )}
 
           {/* Manual DOB fallback */}
           {showManual && result !== 'pass' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                <Calendar size={12} style={{ marginRight: 5 }} />
+            <div className="avm-manual">
+              <label className="avm-manual-label">
+                <Calendar size={12} />
                 Enter date of birth (MM/DD/YYYY)
               </label>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="avm-manual-row">
                 <input
+                  className="avm-manual-input"
                   value={manualDOB}
                   onChange={e => setManualDOB(e.target.value)}
                   placeholder="01/15/1990"
-                  style={{ flex: 1 }}
                   autoFocus
                 />
-                <button onClick={checkManual} style={{
-                  padding: '0 1.25rem', borderRadius: 8,
-                  background: 'var(--amber)', color: '#000',
-                  fontWeight: 700, fontSize: '0.85rem',
-                }}>
-                  Verify
-                </button>
+                <button className="avm-verify-btn" onClick={checkManual}>Verify</button>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '0 1.5rem 1.5rem',
-          display: 'flex', gap: 8, flexWrap: 'wrap',
-        }}>
+        <div className="avm-footer">
           {!showManual && result !== 'pass' && (
-            <button onClick={() => setShowManual(true)} style={{
-              flex: 1, padding: '0.75rem', borderRadius: 8,
-              background: 'var(--bg-input)', color: 'var(--text-secondary)',
-              fontWeight: 600, fontSize: '0.85rem', minWidth: 100,
-            }}>
+            <button className="avm-btn avm-btn-manual" onClick={() => setShowManual(true)}>
               Manual Entry
             </button>
           )}
           {result !== 'pass' && (
             <button
-              onClick={() => requireManager('Age Verification Override', () => {
-                confirmAgeVerify();
-              })}
-              style={{
-                flex: 1, padding: '0.75rem', borderRadius: 8,
-                background: 'rgba(245,158,11,.1)', color: 'var(--amber)',
-                fontWeight: 700, fontSize: '0.85rem',
-                border: '1px solid rgba(245,158,11,.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                minWidth: 100,
-              }}
+              className="avm-btn avm-btn-override"
+              onClick={() => requireManager('Age Verification Override', () => { confirmAgeVerify(); })}
             >
               <ShieldOff size={14} />
               Manager Override
             </button>
           )}
-          <button onClick={cancelAgeVerify} style={{
-            flex: 1, padding: '0.75rem', borderRadius: 8,
-            background: 'var(--red-dim)', color: 'var(--red)',
-            fontWeight: 700, fontSize: '0.85rem',
-            border: '1px solid rgba(224,63,63,.3)',
-            minWidth: 100,
-          }}>
+          <button className="avm-btn avm-btn-decline" onClick={cancelAgeVerify}>
             Decline Item
           </button>
         </div>

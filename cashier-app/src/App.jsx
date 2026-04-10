@@ -18,6 +18,7 @@ import StationSetupScreen  from './screens/StationSetupScreen.jsx';
 import PinLoginScreen      from './screens/PinLoginScreen.jsx';
 import POSScreen           from './screens/POSScreen.jsx';
 import CustomerDisplayScreen from './screens/CustomerDisplayScreen.jsx';
+import './App.css';
 
 export default function App() {
   // Customer display — separate window rendered via hash route
@@ -54,12 +55,8 @@ export default function App() {
 
   if (booting) {
     return (
-      <div style={{
-        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#0f1117', color: '#7ac143', fontSize: '0.85rem', fontWeight: 700,
-        letterSpacing: '0.08em',
-      }}>
-        Starting…
+      <div className="app-boot">
+        Starting\u2026
       </div>
     );
   }

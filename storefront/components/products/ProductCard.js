@@ -13,10 +13,10 @@ const DEPT_COLORS = {
   default: ['#f1f5f9', '#e2e8f0'],
 };
 
-function getPlaceholderStyle(dept) {
+function getPlaceholderVars(dept) {
   const slug = dept?.toLowerCase().replace(/[^a-z-]/g, '') || 'default';
   const [from, to] = DEPT_COLORS[slug] || DEPT_COLORS.default;
-  return { background: `linear-gradient(135deg, ${from}, ${to})` };
+  return { '--sf-ph-from': from, '--sf-ph-to': to };
 }
 
 export default function ProductCard({ product }) {
@@ -44,7 +44,7 @@ export default function ProductCard({ product }) {
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} className="sf-product-image" />
         ) : (
-          <div className="sf-product-image-placeholder" style={getPlaceholderStyle(product.departmentSlug)}>
+          <div className="sf-product-image-placeholder sf-product-image-placeholder--dept" style={getPlaceholderVars(product.departmentSlug)}>
             <span className="sf-placeholder-initial">{product.name?.charAt(0)?.toUpperCase() || '?'}</span>
           </div>
         )}

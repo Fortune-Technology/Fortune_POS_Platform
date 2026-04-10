@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { CheckCircle, Store, Truck } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
@@ -57,12 +58,12 @@ export default function OrderConfirmationPage() {
       <Head><title>Order Confirmed</title></Head>
       <Header />
 
-      <main className="sf-container" style={{ paddingTop: 40, paddingBottom: 80 }}>
+      <main className="sf-container oc-main">
         {loading ? (
           <div className="sf-loading">Loading order details...</div>
         ) : (
           <div className="oc-wrapper">
-            <div className="oc-icon">✅</div>
+            <div className="oc-icon"><CheckCircle size={48} strokeWidth={1.5} /></div>
             <h1 className="oc-title">Order Confirmed!</h1>
             <p className="oc-subtitle">Thank you for your order.</p>
 
@@ -79,7 +80,7 @@ export default function OrderConfirmationPage() {
                 {order.fulfillmentType && (
                   <div className="oc-row">
                     <span className="oc-label">Fulfillment</span>
-                    <span className="oc-value">{order.fulfillmentType === 'pickup' ? '🏪 Pickup' : '🚗 Delivery'}</span>
+                    <span className="oc-value">{order.fulfillmentType === 'pickup' ? <><Store size={14} /> Pickup</> : <><Truck size={14} /> Delivery</>}</span>
                   </div>
                 )}
                 {order.grandTotal && (
@@ -91,7 +92,7 @@ export default function OrderConfirmationPage() {
 
                 {order.lineItems && Array.isArray(order.lineItems) && (
                   <div className="oc-items">
-                    <h3 style={{ marginBottom: 8, fontSize: 15 }}>Items</h3>
+                    <h3 className="oc-items-heading">Items</h3>
                     {order.lineItems.map((item, i) => (
                       <div key={i} className="oc-item-row">
                         <span>{item.name} × {item.qty}</span>
@@ -103,7 +104,7 @@ export default function OrderConfirmationPage() {
               </div>
             )}
 
-            <Link href={`/products?store=${sq}`} className="cd-btn-checkout" style={{ marginTop: 24, display: 'inline-block', padding: '12px 32px' }}>
+            <Link href={`/products?store=${sq}`} className="cd-btn-checkout oc-continue-btn">
               Continue Shopping
             </Link>
           </div>
@@ -113,4 +114,9 @@ export default function OrderConfirmationPage() {
       <Footer />
     </>
   );
+}
+
+export async function getServerSideProps(ctx) {
+  const { withStore } = await import('../../lib/resolveStore.js');
+  return withStore(ctx);
 }

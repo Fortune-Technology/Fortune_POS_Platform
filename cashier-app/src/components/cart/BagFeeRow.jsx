@@ -6,73 +6,38 @@
 import React from 'react';
 import { ShoppingBag, Minus, Plus } from 'lucide-react';
 import { fmt$ } from '../../utils/formatters.js';
+import './BagFeeRow.css';
 
 export default function BagFeeRow({ bagCount, onIncrement, onDecrement, bagPrice, bagTotal }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.5rem 0.875rem',
-      borderTop: '1px solid var(--border)',
-    }}>
+    <div className="bfr-row">
       {/* Label */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="bfr-label">
         <ShoppingBag size={14} color="var(--text-muted)" />
-        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          Bags
-        </span>
-        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-          ({fmt$(bagPrice)} ea)
-        </span>
+        <span className="bfr-label-text">Bags</span>
+        <span className="bfr-label-price">({fmt$(bagPrice)} ea)</span>
       </div>
 
       {/* Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="bfr-controls">
         <button
           onClick={onDecrement}
           disabled={bagCount <= 0}
-          style={{
-            width: 26, height: 26, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px solid var(--border)',
-            background: bagCount <= 0 ? 'transparent' : 'var(--bg-hover)',
-            color: bagCount <= 0 ? 'var(--text-muted)' : 'var(--text-primary)',
-            cursor: bagCount <= 0 ? 'default' : 'pointer',
-            opacity: bagCount <= 0 ? 0.4 : 1,
-            transition: 'all 0.15s',
-          }}
+          className={`bfr-btn bfr-btn-dec ${bagCount > 0 ? 'bfr-btn-dec--active' : ''}`}
         >
           <Minus size={13} />
         </button>
 
-        <span style={{
-          minWidth: 24, textAlign: 'center',
-          fontSize: '0.95rem', fontWeight: 700,
-          color: bagCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
-        }}>
+        <span className={`bfr-count ${bagCount > 0 ? 'bfr-count--active' : 'bfr-count--zero'}`}>
           {bagCount}
         </span>
 
-        <button
-          onClick={onIncrement}
-          style={{
-            width: 26, height: 26, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px solid var(--accent-primary)',
-            background: 'rgba(122, 193, 67, 0.1)',
-            color: 'var(--accent-primary)',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
+        <button onClick={onIncrement} className="bfr-btn bfr-btn-inc">
           <Plus size={13} />
         </button>
 
         {/* Total */}
-        <span style={{
-          minWidth: 52, textAlign: 'right',
-          fontSize: '0.85rem', fontWeight: 700,
-          color: bagTotal > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
-        }}>
+        <span className={`bfr-total ${bagTotal > 0 ? 'bfr-total--active' : 'bfr-total--zero'}`}>
           {fmt$(bagTotal)}
         </span>
       </div>
