@@ -11,6 +11,7 @@ import PosEventLog from './PosEventLog';
 import EmployeeReports from './EmployeeReports';
 import PayoutsReport from './PayoutsReport';
 import '../styles/portal.css';
+import './POSReports.css';
 
 const TABS = [
   { key: 'transactions', label: 'Transactions',     icon: <Receipt size={14} /> },
@@ -62,10 +63,10 @@ export default function POSReports() {
 /* ── Employees Timesheet Tab (placeholder — ready for implementation) ──── */
 function EmployeesTab() {
   return (
-    <div className="p-card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-      <UserCheck size={48} color="var(--text-muted)" style={{ opacity: 0.25, marginBottom: 12 }} />
-      <h3 style={{ margin: '0 0 6px', color: 'var(--text-primary)', fontWeight: 700 }}>Employee Timesheet Management</h3>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+    <div className="p-card posr-placeholder">
+      <UserCheck size={48} color="var(--text-muted)" className="posr-placeholder-icon" />
+      <h3 className="posr-placeholder-title">Employee Timesheet Management</h3>
+      <p className="posr-placeholder-desc">
         Clock-in/out tracking, shift schedules, and timesheet approvals — coming soon.
       </p>
     </div>

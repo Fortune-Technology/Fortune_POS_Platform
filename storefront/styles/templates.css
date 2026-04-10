@@ -432,7 +432,93 @@
   font-size: 13px; color: var(--sf-text-muted);
 }
 
+/* ── Template Utility Classes ────────────────────────────────────────────── */
+
+/* HomeMinimal: browse button margin */
+.tpl-btn--mt16 { margin-top: 16px; }
+
+/* HomeMinimal: section no top padding */
+.tpl-section--no-pt { padding-top: 0; }
+
+/* HomeMinimal: centered load-more wrapper */
+.tpl-load-more-wrap { text-align: center; padding-top: 24px; }
+
+/* HomeTypography: hero actions left-aligned */
+.tpl-hero-actions--start { justify-content: flex-start; }
+
+/* HomeTypography: dept pills left-aligned */
+.tpl-dept-pills--start { justify-content: flex-start; }
+
+/* HomeSplitHero: dept icon low opacity */
+.tpl-dept-lucide--faded { opacity: 0.3; }
+
+/* AboutCards: centered text section */
+.tpl-section--centered { text-align: center; padding-top: 40px; }
+.tpl-about-heading--lg { font-size: 36px; }
+.tpl-about-body--centered { max-width: 700px; margin: 16px auto 0; }
+
+/* AboutMultiSection */
+.tpl-section--centered-heading { text-align: center; padding-bottom: 16px; }
+.tpl-about-heading--xl { font-size: 40px; }
+.tpl-about-split--reverse { flex-direction: row-reverse; }
+.tpl-about-image--narrow { flex: 0 0 300px; }
+.tpl-about-icon-block {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--sf-primary-light), var(--sf-primary));
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+}
+
+/* AboutOverlay: hero title size */
+.tpl-hero-title--md { font-size: 42px; }
+
+/* AboutOverlay: hero with overlay image (dynamic bg via CSS var) */
+.tpl-hero--centered-overlay {
+  background-image: var(--tpl-hero-bg);
+  min-height: 380px;
+}
+.tpl-hero--centered-short { min-height: 300px; }
+
+/* AboutOverlay: story body constrained */
+.tpl-section--narrow { max-width: 700px; }
+
+/* AboutTimeline: centered heading */
+.tpl-about-heading--centered { text-align: center; margin-bottom: 32px; }
+.tpl-about-body--tl-centered { text-align: center; max-width: 650px; margin: 0 auto 40px; }
+
+/* AboutTimeline: team section centered */
+.tpl-section--team-centered { text-align: center; }
+.tpl-about-img--team { max-width: 600px; margin: 20px auto; }
+
+/* ContactCards: header */
+.tpl-about-body--contact { max-width: 500px; margin: 8px auto 32px; }
+
+/* ContactCards: form wrapper */
+.tpl-contact-form-centered { max-width: 600px; margin: 0 auto; padding-bottom: 60px; }
+
+/* ContactMapForm */
+.tpl-map-icon-faded { margin-bottom: 8px; opacity: 0.5; }
+.tpl-map-label { font-weight: 600; }
+.tpl-map-sublabel { font-size: 13px; color: var(--sf-text-muted); margin-top: 4px; }
+.tpl-contact-split--tight { padding-top: 32px; }
+
+/* ContactMinimal */
+.tpl-cm-title { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+.tpl-cm-desc { color: var(--sf-text-muted); margin-bottom: 24px; }
+
+/* ContactSplit: success icon */
+.tpl-contact-success-icon { font-size: 48px; margin-bottom: 12px; color: var(--sf-primary); }
+.tpl-btn--mt16 { margin-top: 16px; }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .tpl-about-icon-block { font-size: 48px; }
+}
 
 @media (max-width: 768px) {
   .tpl-hero--centered { min-height: 360px; padding: 40px 20px; }
@@ -440,20 +526,40 @@
   .tpl-split-inner { flex-direction: column; text-align: center; }
   .tpl-split-text .tpl-hero-title { font-size: 32px; }
   .tpl-hero-actions { justify-content: center; }
+  .tpl-hero-actions--start { justify-content: center; }
   .tpl-split-image { flex: auto; max-width: 100%; }
   .tpl-trust-grid { grid-template-columns: repeat(2, 1fr); }
   .tpl-about-split { flex-direction: column; }
+  .tpl-about-split--reverse { flex-direction: column; }
   .tpl-about-image { flex: auto; }
+  .tpl-about-image--narrow { flex: auto; }
   .tpl-values-grid { grid-template-columns: 1fr; }
   .tpl-feature-grid { grid-template-columns: 1fr; }
   .tpl-contact-split { flex-direction: column; }
+  .tpl-contact-split--tight { padding-top: 24px; }
   .tpl-contact-form-wrap { min-width: auto; }
+  .tpl-contact-form-centered { padding-bottom: 40px; }
   .tpl-form-row { flex-direction: column; gap: 0; }
   .tpl-minimal-title { font-size: 32px; }
   .tpl-timeline-item,
   .tpl-timeline-item--right { padding-left: 40px; padding-right: 0; justify-content: flex-start; }
   .tpl-timeline-line { left: 12px; }
   .tpl-timeline-dot { left: 12px; }
+  .tpl-about-heading--lg { font-size: 28px; }
+  .tpl-about-heading--xl { font-size: 30px; }
+  .tpl-hero-title--md { font-size: 32px; }
+  .tpl-about-img--team { max-width: 100%; }
+  .tpl-section--centered { padding-top: 24px; }
+  .tpl-dept-pills--start { justify-content: center; }
+  .tpl-contact-floating-bg { padding: 40px 0; }
+}
+
+@media (max-width: 640px) {
+  .tpl-about-body--centered { max-width: 100%; }
+  .tpl-about-body--tl-centered { max-width: 100%; }
+  .tpl-about-body--contact { max-width: 100%; }
+  .tpl-about-icon-block { font-size: 40px; }
+  .tpl-cm-title { font-size: 22px; }
 }
 
 @media (max-width: 480px) {
@@ -469,6 +575,8 @@
   .tpl-trust-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .tpl-trust-item { padding: 16px 8px; }
   .tpl-about-heading { font-size: 24px; }
+  .tpl-about-heading--lg { font-size: 24px; }
+  .tpl-about-heading--xl { font-size: 26px; }
   .tpl-mission-card { padding: 24px 20px; }
   .tpl-contact-heading { font-size: 24px; }
   .tpl-stats-row { gap: 16px; flex-wrap: wrap; }
@@ -477,6 +585,8 @@
   .tpl-contact-floating-header h1 { font-size: 22px; }
   .tpl-hero--overlay { min-height: 380px; }
   .tpl-overlay-content .tpl-hero-title { font-size: 32px; }
+  .tpl-hero-title--md { font-size: 28px; }
   .tpl-btn { padding: 11px 20px; font-size: 14px; }
   .tpl-btn--lg { padding: 13px 24px; }
+  .tpl-contact-form-centered { padding-bottom: 32px; }
 }

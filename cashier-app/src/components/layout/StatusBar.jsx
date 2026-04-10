@@ -7,6 +7,7 @@ import { useSyncStore }    from '../../stores/useSyncStore.js';
 import { useCartStore }    from '../../stores/useCartStore.js';
 import { fmtTime }         from '../../utils/formatters.js';
 import { countCachedProducts } from '../../db/dexie.js';
+import './StatusBar.css';
 
 /** How many minutes ago was the last catalog sync (rounded) */
 function fmtSyncAge(isoStr) {
@@ -37,7 +38,6 @@ export default function StatusBar({ onRefresh }) {
   // Count cached products for offline indicator
   useEffect(() => {
     countCachedProducts().then(setProductCount).catch(() => {});
-    // Refresh count after every catalog sync
   }, [catalogSyncedAt]);
 
   // Auto-enter fullscreen when logged in
@@ -62,7 +62,6 @@ export default function StatusBar({ onRefresh }) {
 
   // Two-tap logout: first tap arms it (3 s window), second tap fires
   const handleLogout = async () => {
-    // Guard: block sign-out if transaction in progress
     const check = checkLogout(cartItemCount);
     if (!check.allowed) {
       setBlockMsg(check.reason);
@@ -82,132 +81,84 @@ export default function StatusBar({ onRefresh }) {
   };
 
   return (
-    <div style={{
-      height: 44, flexShrink: 0,
-      background: 'var(--statusbar-bg)',
-      borderBottom: '1px solid rgba(255,255,255,.06)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 1rem', gap: '1.25rem',
-      fontSize: '0.72rem', fontWeight: 600,
-      color: 'var(--text-muted)',
-      userSelect: 'none',
-    }}>
-
+    <div className="sb-bar">
       {/* Brand / Store name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      <div className="sb-brand">
         <StoreveuLogo iconOnly={true} height={28} darkMode={true} />
-        <span style={{ color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.03em', fontSize: '0.8rem' }}>
+        <span className="sb-store-name">
           {station?.storeName || 'Storeveu POS'}
         </span>
       </div>
       {station?.stationName && (
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 600, flexShrink: 0 }}>
-          {station.stationName}
-        </span>
+        <span className="sb-station-name">{station.stationName}</span>
       )}
 
-      <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,.08)', flexShrink: 0 }} />
+      <div className="sb-divider" />
 
       {/* Online status + cached product count */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+      <div className="sb-online-status">
         {isOnline
           ? <Wifi size={12} color="var(--green)" />
           : <WifiOff size={12} color="var(--red)" />}
-        <span style={{ color: isOnline ? 'var(--green)' : 'var(--red)' }}>
+        <span className={isOnline ? 'sb-online-label--on' : 'sb-online-label--off'}>
           {isOnline ? 'ONLINE' : 'OFFLINE'}
         </span>
         {productCount !== null && (
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 3,
-            color: 'var(--text-muted)', fontSize: '0.65rem',
-            marginLeft: 2,
-          }}>
+          <span className="sb-product-count">
             <Database size={10} />
             {productCount.toLocaleString()}
           </span>
         )}
       </div>
 
-      {/* ── Catalog Refresh button ── */}
+      {/* Catalog Refresh button */}
       {isOnline && onRefresh && (
         <button
           onClick={catalogSyncing ? undefined : onRefresh}
           disabled={catalogSyncing}
-          title={catalogSyncing ? 'Syncing catalog…' : `Refresh catalog${syncAge ? ` · last synced ${syncAge}` : ''}`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            height: 26, borderRadius: 6, padding: '0 9px',
-            background: catalogSyncing
-              ? 'rgba(122,193,67,.12)'
-              : 'rgba(255,255,255,.05)',
-            border: `1px solid ${catalogSyncing
-              ? 'rgba(122,193,67,.3)'
-              : 'rgba(255,255,255,.09)'}`,
-            color: catalogSyncing ? 'var(--green)' : 'var(--text-muted)',
-            cursor: catalogSyncing ? 'not-allowed' : 'pointer',
-            fontSize: '0.68rem', fontWeight: 700, flexShrink: 0,
-            transition: 'background .15s, border-color .15s, color .15s',
-          }}
-          onMouseEnter={e => {
-            if (!catalogSyncing) {
-              e.currentTarget.style.background   = 'rgba(122,193,67,.1)';
-              e.currentTarget.style.borderColor  = 'rgba(122,193,67,.3)';
-              e.currentTarget.style.color        = 'var(--green)';
-            }
-          }}
-          onMouseLeave={e => {
-            if (!catalogSyncing) {
-              e.currentTarget.style.background   = 'rgba(255,255,255,.05)';
-              e.currentTarget.style.borderColor  = 'rgba(255,255,255,.09)';
-              e.currentTarget.style.color        = 'var(--text-muted)';
-            }
-          }}
+          title={catalogSyncing ? 'Syncing catalog\u2026' : `Refresh catalog${syncAge ? ` \u00B7 last synced ${syncAge}` : ''}`}
+          className={`sb-refresh-btn ${catalogSyncing ? 'sb-refresh-btn--syncing' : ''}`}
         >
           <RefreshCw
             size={11}
-            style={{ animation: catalogSyncing ? 'spin 0.9s linear infinite' : 'none' }}
+            style={catalogSyncing ? { animation: 'spin 0.9s linear infinite' } : undefined}
           />
-          {catalogSyncing ? 'Syncing…' : syncAge ? `Synced ${syncAge}` : 'Refresh'}
+          {catalogSyncing ? 'Syncing\u2026' : syncAge ? `Synced ${syncAge}` : 'Refresh'}
         </button>
       )}
 
       {/* Pending tx-queue badge */}
       {pendingCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <div className="sb-pending">
           <RefreshCw size={11} color="var(--amber)"
-            style={{ animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
-          <span style={{ color: 'var(--amber)' }}>
-            {pendingCount} pending{isSyncing ? '…' : ''}
+            style={isSyncing ? { animation: 'spin 1s linear infinite' } : undefined} />
+          <span>
+            {pendingCount} pending{isSyncing ? '\u2026' : ''}
           </span>
         </div>
       )}
 
       {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      <div className="sb-spacer" />
 
       {/* TX Number */}
       {txNumber && (
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-secondary)', flexShrink: 0 }}>
-          {txNumber}
-        </span>
+        <span className="sb-tx-number">{txNumber}</span>
       )}
 
-      {/* Cashier name (amber if in offline mode) */}
+      {/* Cashier name */}
       {cashier && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
-          color: cashier.offlineMode ? 'var(--amber)' : 'var(--text-muted)',
-        }}>
+        <div className={`sb-cashier ${cashier.offlineMode ? 'sb-cashier--offline' : 'sb-cashier--online'}`}>
           <User size={12} color={cashier.offlineMode ? 'var(--amber)' : 'var(--text-muted)'} />
           <span>{cashier.name || cashier.email}</span>
           {cashier.offlineMode && (
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.8 }}>(offline)</span>
+            <span className="sb-cashier-offline-tag">(offline)</span>
           )}
         </div>
       )}
 
       {/* Clock */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+      <div className="sb-clock">
         <Clock size={12} />
         <span>{time}</span>
       </div>
@@ -216,31 +167,7 @@ export default function StatusBar({ onRefresh }) {
       <button
         onClick={handleLogout}
         title="Sign out"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          height: 28, borderRadius: 6,
-          padding: confirmLogout ? '0 10px' : '0 8px',
-          background: confirmLogout ? 'rgba(224,63,63,.18)' : 'rgba(255,255,255,.05)',
-          border: `1px solid ${confirmLogout ? 'rgba(224,63,63,.45)' : 'rgba(255,255,255,.09)'}`,
-          color: confirmLogout ? 'var(--red)' : 'var(--text-muted)',
-          cursor: 'pointer', transition: 'background .15s, border-color .15s, color .15s',
-          fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
-          whiteSpace: 'nowrap',
-        }}
-        onMouseEnter={e => {
-          if (!confirmLogout) {
-            e.currentTarget.style.background  = 'rgba(224,63,63,.1)';
-            e.currentTarget.style.borderColor = 'rgba(224,63,63,.3)';
-            e.currentTarget.style.color       = 'var(--red)';
-          }
-        }}
-        onMouseLeave={e => {
-          if (!confirmLogout) {
-            e.currentTarget.style.background  = 'rgba(255,255,255,.05)';
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,.09)';
-            e.currentTarget.style.color       = 'var(--text-muted)';
-          }
-        }}
+        className={`sb-logout-btn ${confirmLogout ? 'sb-logout-btn--confirm' : ''}`}
       >
         <LogOut size={12} />
         {confirmLogout ? 'Tap again to sign out' : 'Sign out'}
@@ -248,39 +175,24 @@ export default function StatusBar({ onRefresh }) {
 
       {/* Sign-out blocked warning */}
       {blockMsg && (
-        <div style={{
-          background: 'rgba(224,63,63,.12)', border: '1px solid rgba(224,63,63,.25)',
-          borderRadius: 4, padding: '2px 8px', fontSize: '0.65rem',
-          color: 'var(--red)', fontWeight: 700, flexShrink: 0,
-        }}>
-          {blockMsg}
-        </div>
+        <div className="sb-warning">{blockMsg}</div>
       )}
 
       {/* Offline mode warning */}
       {!isOnline && (
-        <div style={{
-          background: 'rgba(224,63,63,.12)', border: '1px solid rgba(224,63,63,.25)',
-          borderRadius: 4, padding: '2px 8px', fontSize: '0.65rem',
-          color: 'var(--red)', fontWeight: 700, flexShrink: 0,
-          display: 'flex', alignItems: 'center', gap: 4,
-        }}>
+        <div className="sb-warning">
           <AlertTriangle size={10} />
           OFFLINE — Sales queued, will sync on reconnect
         </div>
       )}
 
-      {/* Auth-expired warning: pending queue can't drain because JWT expired */}
+      {/* Auth-expired warning */}
       {isOnline && syncError === 'auth_expired' && pendingCount > 0 && (
         <div
           onClick={clearSyncError}
           title="Click to dismiss"
-          style={{
-            background: 'rgba(245,158,11,.15)', border: '1px solid rgba(245,158,11,.35)',
-            borderRadius: 4, padding: '2px 10px', fontSize: '0.65rem',
-            color: 'var(--amber)', fontWeight: 700, flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-          }}>
+          className="sb-warning sb-warning--amber"
+        >
           <AlertTriangle size={10} />
           Session expired — sign out and log in again to sync {pendingCount} pending sale{pendingCount !== 1 ? 's' : ''}
         </div>

@@ -1,0 +1,92 @@
+/* SalesAnalytics.css — prefix: sa- */
+/* NOTE: SalesAnalytics already uses analytics.css classes extensively.
+   This file handles the remaining inline styles. */
+
+/* ── Location modal inline overrides ── */
+.sa-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+.sa-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.sa-detect-btn {
+  width: 100%;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.sa-form-group-mt {
+  margin-top: 0.75rem;
+}
+
+/* ── Edit location button in chart selector ── */
+.sa-edit-location-btn {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ── Scroll hint ── */
+.sa-scroll-hint {
+  margin-left: auto;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ── Table cell colours ── */
+.sa-cell-accent { color: var(--accent-primary); font-weight: 600; }
+.sa-cell-warning { color: var(--warning); }
+.sa-cell-error { color: var(--error); }
+.sa-cell-success { color: var(--success); font-weight: 600; }
+.sa-cell-bold { font-weight: 500; }
+.sa-cell-year { font-weight: 700; font-size: 1rem; }
+.sa-cell-week { font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+.sa-cell-sub { color: var(--text-secondary); padding-left: 2rem; }
+.sa-cell-precip { color: var(--text-muted); font-size: 0.78rem; }
+
+/* ── Detailed records header ── */
+.sa-records-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+.sa-records-count {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .sa-edit-location-btn {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .sa-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sa-records-count {
+    display: block;
+    margin-left: 0;
+  }
+}

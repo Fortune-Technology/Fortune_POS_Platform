@@ -6,6 +6,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import RichTextEditor from '../components/RichTextEditor';
 import { getAdminCareers, createAdminCareer, updateAdminCareer, deleteAdminCareer } from '../services/api';
 import '../styles/admin.css';
+import './AdminCareers.css';
 
 const JOB_TYPES = ['full-time', 'part-time', 'contract', 'internship'];
 
@@ -69,7 +70,7 @@ const AdminCareers = () => {
             {careers.map(c => (
               <div key={c.id} className="admin-card">
                 <div>
-                  <div className="admin-header-icon" style={{ flexWrap: 'wrap' }}>
+                  <div className="admin-header-icon acr-header-wrap">
                     <span className="admin-card-title">{c.title}</span>
                     {c.department && <span className="admin-badge sm staff">{c.department}</span>}
                     {c.type && <span className="admin-badge sm manager">{c.type}</span>}
@@ -82,7 +83,7 @@ const AdminCareers = () => {
                   {c.location && <div className="admin-card-meta">{c.location}</div>}
                 </div>
                 <div className="admin-card-actions">
-                  <button onClick={() => navigate(`/careers/${c.id}/applications`)} className="admin-btn-secondary" style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem' }}>
+                  <button onClick={() => navigate(`/careers/${c.id}/applications`)} className="admin-btn-secondary acr-app-btn">
                     <Users size={12} /> Applications
                   </button>
                   <button onClick={() => setModal({ mode: 'edit', data: c })} className="admin-btn-icon"><Edit3 size={13} /></button>
@@ -95,7 +96,7 @@ const AdminCareers = () => {
 
         {modal && (
           <div className="admin-modal-overlay" onClick={() => setModal(null)}>
-            <div className="admin-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+            <div className="admin-modal acr-modal-size" onClick={e => e.stopPropagation()}>
               <div className="admin-modal-header">
                 <h2 className="admin-modal-title">{modal.mode === 'create' ? 'New Posting' : 'Edit Posting'}</h2>
                 <button onClick={() => setModal(null)} className="admin-modal-close"><X size={18} /></button>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import DocumentUploader from '../components/DocumentUploader';
 import DocumentHistory from '../components/DocumentHistory';
 import '../OCR.css';
+import './OCRPage.css';
 
 const OCRPage = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -12,10 +13,10 @@ const OCRPage = () => {
 
     return (
         <div className="animate-fade-in container">
-            <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <header className="ocr-header">
                 <div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Document Intelligence Hub</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>Transform physical documents into digital pipelines. Extract critical information from invoices, receipts, and identity documents with sub-second latency.</p>
+                    <h1 className="ocr-title">Document Intelligence Hub</h1>
+                    <p className="ocr-subtitle">Transform physical documents into digital pipelines. Extract critical information from invoices, receipts, and identity documents with sub-second latency.</p>
                 </div>
             </header>
 

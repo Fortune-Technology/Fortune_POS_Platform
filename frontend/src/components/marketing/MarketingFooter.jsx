@@ -87,7 +87,7 @@ const MarketingFooter = () => {
         </div>
 
         <div className="mkt-footer-bottom">
-          <p style={{ textAlign: 'center', width: '100%' }}>&copy; {currentYear} Storeveu. All rights reserved.</p>
+          <p className="mkt-footer-copyright">&copy; {currentYear} Storeveu. All rights reserved.</p>
         </div>
       </div>
     </footer>

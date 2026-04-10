@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import './DocumentHistory.css';
 
 const DocumentHistory = ({ refresh }) => {
     const [history, setHistory] = useState([]);
@@ -27,7 +28,6 @@ const DocumentHistory = ({ refresh }) => {
     const handleDelete = async (id, e) => {
         e.stopPropagation();
         if (!window.confirm('Are you sure?')) return;
-        
         try {
             await api.delete(`/document/${id}`);
             setHistory(prev => prev.filter(doc => doc.id !== id));
@@ -41,9 +41,7 @@ const DocumentHistory = ({ refresh }) => {
         setExpandedItem(expandedItem === id ? null : id);
     };
 
-    useEffect(() => {
-        fetchHistory();
-    }, [refresh]);
+    useEffect(() => { fetchHistory(); }, [refresh]);
 
     if (loading && history.length === 0) {
         return (
@@ -80,18 +78,18 @@ const DocumentHistory = ({ refresh }) => {
 
             <div className="mt-lg ocr-history-list">
                 {history.map((doc) => (
-                    <div 
-                        key={doc.id} 
+                    <div
+                        key={doc.id}
                         className={`card ocr-history-item ${expandedItem === doc.id ? 'active' : 'inactive'}`}
                         onClick={() => toggleExpand(doc.id)}
                     >
                         <div className="flex-between">
                             <div className="flex items-center gap-md">
-                                <div className="dropzone-icon mb-0" style={{ fontSize: '1.5rem', opacity: 1 }}>
+                                <div className="dropzone-icon mb-0 dh-doc-icon">
                                     {doc.docType.toLowerCase().includes('invoice') ? '📄' : '🎫'}
                                 </div>
                                 <div className="text-left">
-                                    <h5 className="mb-0 text-primary-light" style={{ fontSize: 'var(--font-size-base)', fontWeight: '600' }}>
+                                    <h5 className="mb-0 text-primary-light dh-filename">
                                         {doc.fileName.length > 25 ? doc.fileName.slice(0, 25) + '...' : doc.fileName}
                                     </h5>
                                     <small className="text-tertiary">
@@ -101,7 +99,7 @@ const DocumentHistory = ({ refresh }) => {
                             </div>
                             <div className="flex gap-sm">
                                 <span className={`badge ${
-                                    doc.confidence > 0.8 ? 'badge-success' : 
+                                    doc.confidence > 0.8 ? 'badge-success' :
                                     doc.confidence > 0.5 ? 'badge-warning' : 'badge-error'
                                 }`}>
                                     {(doc.confidence * 100).toFixed(0)}%
@@ -125,24 +123,14 @@ const DocumentHistory = ({ refresh }) => {
                                         <tbody>
                                             {Object.entries(doc.extractedFields).map(([key, field]) => (
                                                 <tr key={key}>
-                                                    <td className="text-tertiary" style={{ width: '30%' }}>{key}</td>
+                                                    <td className="text-tertiary dh-field-key">{key}</td>
                                                     <td>
                                                         {key === "extractedText" ? (
-                                                            <pre style={{ 
-                                                                whiteSpace: 'pre-wrap', 
-                                                                fontSize: '12px', 
-                                                                maxHeight: '200px', 
-                                                                overflowY: 'auto',
-                                                                background: 'rgba(0,0,0,0.1)',
-                                                                padding: '8px',
-                                                                borderRadius: '4px'
-                                                            }}>
-                                                                {field.value}
-                                                            </pre>
+                                                            <pre className="dh-extracted-pre">{field.value}</pre>
                                                         ) : (
                                                             <span>
-                                                                {typeof field.value === 'object' 
-                                                                    ? JSON.stringify(field.value, null, 2) 
+                                                                {typeof field.value === 'object'
+                                                                    ? JSON.stringify(field.value, null, 2)
                                                                     : String(field.value ?? "N/A")}
                                                             </span>
                                                         )}

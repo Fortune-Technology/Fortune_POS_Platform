@@ -1,0 +1,40 @@
+/* TransformPage.css — prefix: tp- */
+
+.tp-status-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+.tp-mono {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+}
+.tp-big-number {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+.tp-warnings-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.tp-warning-item {
+  margin-bottom: var(--space-sm);
+}
+.tp-actions-gap {
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.tp-spinner-center {
+  margin: 2rem auto;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .tp-status-icon {
+    font-size: 3rem;
+  }
+}

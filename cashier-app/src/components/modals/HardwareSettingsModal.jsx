@@ -2,8 +2,7 @@
  * HardwareSettingsModal.jsx
  *
  * Allows reconfiguring station hardware after initial setup.
- * Requires admin or superadmin credentials — managers and cashiers
- * cannot access this screen.
+ * Requires admin or superadmin credentials.
  *
  * Step 1 — Admin auth (email + password, admin/superadmin only)
  * Step 2 — Hardware configuration (receipt printer, cash drawer, scale, label printer)
@@ -18,6 +17,7 @@ import { loginWithPassword, saveHardwareConfig } from '../../api/pos.js';
 import { useStationStore } from '../../stores/useStationStore.js';
 import { isElectron } from '../../hooks/useHardware.js';
 import { connectQZ, isQZConnected, listPrinters } from '../../services/qzService.js';
+import './HardwareSettingsModal.css';
 
 const HW_KEY = 'storv_hardware_config';
 const saveHW = (cfg) => localStorage.setItem(HW_KEY, JSON.stringify(cfg));
@@ -54,30 +54,21 @@ const SCALE_BRANDS = [
   { id: 'generic',   label: 'Generic RS-232 / USB-Serial', baud: 9600 },
 ];
 
-const S = {
-  field:  { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, color: '#e8eaf0', padding: '0.75rem 1rem', fontSize: '0.9rem', outline: 'none' },
-  select: { width: '100%', boxSizing: 'border-box', background: '#1a1d27', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, color: '#e8eaf0', padding: '0.75rem 1rem', fontSize: '0.9rem', outline: 'none', cursor: 'pointer' },
-  label:  { display: 'block', color: '#6b7280', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 },
-  testBtn: (status) => ({ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: status === 'ok' ? 'rgba(22,163,74,.15)' : status === 'err' ? 'rgba(239,68,68,.12)' : 'rgba(255,255,255,.06)', color: status === 'ok' ? '#4ade80' : status === 'err' ? '#f87171' : '#94a3b8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }),
-  hwSection: (open) => ({ border: `1px solid ${open ? 'rgba(61,86,181,.4)' : 'rgba(255,255,255,.06)'}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden', background: open ? 'rgba(61,86,181,.04)' : 'rgba(255,255,255,.02)' }),
-  hwHeader:  { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', cursor: 'pointer', userSelect: 'none' },
-};
-
 function HWSection({ icon: Icon, title, status, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
-  const dotColor = status === 'ok' ? '#4ade80' : status === 'err' ? '#f87171' : '#374151';
+  const dotCls = status === 'ok' ? 'hsm-hw-dot--ok' : status === 'err' ? 'hsm-hw-dot--err' : 'hsm-hw-dot--idle';
+  const statusCls = status === 'ok' ? 'hsm-hw-status--ok' : status === 'err' ? 'hsm-hw-status--err' : 'hsm-hw-status--idle';
+  const statusText = status === 'ok' ? 'Configured' : status === 'err' ? 'Error' : 'Optional';
   return (
-    <div style={S.hwSection(open)}>
-      <div style={S.hwHeader} onClick={() => setOpen(o => !o)}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(61,86,181,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon size={15} color="#7b95e0" />
-        </div>
-        <span style={{ flex: 1, fontWeight: 700, color: '#e8eaf0', fontSize: '0.88rem' }}>{title}</span>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, marginRight: 6, flexShrink: 0 }} />
-        <span style={{ fontSize: '0.7rem', color: dotColor, marginRight: 6 }}>{status === 'ok' ? 'Configured' : status === 'err' ? 'Error' : 'Optional'}</span>
+    <div className={`hsm-hw-section${open ? ' hsm-hw-section--open' : ''}`}>
+      <div className="hsm-hw-header" onClick={() => setOpen(o => !o)}>
+        <div className="hsm-hw-icon"><Icon size={15} color="#7b95e0" /></div>
+        <span className="hsm-hw-title">{title}</span>
+        <span className={`hsm-hw-dot ${dotCls}`} />
+        <span className={`hsm-hw-status ${statusCls}`}>{statusText}</span>
         {open ? <ChevronUp size={13} color="#4b5563" /> : <ChevronDown size={13} color="#4b5563" />}
       </div>
-      {open && <div style={{ padding: '0 14px 14px' }}>{children}</div>}
+      {open && <div className="hsm-hw-body">{children}</div>}
     </div>
   );
 }
@@ -85,14 +76,12 @@ function HWSection({ icon: Icon, title, status, children, defaultOpen = false })
 export default function HardwareSettingsModal({ onClose }) {
   const station = useStationStore(s => s.station);
 
-  // ── Step 1 — auth ────────────────────────────────────────────────────────
-  const [step,        setStep]        = useState(1);
-  const [email,       setEmail]       = useState('');
-  const [password,    setPassword]    = useState('');
-  const [authError,   setAuthError]   = useState('');
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // ── Step 2 — hardware ────────────────────────────────────────────────────
   const [hw, setHW] = useState(() => loadHW() || {
     receiptPrinter: { model: '', type: 'none', name: '', ip: '', port: 9100, width: '80mm' },
     labelPrinter:   { type: 'none', name: '', ip: '', port: 9100 },
@@ -101,8 +90,8 @@ export default function HardwareSettingsModal({ onClose }) {
   });
 
   const [detectedPrinters, setDetectedPrinters] = useState([]);
-  const [detecting,        setDetecting]        = useState(false);
-  const [saving,           setSaving]           = useState(false);
+  const [detecting, setDetecting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const updHW = (section, fields) => setHW(p => ({ ...p, [section]: { ...p[section], ...fields } }));
 
@@ -128,13 +117,11 @@ export default function HardwareSettingsModal({ onClose }) {
     setSaving(true);
     saveHW(hw);
     if (station?.id) {
-      const storeId = station.storeId;
-      saveHardwareConfig(station.id, hw, storeId).catch(() => {});
+      saveHardwareConfig(station.id, hw, station.storeId).catch(() => {});
     }
     setTimeout(() => { setSaving(false); onClose(); }, 400);
   };
 
-  // ── Printer detect ──────────────────────────────────────────────────────
   const detectPrinters = async () => {
     setDetecting(true);
     try {
@@ -146,110 +133,92 @@ export default function HardwareSettingsModal({ onClose }) {
         list = await listPrinters();
       }
       setDetectedPrinters(list);
-    } catch {
-      setDetectedPrinters([]);
-    } finally {
-      setDetecting(false);
-    }
+    } catch { setDetectedPrinters([]); }
+    finally { setDetecting(false); }
   };
 
   const printerModel = PRINTER_MODELS.find(p => p.id === hw.receiptPrinter.model);
 
-  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ width: '100%', maxWidth: 560, maxHeight: '92vh', overflowY: 'auto', background: '#13161e', borderRadius: 20, border: '1px solid rgba(255,255,255,.07)', padding: '1.75rem', position: 'relative' }}>
+    <div className="hsm-backdrop">
+      <div className="hsm-modal">
+        <button className="hsm-close-btn" onClick={onClose}><X size={18} /></button>
 
-        {/* Close */}
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-          <X size={18} />
-        </button>
-
-        {/* Header */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, color: '#e8eaf0', fontSize: '1.1rem', fontWeight: 800 }}>Hardware Settings</h2>
-          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.82rem' }}>
+        <div className="hsm-header">
+          <h2 className="hsm-header-title">Hardware Settings</h2>
+          <p className="hsm-header-sub">
             {step === 1 ? 'Admin authentication required' : `Station: ${station?.name || 'Unknown'}`}
           </p>
         </div>
 
-        {/* ── STEP 1: Auth ─────────────────────────────────────────────── */}
+        {/* Step 1: Auth */}
         {step === 1 && (
           <form onSubmit={handleAuth}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 10, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', marginBottom: 20, fontSize: '0.82rem', color: '#f87171' }}>
-              <Shield size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <strong>Admin access only.</strong> Hardware settings can only be changed with an Admin or Super Admin account.
-              </div>
+            <div className="hsm-auth-warning">
+              <Shield size={16} className="hsm-auth-warning-icon" />
+              <div><strong>Admin access only.</strong> Hardware settings can only be changed with an Admin or Super Admin account.</div>
             </div>
-
             {authError && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', marginBottom: 14, color: '#f87171', fontSize: '0.85rem' }}>
-                <AlertCircle size={15} />{authError}
-              </div>
+              <div className="hsm-auth-error"><AlertCircle size={15} />{authError}</div>
             )}
-
-            <div style={{ display: 'grid', gap: 14 }}>
+            <div className="hsm-auth-form">
               <div>
-                <label style={S.label}>Admin Email</label>
-                <input style={S.field} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@company.com" required autoFocus />
+                <label className="hsm-label">Admin Email</label>
+                <input className="hsm-field" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@company.com" required autoFocus />
               </div>
               <div>
-                <label style={S.label}>Password</label>
-                <input style={S.field} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+                <label className="hsm-label">Password</label>
+                <input className="hsm-field" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required />
               </div>
-              <button type="submit" disabled={authLoading} style={{ padding: '0.85rem', borderRadius: 12, border: 'none', cursor: authLoading ? 'not-allowed' : 'pointer', background: '#3d56b5', color: '#fff', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: authLoading ? 0.7 : 1 }}>
-                {authLoading ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Verifying...</> : <><Shield size={16} /> Authenticate</>}
+              <button type="submit" disabled={authLoading} className={`hsm-auth-btn${authLoading ? ' hsm-auth-btn--loading' : ''}`}>
+                {authLoading ? <><Loader size={16} /> Verifying...</> : <><Shield size={16} /> Authenticate</>}
               </button>
             </div>
           </form>
         )}
 
-        {/* ── STEP 2: Hardware ─────────────────────────────────────────── */}
+        {/* Step 2: Hardware */}
         {step === 2 && (
           <>
-            {/* Receipt Printer */}
             <HWSection icon={Printer} title="Receipt Printer" status={hw.receiptPrinter.type !== 'none' && hw.receiptPrinter.model ? 'ok' : 'idle'} defaultOpen>
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div className="hsm-hw-grid">
                 <div>
-                  <label style={S.label}>Printer Model</label>
-                  <select style={S.select} value={hw.receiptPrinter.model} onChange={e => {
+                  <label className="hsm-label">Printer Model</label>
+                  <select className="hsm-select" value={hw.receiptPrinter.model} onChange={e => {
                     const m = PRINTER_MODELS.find(p => p.id === e.target.value);
                     if (m) updHW('receiptPrinter', { model: m.id, type: m.type, port: m.port || 9100, width: m.width });
-                    else   updHW('receiptPrinter', { model: '', type: 'none' });
+                    else updHW('receiptPrinter', { model: '', type: 'none' });
                   }}>
-                    <option value="">— Select model —</option>
+                    <option value="">-- Select model --</option>
                     {PRINTER_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                   </select>
                 </div>
-
                 {printerModel?.type === 'network' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
+                  <div className="hsm-hw-grid-row">
                     <div>
-                      <label style={S.label}>IP Address</label>
-                      <input style={S.field} value={hw.receiptPrinter.ip || ''} onChange={e => updHW('receiptPrinter', { ip: e.target.value })} placeholder="192.168.1.100" />
+                      <label className="hsm-label">IP Address</label>
+                      <input className="hsm-field" value={hw.receiptPrinter.ip || ''} onChange={e => updHW('receiptPrinter', { ip: e.target.value })} placeholder="192.168.1.100" />
                     </div>
                     <div>
-                      <label style={S.label}>Port</label>
-                      <input style={{ ...S.field, width: 90 }} type="number" value={hw.receiptPrinter.port || 9100} onChange={e => updHW('receiptPrinter', { port: Number(e.target.value) })} />
+                      <label className="hsm-label">Port</label>
+                      <input className="hsm-field hsm-field--narrow" type="number" value={hw.receiptPrinter.port || 9100} onChange={e => updHW('receiptPrinter', { port: Number(e.target.value) })} />
                     </div>
                   </div>
                 )}
-
                 {printerModel?.type === 'qz' && (
                   <div>
-                    <label style={S.label}>Printer Name</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <label className="hsm-label">Printer Name</label>
+                    <div className="hsm-detect-row">
                       {detectedPrinters.length > 0 ? (
-                        <select style={S.select} value={hw.receiptPrinter.name || ''} onChange={e => updHW('receiptPrinter', { name: e.target.value })}>
-                          <option value="">— Select printer —</option>
+                        <select className="hsm-select" value={hw.receiptPrinter.name || ''} onChange={e => updHW('receiptPrinter', { name: e.target.value })}>
+                          <option value="">-- Select printer --</option>
                           {detectedPrinters.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                       ) : (
-                        <input style={S.field} value={hw.receiptPrinter.name || ''} onChange={e => updHW('receiptPrinter', { name: e.target.value })} placeholder="Printer name" />
+                        <input className="hsm-field" value={hw.receiptPrinter.name || ''} onChange={e => updHW('receiptPrinter', { name: e.target.value })} placeholder="Printer name" />
                       )}
-                      <button type="button" onClick={detectPrinters} disabled={detecting} style={S.testBtn(null)}>
-                        {detecting ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />} Detect
+                      <button type="button" className="hsm-test-btn" onClick={detectPrinters} disabled={detecting}>
+                        {detecting ? <Loader size={12} /> : <RefreshCw size={12} />} Detect
                       </button>
                     </div>
                   </div>
@@ -257,53 +226,50 @@ export default function HardwareSettingsModal({ onClose }) {
               </div>
             </HWSection>
 
-            {/* Cash Drawer */}
             <HWSection icon={Tag} title="Cash Drawer" status={hw.cashDrawer.type !== 'none' ? 'ok' : 'idle'}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <div className="hsm-checkbox-row">
+                <label className="hsm-checkbox-label">
                   <input type="checkbox" checked={hw.cashDrawer.type !== 'none'} onChange={e => updHW('cashDrawer', { type: e.target.checked ? 'printer' : 'none' })} />
-                  <span style={{ color: '#e8eaf0', fontSize: '0.88rem' }}>Connected via receipt printer</span>
+                  <span className="hsm-checkbox-text">Connected via receipt printer</span>
                 </label>
               </div>
             </HWSection>
 
-            {/* Scale */}
             <HWSection icon={Scale} title="Weighing Scale" status={hw.scale.type !== 'none' ? 'ok' : 'idle'}>
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div className="hsm-hw-grid">
                 <div>
-                  <label style={S.label}>Scale Brand</label>
-                  <select style={S.select} value={hw.scale.type === 'none' ? '' : hw.scale.brand || ''} onChange={e => {
+                  <label className="hsm-label">Scale Brand</label>
+                  <select className="hsm-select" value={hw.scale.type === 'none' ? '' : hw.scale.brand || ''} onChange={e => {
                     const brand = SCALE_BRANDS.find(b => b.id === e.target.value);
                     updHW('scale', { brand: e.target.value, type: e.target.value ? 'serial' : 'none', baud: brand?.baud || 9600 });
                   }}>
-                    <option value="">— None —</option>
+                    <option value="">-- None --</option>
                     {SCALE_BRANDS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
                   </select>
                 </div>
                 {hw.scale.type !== 'none' && (
                   <>
                     <div>
-                      <label style={S.label}>Baud Rate</label>
-                      <select style={S.select} value={hw.scale.baud || 9600} onChange={e => updHW('scale', { baud: Number(e.target.value) })}>
+                      <label className="hsm-label">Baud Rate</label>
+                      <select className="hsm-select" value={hw.scale.baud || 9600} onChange={e => updHW('scale', { baud: Number(e.target.value) })}>
                         {BAUD_RATES.map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label style={S.label}>Serial Port</label>
-                      <input style={S.field} value={hw.scale.portLabel || ''} onChange={e => updHW('scale', { portLabel: e.target.value })} placeholder="e.g. COM3 or /dev/ttyUSB0" />
+                      <label className="hsm-label">Serial Port</label>
+                      <input className="hsm-field" value={hw.scale.portLabel || ''} onChange={e => updHW('scale', { portLabel: e.target.value })} placeholder="e.g. COM3 or /dev/ttyUSB0" />
                     </div>
                   </>
                 )}
               </div>
             </HWSection>
 
-            {/* Label Printer */}
             <HWSection icon={Tag} title="Label Printer" status={hw.labelPrinter.type !== 'none' ? 'ok' : 'idle'}>
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div className="hsm-hw-grid">
                 <div>
-                  <label style={S.label}>Label Printer Type</label>
-                  <select style={S.select} value={hw.labelPrinter.type} onChange={e => updHW('labelPrinter', { type: e.target.value })}>
-                    <option value="none">— None —</option>
+                  <label className="hsm-label">Label Printer Type</label>
+                  <select className="hsm-select" value={hw.labelPrinter.type} onChange={e => updHW('labelPrinter', { type: e.target.value })}>
+                    <option value="none">-- None --</option>
                     <option value="zebra_usb">Zebra (ZPL) — USB via QZ Tray</option>
                     <option value="zebra_network">Zebra (ZPL) — Network/TCP</option>
                     <option value="dymo">Dymo LabelWriter</option>
@@ -311,27 +277,24 @@ export default function HardwareSettingsModal({ onClose }) {
                 </div>
                 {hw.labelPrinter.type === 'zebra_network' && (
                   <div>
-                    <label style={S.label}>IP Address</label>
-                    <input style={S.field} value={hw.labelPrinter.ip || ''} onChange={e => updHW('labelPrinter', { ip: e.target.value })} placeholder="192.168.1.101" />
+                    <label className="hsm-label">IP Address</label>
+                    <input className="hsm-field" value={hw.labelPrinter.ip || ''} onChange={e => updHW('labelPrinter', { ip: e.target.value })} placeholder="192.168.1.101" />
                   </div>
                 )}
                 {(hw.labelPrinter.type === 'zebra_usb' || hw.labelPrinter.type === 'dymo') && (
                   <div>
-                    <label style={S.label}>Printer Name</label>
-                    <input style={S.field} value={hw.labelPrinter.name || ''} onChange={e => updHW('labelPrinter', { name: e.target.value })} placeholder="Label printer name" />
+                    <label className="hsm-label">Printer Name</label>
+                    <input className="hsm-field" value={hw.labelPrinter.name || ''} onChange={e => updHW('labelPrinter', { name: e.target.value })} placeholder="Label printer name" />
                   </div>
                 )}
               </div>
             </HWSection>
 
-            {/* Save */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: '0.9rem', borderRadius: 12, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', background: '#3d56b5', color: '#fff', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {saving ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Check size={15} /> Save Hardware Settings</>}
+            <div className="hsm-footer">
+              <button className={`hsm-save-btn${saving ? ' hsm-save-btn--loading' : ''}`} onClick={handleSave} disabled={saving}>
+                {saving ? <><Loader size={15} /> Saving...</> : <><Check size={15} /> Save Hardware Settings</>}
               </button>
-              <button onClick={onClose} style={{ padding: '0.9rem 1.25rem', borderRadius: 12, border: '1px solid rgba(255,255,255,.1)', background: 'none', color: '#6b7280', fontWeight: 700, cursor: 'pointer' }}>
-                Cancel
-              </button>
+              <button className="hsm-cancel-btn" onClick={onClose}>Cancel</button>
             </div>
           </>
         )}

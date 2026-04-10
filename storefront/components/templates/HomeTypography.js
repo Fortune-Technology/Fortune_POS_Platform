@@ -15,7 +15,7 @@ export default function HomeTypography({ content, store, products = [], departme
           <p className="tpl-typo-eyebrow">{hero.badge || store?.storeName}</p>
           <h1 className="tpl-typo-title">{hero.heading || 'Fresh. Local. Delivered.'}</h1>
           <p className="tpl-typo-desc">{hero.subheading || 'Your neighborhood store, now online.'}</p>
-          <div className="tpl-hero-actions" style={{ justifyContent: 'flex-start' }}>
+          <div className="tpl-hero-actions tpl-hero-actions--start">
             <Link href={hero.ctaLink || `/products?${sq}`} className="tpl-btn tpl-btn--primary tpl-btn--lg">{hero.ctaText || 'Start Shopping'}</Link>
             {hero.secondaryCta && <Link href={hero.secondaryCtaLink || `/about?${sq}`} className="tpl-btn tpl-btn--outline">{hero.secondaryCta}</Link>}
           </div>
@@ -23,7 +23,7 @@ export default function HomeTypography({ content, store, products = [], departme
       </section>
       <div className="sf-container">
         {departments.length > 0 && (
-          <section className="tpl-section"><div className="tpl-dept-pills" style={{ justifyContent: 'flex-start' }}>{departments.map(d => (<Link key={d.slug} href={`/products?${sq}&department=${d.slug}`} className="sf-dept-badge">{d.name}</Link>))}</div></section>
+          <section className="tpl-section"><div className="tpl-dept-pills tpl-dept-pills--start">{departments.map(d => (<Link key={d.slug} href={`/products?${sq}&department=${d.slug}`} className="sf-dept-badge">{d.name}</Link>))}</div></section>
         )}
         {products.length > 0 && (
           <section className="tpl-section">

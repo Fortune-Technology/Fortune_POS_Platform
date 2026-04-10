@@ -5,6 +5,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import { getAdminUserActivity } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminUserActivity.css';
 
 const ROLE_COLORS = ['#3b82f6', 'var(--accent-primary)', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 const STATUS_COLORS = { active: '#10b981', pending: '#f59e0b', suspended: '#ef4444' };

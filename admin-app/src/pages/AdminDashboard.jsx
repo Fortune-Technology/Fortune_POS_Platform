@@ -11,6 +11,7 @@ import {
 import AdminSidebar from '../components/AdminSidebar';
 import { getAdminDashboard } from '../services/api';
 import '../styles/admin.css';
+import './AdminDashboard.css';
 
 const ROLE_COLORS = {
   superadmin: '#ef4444',
@@ -29,6 +30,7 @@ const PLAN_COLORS = {
   none:       '#94a3b8',
 };
 
+// Recharts Tooltip contentStyle requires inline style objects — these are not JSX inline styles
 const tooltipStyle = {
   background: '#ffffff',
   border: '1px solid #e2e8f0',
@@ -172,7 +174,7 @@ const AdminDashboard = () => {
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No data</div>
+                  <div className="adsh-empty">No data</div>
                 )}
               </div>
             </div>
@@ -198,7 +200,7 @@ const AdminDashboard = () => {
                       </tr>
                     ))}
                     {(!stats?.recentUsers || stats.recentUsers.length === 0) && (
-                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No users yet</td></tr>
+                      <tr><td colSpan={4} className="adsh-empty">No users yet</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -224,7 +226,7 @@ const AdminDashboard = () => {
                       </tr>
                     ))}
                     {(!stats?.recentOrgs || stats.recentOrgs.length === 0) && (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No organizations yet</td></tr>
+                      <tr><td colSpan={5} className="adsh-empty">No organizations yet</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -244,7 +246,7 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {stats.recentTickets.map(t => (
-                      <tr key={t.id} style={{ cursor: 'pointer' }} onClick={() => navigate('/tickets')}>
+                      <tr key={t.id} className="adsh-ticket-row" onClick={() => navigate('/tickets')}>
                         <td className="primary">{t.subject}</td>
                         <td><span className={`admin-badge sm ${t.status}`}>{t.status?.replace('_', ' ')}</span></td>
                         <td><span className={`admin-badge sm ${t.priority || 'normal'}`}>{t.priority || 'normal'}</span></td>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getStores, getStoreBranding, updateStoreBranding } from '../services/api.js';
 import Sidebar from '../components/Sidebar.jsx';
+import './StoreBranding.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ export default function StoreBranding() {
   return (
     <div className="layout-container">
       <Sidebar />
-      <div className="main-content" style={{ padding: '2rem', overflowY: 'auto', flex: 1 }}>
+      <div className="main-content sbr-content">
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.75rem' }}>

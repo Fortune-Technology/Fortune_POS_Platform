@@ -1,12 +1,6 @@
 /**
  * PinLoginScreen
  * Shown whenever a station is configured but no cashier is signed in.
- * Big numpad, auto-submits at 6 digits or when Enter is pressed.
- * Keyboard also works (for testing without a touchscreen).
- *
- * Modes:
- *   'signin' — standard PIN → cashier session login
- *   'clock'  — PIN → clock in/out (no session created, station-token only)
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,12 +8,13 @@ import { Delete } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore.js';
 import { useStationStore } from '../stores/useStationStore.js';
 import { clockInOut } from '../api/pos.js';
+import './PinLoginScreen.css';
 
 const PAD = [
   ['1','2','3'],
   ['4','5','6'],
   ['7','8','9'],
-  ['','0','⌫'],
+  ['','0','\u232B'],
 ];
 
 export default function PinLoginScreen() {
@@ -30,15 +25,12 @@ export default function PinLoginScreen() {
   const [pin,          setPin]          = useState('');
   const [shake,        setShake]        = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
-
-  // Clock in/out mode state
-  const [mode,         setMode]         = useState('signin');  // 'signin' | 'clock'
-  const [clockType,    setClockType]    = useState('in');      // 'in' | 'out'
-  const [clockDone,    setClockDone]    = useState(null);      // { userName, type } after success
-  const [clockWarn,    setClockWarn]    = useState(null);      // { kind: 'alreadyIn'|'notIn', userName, since? }
+  const [mode,         setMode]         = useState('signin');
+  const [clockType,    setClockType]    = useState('in');
+  const [clockDone,    setClockDone]    = useState(null);
+  const [clockWarn,    setClockWarn]    = useState(null);
   const [clockLoading, setClockLoading] = useState(false);
 
-  // Format duration from a timestamp to now (e.g. "2h 14m")
   const fmtDuration = (since) => {
     const mins = Math.floor((Date.now() - new Date(since)) / 60000);
     if (mins < 1) return 'just now';
@@ -53,18 +45,15 @@ export default function PinLoginScreen() {
     setTimeout(() => { setShake(false); setPin(''); }, 520);
   };
 
-  // ── Sign-in submit ──────────────────────────────────────────────────────────
   const submit = useCallback(async (p) => {
     if (p.length < 4 || loading) return;
     try {
       await pinLogin(p, station?.stationToken);
     } catch (err) {
       triggerShake();
-      // error is stored in useAuthStore and displayed by the error block below
     }
   }, [pinLogin, loading, station]);
 
-  // ── Clock submit ────────────────────────────────────────────────────────────
   const submitClock = useCallback(async (p) => {
     if (p.length < 4 || clockLoading) return;
     setClockLoading(true);
@@ -85,18 +74,14 @@ export default function PinLoginScreen() {
     }
   }, [clockType, station, clockLoading]);
 
-  // ── Digit helpers ───────────────────────────────────────────────────────────
   const addDigit = useCallback((d) => {
     if (loading || clockLoading) return;
     clearError();
     setPin(prev => {
       const next = prev + d;
       if (next.length === 6) {
-        if (mode === 'clock') {
-          setTimeout(() => submitClock(next), 0);
-        } else {
-          setTimeout(() => submit(next), 0);
-        }
+        if (mode === 'clock') setTimeout(() => submitClock(next), 0);
+        else setTimeout(() => submit(next), 0);
       }
       return next.length <= 6 ? next : prev;
     });
@@ -107,7 +92,6 @@ export default function PinLoginScreen() {
     setPin(p => p.slice(0, -1));
   }, [clearError]);
 
-  // ── Keyboard support ────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (e.key >= '0' && e.key <= '9') addDigit(e.key);
@@ -121,7 +105,6 @@ export default function PinLoginScreen() {
     return () => window.removeEventListener('keydown', handler);
   }, [addDigit, delDigit, submit, submitClock, pin, mode]);
 
-  // ── Switch mode helper ──────────────────────────────────────────────────────
   const switchMode = (m) => {
     setMode(m);
     setPin('');
@@ -131,106 +114,67 @@ export default function PinLoginScreen() {
   };
 
   const isLoading = loading || clockLoading;
-  const dots = Array.from({ length: 6 }, (_, i) => i < pin.length ? '●' : '○');
+  const dots = Array.from({ length: 6 }, (_, i) => i < pin.length);
 
   return (
-    <div style={{
-      minHeight: '100vh', background: 'var(--bg-base)',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      padding: '2rem', userSelect: 'none',
-      overflowY: 'auto',
-    }}>
-
-      {/* Store + station identity */}
-      <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-        <div style={{ color: 'var(--text-primary)', fontWeight: 900, fontSize: '1.6rem', letterSpacing: '0.04em' }}>
-          {station?.storeName || 'Storeveu POS'}
-        </div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
-          {station?.stationName || 'Register'}
-        </div>
+    <div className="pls-page">
+      <div className="pls-identity">
+        <div className="pls-store-name">{station?.storeName || 'Storeveu POS'}</div>
+        <div className="pls-station-name">{station?.stationName || 'Register'}</div>
       </div>
 
       {/* Mode tabs */}
-      <div style={{ display:'flex', gap:8, marginBottom:'1.5rem', background:'rgba(255,255,255,.05)', borderRadius:12, padding:4, width:260 }}>
+      <div className="pls-mode-tabs">
         {[
-          { id:'signin', label:'Sign In to POS' },
-          { id:'clock',  label:'🕐 Clock In/Out' },
+          { id: 'signin', label: 'Sign In to POS' },
+          { id: 'clock',  label: '\uD83D\uDD50 Clock In/Out' },
         ].map(tab => (
-          <button key={tab.id} onClick={() => switchMode(tab.id)}
-            style={{
-              flex:1, padding:'0.6rem', borderRadius:8, border:'none', fontWeight:700, fontSize:'0.82rem',
-              background: mode === tab.id ? 'var(--bg-card)' : 'transparent',
-              color: mode === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-              cursor:'pointer',
-            }}>
+          <button
+            key={tab.id}
+            onClick={() => switchMode(tab.id)}
+            className={`pls-mode-tab ${mode === tab.id ? 'pls-mode-tab--active' : 'pls-mode-tab--inactive'}`}
+          >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Clock done confirmation — replaces numpad in clock mode */}
+      {/* Clock done */}
       {mode === 'clock' && clockDone ? (
-        <div style={{ textAlign:'center', padding:'2rem 1rem', width:260 }}>
-          <div style={{ fontSize:'2.5rem', marginBottom:12 }}>{clockDone.type === 'in' ? '✅' : '👋'}</div>
-          <div style={{ fontWeight:800, fontSize:'1.1rem', color: clockDone.type === 'in' ? 'var(--green)' : 'var(--text-primary)' }}>
+        <div className="pls-clock-done">
+          <div className="pls-clock-done-emoji">{clockDone.type === 'in' ? '\u2705' : '\uD83D\uDC4B'}</div>
+          <div className={`pls-clock-done-title ${clockDone.type === 'in' ? 'pls-clock-done-title--in' : 'pls-clock-done-title--out'}`}>
             {clockDone.type === 'in' ? 'Clocked In' : 'Clocked Out'}
           </div>
-          <div style={{ color:'var(--text-secondary)', marginTop:4 }}>{clockDone.userName}</div>
-          <button
-            onClick={() => { setClockDone(null); setPin(''); }}
-            style={{ marginTop:'1.5rem', padding:'0.75rem 2rem', background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:10, color:'var(--text-muted)', fontWeight:700, cursor:'pointer' }}
-          >
-            Done
-          </button>
+          <div className="pls-clock-done-name">{clockDone.userName}</div>
+          <button onClick={() => { setClockDone(null); setPin(''); }} className="pls-done-btn">Done</button>
         </div>
 
       ) : mode === 'clock' && clockWarn ? (
-        /* ── Already clocked in / not clocked in warning ── */
-        <div style={{ textAlign:'center', padding:'2rem 1rem', width:280 }}>
+        <div className="pls-clock-warn">
           {clockWarn.kind === 'alreadyIn' ? (
             <>
-              <div style={{ fontSize:'2.5rem', marginBottom:12 }}>⏱</div>
-              <div style={{ fontWeight:800, fontSize:'1.05rem', color:'var(--amber, #f59e0b)', marginBottom:6 }}>
-                Already Clocked In
-              </div>
-              <div style={{ color:'var(--text-secondary)', fontSize:'0.9rem', marginBottom:4 }}>
-                {clockWarn.userName}
-              </div>
-              <div style={{
-                marginTop:10, padding:'0.6rem 1rem', borderRadius:10,
-                background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.3)',
-                color:'#fbbf24', fontSize:'0.82rem', fontWeight:700,
-              }}>
-                Clocked in for {fmtDuration(clockWarn.since)}
-              </div>
-              <div style={{ color:'var(--text-muted)', fontSize:'0.75rem', marginTop:8 }}>
-                Please clock out first before clocking in again.
-              </div>
+              <div className="pls-warn-emoji">\u23F1</div>
+              <div className="pls-warn-title pls-warn-title--amber">Already Clocked In</div>
+              <div className="pls-warn-name">{clockWarn.userName}</div>
+              <div className="pls-warn-duration">Clocked in for {fmtDuration(clockWarn.since)}</div>
+              <div className="pls-warn-hint">Please clock out first before clocking in again.</div>
             </>
           ) : (
             <>
-              <div style={{ fontSize:'2.5rem', marginBottom:12 }}>🔒</div>
-              <div style={{ fontWeight:800, fontSize:'1.05rem', color:'var(--red, #ef4444)', marginBottom:6 }}>
-                Not Clocked In
-              </div>
-              <div style={{ color:'var(--text-secondary)', fontSize:'0.9rem', marginBottom:4 }}>
-                {clockWarn.userName}
-              </div>
-              <div style={{ color:'var(--text-muted)', fontSize:'0.75rem', marginTop:8 }}>
-                You must clock in before you can clock out.
-              </div>
+              <div className="pls-warn-emoji">\uD83D\uDD12</div>
+              <div className="pls-warn-title pls-warn-title--red">Not Clocked In</div>
+              <div className="pls-warn-name">{clockWarn.userName}</div>
+              <div className="pls-warn-hint">You must clock in before you can clock out.</div>
             </>
           )}
           <button
             onClick={() => {
               setClockWarn(null);
               setPin('');
-              // Auto-switch to the correct action
               setClockType(clockWarn.kind === 'alreadyIn' ? 'out' : 'in');
             }}
-            style={{ marginTop:'1.5rem', padding:'0.75rem 2rem', background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:10, color:'var(--text-muted)', fontWeight:700, cursor:'pointer' }}
+            className="pls-warn-switch-btn"
           >
             {clockWarn.kind === 'alreadyIn' ? 'Switch to Clock Out' : 'Switch to Clock In'}
           </button>
@@ -238,105 +182,57 @@ export default function PinLoginScreen() {
 
       ) : (
         <>
-          {/* Clock mode hint */}
-          {mode === 'clock' && (
-            <div style={{
-              width: 260, marginBottom: '0.6rem',
-              padding: '0.45rem 0.75rem',
-              borderRadius: 8,
-              background: 'rgba(255,255,255,.04)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-muted)',
-              fontSize: '0.72rem',
-              textAlign: 'center',
-              lineHeight: 1.4,
-            }}>
-              Use your register PIN to clock in or out
-            </div>
-          )}
+          {/* Clock hint */}
+          {mode === 'clock' && <div className="pls-clock-hint">Use your register PIN to clock in or out</div>}
 
-          {/* Clock in/out type toggle — only shown in clock mode */}
+          {/* Clock toggle */}
           {mode === 'clock' && (
-            <div style={{ display:'flex', gap:8, marginBottom:'1rem', width:260 }}>
-              {['in','out'].map(t => (
-                <button key={t} onClick={() => setClockType(t)} style={{
-                  flex:1, padding:'0.6rem', borderRadius:8, fontWeight:700, cursor:'pointer',
-                  background: clockType === t
-                    ? (t === 'in' ? 'rgba(122,193,67,.15)' : 'rgba(224,63,63,.12)')
-                    : 'var(--bg-input)',
-                  border: `1.5px solid ${clockType === t
-                    ? (t === 'in' ? 'rgba(122,193,67,.5)' : 'rgba(224,63,63,.4)')
-                    : 'var(--border)'}`,
-                  color: clockType === t
-                    ? (t === 'in' ? 'var(--green)' : 'var(--red)')
-                    : 'var(--text-muted)',
-                }}>
-                  {t === 'in' ? '→ Clock In' : 'Clock Out ←'}
+            <div className="pls-clock-toggle">
+              {['in', 'out'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setClockType(t)}
+                  className={`pls-clock-toggle-btn ${
+                    t === 'in'
+                      ? (clockType === 'in' ? 'pls-clock-toggle-btn--in-active' : 'pls-clock-toggle-btn--in-inactive')
+                      : (clockType === 'out' ? 'pls-clock-toggle-btn--out-active' : 'pls-clock-toggle-btn--out-inactive')
+                  }`}
+                >
+                  {t === 'in' ? '\u2192 Clock In' : 'Clock Out \u2190'}
                 </button>
               ))}
             </div>
           )}
 
           {/* PIN dots */}
-          <div style={{
-            display: 'flex', gap: 16, marginBottom: '2rem',
-            animation: shake ? 'shake 0.5s ease' : 'none',
-          }}>
-            {dots.map((d, i) => (
-              <div key={i} style={{
-                width: 18, height: 18, borderRadius: '50%',
-                background: i < pin.length ? 'var(--green)' : 'transparent',
-                border: `2px solid ${i < pin.length ? 'var(--green)' : 'rgba(255,255,255,.2)'}`,
-                transition: 'background .1s, border-color .1s',
-              }} />
+          <div className={`pls-pin-dots ${shake ? 'pls-pin-dots--shake' : ''}`}>
+            {dots.map((filled, i) => (
+              <div key={i} className={`pls-dot ${filled ? 'pls-dot--filled' : 'pls-dot--empty'}`} />
             ))}
           </div>
 
-          {/* Error message */}
-          {error && !shake && (
-            <div style={{
-              color: 'var(--red)', fontSize: '0.82rem', fontWeight: 600,
-              marginBottom: '1rem', minHeight: 20,
-            }}>
-              {error}
-            </div>
+          {/* Error */}
+          {error && !shake ? (
+            <div className="pls-error">{error}</div>
+          ) : (
+            <div className="pls-error-spacer" />
           )}
-          {!error && <div style={{ marginBottom: '1rem', minHeight: 20 }} />}
 
           {/* Numpad */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div className="pls-numpad">
             {PAD.flat().map((key, i) => {
               const isEmpty = key === '';
-              const isDel   = key === '⌫';
+              const isDel   = key === '\u232B';
               return (
                 <button
                   key={i}
                   onClick={() => {
                     if (isEmpty) return;
-                    if (isDel)   delDigit();
-                    else         addDigit(key);
+                    if (isDel) delDigit();
+                    else addDigit(key);
                   }}
                   disabled={isLoading || isEmpty}
-                  style={{
-                    width: 80, height: 80, borderRadius: 16,
-                    background: isEmpty
-                      ? 'transparent'
-                      : isDel
-                        ? 'rgba(224,63,63,.12)'
-                        : 'var(--bg-card)',
-                    border: isEmpty
-                      ? 'none'
-                      : `1px solid ${isDel ? 'rgba(224,63,63,.2)' : 'var(--border-light)'}`,
-                    color: isDel ? 'var(--red)' : 'var(--text-primary)',
-                    fontSize: isDel ? '1rem' : '1.5rem',
-                    fontWeight: 700, cursor: isEmpty ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background .1s, transform .08s',
-                    transform: 'scale(1)',
-                  }}
-                  onMouseDown={e => { if (!isEmpty) e.currentTarget.style.transform = 'scale(0.93)'; }}
-                  onMouseUp={e =>   { e.currentTarget.style.transform = 'scale(1)'; }}
-                  onMouseLeave={e =>{ e.currentTarget.style.transform = 'scale(1)'; }}
+                  className={`pls-numpad-key ${isEmpty ? 'pls-numpad-key--empty' : isDel ? 'pls-numpad-key--del' : 'pls-numpad-key--digit'}`}
                 >
                   {isDel ? <Delete size={20} /> : key}
                 </button>
@@ -344,93 +240,47 @@ export default function PinLoginScreen() {
             })}
           </div>
 
-          {/* Enter / submit button */}
+          {/* Submit */}
           {mode === 'signin' ? (
             <button
               onClick={() => submit(pin)}
               disabled={pin.length < 4 || loading}
-              style={{
-                marginTop: 20, width: 260, height: 52,
-                background: pin.length >= 4 ? 'var(--green)' : 'rgba(255,255,255,.05)',
-                color: pin.length >= 4 ? '#0f1117' : 'var(--text-muted)',
-                border: 'none', borderRadius: 14,
-                fontWeight: 800, fontSize: '1rem',
-                cursor: pin.length >= 4 ? 'pointer' : 'not-allowed',
-                transition: 'background .15s',
-              }}
+              className={`pls-submit ${pin.length >= 4 ? 'pls-submit--ready' : 'pls-submit--disabled'}`}
             >
-              {loading ? 'Signing in…' : 'Sign In'}
+              {loading ? 'Signing in\u2026' : 'Sign In'}
             </button>
           ) : (
             <button
               onClick={() => submitClock(pin)}
               disabled={pin.length < 4 || clockLoading}
-              style={{
-                marginTop: 20, width: 260, height: 52,
-                background: pin.length >= 4
-                  ? (clockType === 'in' ? 'var(--green)' : 'var(--red)')
-                  : 'rgba(255,255,255,.05)',
-                color: pin.length >= 4 ? (clockType === 'in' ? '#0f1117' : '#fff') : 'var(--text-muted)',
-                border: 'none', borderRadius: 14,
-                fontWeight: 800, fontSize: '1rem',
-                cursor: pin.length >= 4 ? 'pointer' : 'not-allowed',
-                transition: 'background .15s',
-              }}
+              className={`pls-submit ${pin.length >= 4 ? (clockType === 'in' ? 'pls-submit--clock-in' : 'pls-submit--clock-out') : 'pls-submit--disabled'}`}
             >
               {clockLoading
-                ? (clockType === 'in' ? 'Clocking in…' : 'Clocking out…')
+                ? (clockType === 'in' ? 'Clocking in\u2026' : 'Clocking out\u2026')
                 : (clockType === 'in' ? 'Clock In' : 'Clock Out')}
             </button>
           )}
         </>
       )}
 
-      {/* Reset station (manager action) */}
-      <div style={{ marginTop: '3rem' }}>
+      {/* Reset station */}
+      <div className="pls-reset-section">
         {!showConfirm ? (
-          <button
-            onClick={() => setShowConfirm(true)}
-            style={{
-              background: 'none', border: 'none',
-              color: 'var(--text-muted)', fontSize: '0.72rem',
-              cursor: 'pointer', textDecoration: 'underline', opacity: 0.6,
-            }}
-          >
+          <button onClick={() => setShowConfirm(true)} className="pls-reset-link">
             Reset this register
           </button>
         ) : (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: 'var(--red)', fontSize: '0.82rem', marginBottom: 10 }}>
+          <div className="pls-reset-confirm">
+            <p className="pls-reset-warning">
               This will remove the station setup. A manager will need to reconfigure it.
             </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button
-                onClick={() => { clearStation(); }}
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  background: 'rgba(224,63,63,.15)', border: '1px solid rgba(224,63,63,.3)',
-                  borderRadius: 8, color: 'var(--red)', fontWeight: 700,
-                  fontSize: '0.82rem', cursor: 'pointer',
-                }}
-              >
-                Yes, reset
-              </button>
-              <button
-                onClick={() => setShowConfirm(false)}
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
-                  borderRadius: 8, color: 'var(--text-muted)', fontWeight: 700,
-                  fontSize: '0.82rem', cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
+            <div className="pls-reset-actions">
+              <button onClick={() => clearStation()} className="pls-reset-yes">Yes, reset</button>
+              <button onClick={() => setShowConfirm(false)} className="pls-reset-cancel">Cancel</button>
             </div>
           </div>
         )}
       </div>
-
     </div>
   );
 }

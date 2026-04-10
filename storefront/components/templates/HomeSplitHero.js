@@ -26,7 +26,7 @@ export default function HomeSplitHero({ content, store, products = [], departmen
               </div>
             </div>
             <div className="tpl-split-image">
-              {heroImg ? <img src={heroImg} alt="" className="tpl-split-img" /> : <div className="tpl-split-placeholder"><DeptIcon slug="grocery" size={80} className="tpl-dept-lucide" style={{ opacity: 0.3 }} /></div>}
+              {heroImg ? <img src={heroImg} alt="" className="tpl-split-img" /> : <div className="tpl-split-placeholder"><DeptIcon slug="grocery" size={80} className="tpl-dept-lucide tpl-dept-lucide--faded" /></div>}
             </div>
           </div>
         </div>

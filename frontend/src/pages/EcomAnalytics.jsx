@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import './EcomSetup.css';
+import './EcomAnalytics.css';
 
 const API = '/api/ecom';
 
@@ -20,14 +21,14 @@ export default function EcomAnalytics() {
       .then(r => r.json()).then(d => setData(d.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="layout-container"><Sidebar /><main className="main-content"><p style={{ color: 'var(--text-muted)' }}>Loading analytics...</p></main></div>;
-  if (!data) return <div className="layout-container"><Sidebar /><main className="main-content"><p style={{ color: 'var(--text-muted)' }}>Enable e-commerce first to see analytics.</p></main></div>;
+  if (loading) return <div className="layout-container"><Sidebar /><main className="main-content"><p className="ean-loading">Loading analytics...</p></main></div>;
+  if (!data) return <div className="layout-container"><Sidebar /><main className="main-content"><p className="ean-loading">Enable e-commerce first to see analytics.</p></main></div>;
 
   const { kpis, statusCounts, revenueTrend, topProducts } = data;
 
   return (
     <div className="layout-container"><Sidebar /><main className="main-content">
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Store Analytics</h1>
+      <h1 className="ean-title">Store Analytics</h1>
 
       <div className="es-analytics-kpis">
         <div className="es-kpi"><DollarSign size={20} className="es-kpi-icon" /><div><span className="es-kpi-num">${kpis.totalRevenue.toLocaleString()}</span><span className="es-kpi-label">Total Revenue</span></div></div>
@@ -36,7 +37,7 @@ export default function EcomAnalytics() {
         <div className="es-kpi"><TrendingUp size={20} className="es-kpi-icon" /><div><span className="es-kpi-num">${kpis.avgOrderValue.toFixed(2)}</span><span className="es-kpi-label">Avg Order</span></div></div>
       </div>
 
-      <div className="es-grid" style={{ marginBottom: 20 }}>
+      <div className="es-grid ean-grid-mb">
         <div className="es-section">
           <div className="es-section-title">Revenue (Last 14 Days)</div>
           <div className="es-chart-bar">
@@ -53,7 +54,7 @@ export default function EcomAnalytics() {
         </div>
         <div className="es-section">
           <div className="es-section-title">Orders by Status</div>
-          {Object.entries(statusCounts).length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No orders yet</p> : (
+          {Object.entries(statusCounts).length === 0 ? <p className="ean-no-data">No orders yet</p> : (
             <div className="es-status-list">
               {Object.entries(statusCounts).map(([status, count]) => (
                 <div key={status} className="es-status-row"><span className="es-status-name">{status}</span><span className="es-status-count">{count}</span></div>
@@ -65,7 +66,7 @@ export default function EcomAnalytics() {
 
       <div className="es-section">
         <div className="es-section-title">Top Products</div>
-        {topProducts.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No sales data yet</p> : (
+        {topProducts.length === 0 ? <p className="ean-no-data">No sales data yet</p> : (
           <table className="es-top-table">
             <thead><tr><th>Product</th><th>Sold</th><th>Revenue</th></tr></thead>
             <tbody>{topProducts.map((p, i) => (<tr key={i}><td>{p.name}</td><td>{p.qty}</td><td>${p.revenue.toFixed(2)}</td></tr>))}</tbody>

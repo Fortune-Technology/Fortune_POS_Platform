@@ -1,0 +1,173 @@
+/* ══════════════════════════════════════════════════════════════
+   Organisation.css — Organisation / Account page styles
+   Prefix: org-
+══════════════════════════════════════════════════════════════ */
+
+/* ── Section cards ───────────────────────────────────── */
+.org-section {
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.org-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem; gap: 0.75rem;
+}
+
+.org-section-title {
+  font-size: 1rem; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+
+.org-section-desc {
+  font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;
+}
+
+/* ── Form grid ───────────────────────────────────────── */
+.org-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.org-form-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.org-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 0; }
+.org-field-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+.org-input {
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  color: var(--text-primary); font-size: 0.875rem; width: 100%;
+  box-sizing: border-box; outline: none; transition: border-color 0.15s;
+}
+.org-input:focus {
+  border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--brand-10);
+}
+.org-input--readonly {
+  background: var(--bg-tertiary); cursor: not-allowed; opacity: 0.7;
+}
+
+/* ── Plan card ───────────────────────────────────────── */
+.org-plan-card {
+  border: 2px solid var(--border-color); border-radius: var(--radius-lg);
+  padding: 1.25rem; cursor: pointer; transition: all 0.15s;
+  position: relative;
+}
+.org-plan-card--selected { box-shadow: 0 0 0 3px; }
+
+.org-plan-popular {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0.2rem 0.65rem; border-radius: 9999px; white-space: nowrap;
+}
+
+.org-plan-current {
+  position: absolute; top: 10px; right: 10px;
+  color: #fff; font-size: 0.6rem; font-weight: 700;
+  padding: 0.1rem 0.45rem; border-radius: 9999px;
+}
+
+.org-plan-price { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
+.org-plan-subprice { font-size: 0.72rem; color: var(--text-muted); }
+.org-plan-name { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+
+.org-plan-features { list-style: none; padding: 0; margin: 0.75rem 0 0; }
+.org-plan-feature {
+  font-size: 0.76rem; color: var(--text-secondary); padding: 3px 0;
+  display: flex; align-items: center; gap: 6px;
+}
+.org-plan-feature::before {
+  content: '\2713'; color: var(--success); font-weight: 700; font-size: 0.7rem;
+}
+
+.org-plan-limits {
+  display: flex; gap: 0.75rem; margin-top: 0.75rem;
+  font-size: 0.7rem; color: var(--text-muted);
+}
+.org-plan-limit { display: flex; align-items: center; gap: 4px; }
+
+/* ── Plan grid (modal) ───────────────────────────────── */
+.org-plan-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem; margin-bottom: 1.75rem;
+}
+
+/* ── Modal ───────────────────────────────────────────── */
+.org-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.org-modal {
+  background: var(--bg-secondary); border-radius: var(--radius-lg);
+  padding: 2rem; width: 100%; max-width: 860px;
+  box-shadow: var(--shadow-lg); max-height: 92vh; overflow-y: auto;
+  animation: org-fade 0.2s ease;
+}
+@keyframes org-fade { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+.org-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 1.75rem;
+}
+.org-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 0.25rem;
+}
+
+.org-modal-footer {
+  display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;
+  padding-top: 1rem; border-top: 1px solid var(--border-color);
+}
+
+/* ── Billing summary ─────────────────────────────────── */
+.org-billing-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+
+.org-billing-card {
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); padding: 1rem;
+}
+.org-billing-label {
+  font-size: 0.68rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+}
+.org-billing-value { font-size: 1.3rem; font-weight: 800; }
+
+/* ── Danger zone ─────────────────────────────────────── */
+.org-danger-section {
+  background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: var(--radius-md); padding: 1.5rem; margin-top: 2rem;
+}
+.org-danger-title {
+  font-size: 1rem; font-weight: 700; color: var(--error);
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+}
+
+/* ── Save bar ────────────────────────────────────────── */
+.org-save-bar {
+  position: sticky; bottom: 0; padding: 1rem 0;
+  display: flex; justify-content: flex-end; gap: 0.75rem;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .org-plan-grid { grid-template-columns: repeat(2, 1fr); }
+  .org-billing-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 768px) {
+  .org-form-grid, .org-form-grid--3 { grid-template-columns: 1fr; }
+  .org-section { padding: 1rem; }
+  .org-plan-grid { grid-template-columns: 1fr; }
+  .org-modal { padding: 1.25rem; }
+  .org-billing-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .org-section { padding: 0.75rem; }
+}

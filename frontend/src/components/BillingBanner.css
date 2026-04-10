@@ -1,0 +1,40 @@
+/* BillingBanner.css — prefix: bb- */
+
+.bb-banner {
+  color: #fff;
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+.bb-banner--past-due {
+  background: #7c3a00;
+}
+.bb-banner--suspended {
+  background: #5a0000;
+}
+.bb-link {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .bb-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 0.75rem 1rem;
+  }
+}

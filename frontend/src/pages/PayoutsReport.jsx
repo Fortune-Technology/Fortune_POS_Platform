@@ -8,6 +8,7 @@ import {
   ArrowUpCircle, DollarSign, ShoppingCart, RefreshCw,
   AlertCircle, Search, Filter, ChevronDown,
 } from 'lucide-react';
+import './PayoutsReport.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function fmt$(n) {
@@ -384,7 +385,7 @@ export default function PayoutsReport({ embedded }) {
   if (embedded) return <div className="p-tab-content">{content}</div>;
 
   return (
-    <div style={{ padding: '1.5rem 2rem', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="pr-container">
       {content}
     </div>
   );

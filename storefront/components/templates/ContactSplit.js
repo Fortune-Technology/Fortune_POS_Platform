@@ -52,10 +52,10 @@ function ContactForm({ storeSlug }) {
     return (
       <div className="tpl-contact-form-wrap">
         <div className="tpl-contact-success">
-          <div style={{ fontSize: 48, marginBottom: 12, color: 'var(--sf-primary)' }}>✓</div>
+          <div className="tpl-contact-success-icon">✓</div>
           <h3>Message Sent!</h3>
           <p>We'll get back to you as soon as possible.</p>
-          <button className="tpl-btn tpl-btn--outline" onClick={() => setStatus(null)} style={{ marginTop: 16 }}>Send Another</button>
+          <button className="tpl-btn tpl-btn--outline tpl-btn--mt16" onClick={() => setStatus(null)}>Send Another</button>
         </div>
       </div>
     );

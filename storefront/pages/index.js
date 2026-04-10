@@ -98,7 +98,7 @@ function StoreDiscovery({ stores }) {
                 const logoUrl = branding.logoUrl ? (branding.logoUrl.startsWith('http') ? branding.logoUrl : `${process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005'}${branding.logoUrl}`) : null;
                 return (
                   <div key={s.slug} className="sd-card">
-                    <div className="sd-card-banner" style={logoUrl ? {} : { background: branding.primaryColor || 'var(--sf-primary)' }}>
+                    <div className={`sd-card-banner ${!logoUrl ? 'sd-card-banner--color' : ''}`} style={!logoUrl ? { '--sd-banner-bg': branding.primaryColor || undefined } : undefined}>
                       {logoUrl ? (
                         <img src={logoUrl} alt={s.storeName} className="sd-card-logo" />
                       ) : (
@@ -120,8 +120,8 @@ function StoreDiscovery({ stores }) {
             </div>
           </>
         ) : (
-          <div className="sf-empty" style={{ paddingTop: 60 }}>
-            <Search size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
+          <div className="sf-empty sd-empty">
+            <Search size={48} className="sd-empty-icon" />
             <h2>No stores found</h2>
             <p>{search ? 'Try a different search term.' : 'No stores are online yet.'}</p>
           </div>

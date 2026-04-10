@@ -32,6 +32,7 @@ import { getSmartCashPresets, applyRounding } from '../../utils/cashPresets.js';
 import { nanoid } from 'nanoid';
 import { useHardware, loadHardwareConfig } from '../../hooks/useHardware.js';
 import { useStationStore } from '../../stores/useStationStore.js';
+import './TenderModal.css';
 
 // ── Method definitions ────────────────────────────────────────────────────────
 const METHODS = [
@@ -46,54 +47,12 @@ const BY_ID       = Object.fromEntries(METHODS.map(m => [m.id, m]));
 const HAS_AMOUNT  = ['cash', 'manual_card', 'manual_ebt', 'other'];
 const GIVES_CHANGE = ['cash'];
 
-// ── Style helpers ─────────────────────────────────────────────────────────────
+// Style helpers kept as shortcuts referencing CSS classes
 const s = {
-  backdrop: {
-    position: 'fixed', inset: 0, zIndex: 200,
-    background: 'rgba(0,0,0,.72)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '1rem',
-  },
-  modal: (maxW = 720) => ({
-    width: '100%', maxWidth: maxW,
-    background: 'var(--bg-panel)', borderRadius: 20,
-    border: '1px solid var(--border-light)',
-    display: 'flex', flexDirection: 'column',
-    maxHeight: '94vh', overflow: 'hidden',
-    boxShadow: '0 32px 80px rgba(0,0,0,.65)',
-    position: 'relative',
-  }),
-  hdr: {
-    padding: '0.875rem 1.25rem',
-    borderBottom: '1px solid var(--border)',
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    flexShrink: 0,
-  },
-  closeBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center' },
-  bigBtn: (color = 'var(--green)', disabled = false) => ({
-    width: '100%', padding: '1.1rem', borderRadius: 14,
-    fontWeight: 800, fontSize: '1rem',
-    background: disabled ? 'var(--bg-input)' : color,
-    color: disabled ? 'var(--text-muted)' : '#fff',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-    boxShadow: disabled ? 'none' : '0 4px 16px rgba(0,0,0,.3)',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    transition: 'background .12s', border: 'none',
-  }),
-  splitAddBtn: {
-    width: '100%', padding: '0.7rem', background: 'var(--bg-card)',
-    border: '1px solid var(--border)', borderRadius: 10,
-    color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.82rem',
-    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-  },
-};
-
-// numpad right column wrapper
-const numpadCol = {
-  width: 252, flexShrink: 0,
-  padding: '0.875rem',
-  display: 'flex', alignItems: 'center',
-  borderLeft: '1px solid var(--border)',
+  backdrop: 'tm-backdrop',
+  hdr: 'tm-header',
+  closeBtn: 'tm-close-btn',
+  splitAddBtn: 'tm-split-add-btn',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -389,7 +348,7 @@ export default function TenderModal({
     const multiTender   = tenderLines.length > 1;
 
     return (
-      <div style={s.backdrop}>
+      <div className="tm-backdrop">
         <div style={{ width: '100%', maxWidth: 400, background: 'var(--bg-panel)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(122,193,67,.3)', boxShadow: '0 32px 80px rgba(0,0,0,.7)' }}>
 
           {/* Header */}
@@ -441,7 +400,7 @@ export default function TenderModal({
           <div style={{ padding: '0 1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {hasCashTender && onPrint ? (
               <>
-                <button onClick={handlePrint} style={s.bigBtn('var(--green)')}>
+                <button onClick={handlePrint} className="tm-big-btn" style={{ background: 'var(--green)' }}>
                   <Check size={18} /> Print Receipt &amp; Done
                 </button>
                 <button onClick={handleDone} style={{ width: '100%', padding: '0.875rem', borderRadius: 12, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer' }}>
@@ -449,7 +408,7 @@ export default function TenderModal({
                 </button>
               </>
             ) : (
-              <button onClick={handleDone} style={s.bigBtn('var(--green)')}>
+              <button onClick={handleDone} className="tm-big-btn" style={{ background: 'var(--green)' }}>
                 <RefreshCw size={18} /> Done — New Sale
               </button>
             )}
@@ -469,16 +428,16 @@ export default function TenderModal({
     const isDeclined = payStatus === 'declined' || payStatus === 'error';
 
     return (
-      <div style={s.backdrop}>
-        <div style={{ ...s.modal(440), border: `1px solid ${isApproved ? 'rgba(122,193,67,.4)' : isDeclined ? 'rgba(224,63,63,.4)' : 'rgba(59,130,246,.3)'}` }}>
-          <div style={{ ...s.hdr, background: isApproved ? 'rgba(122,193,67,.06)' : isDeclined ? 'rgba(224,63,63,.06)' : 'rgba(59,130,246,.06)', borderBottomColor: isApproved ? 'rgba(122,193,67,.2)' : isDeclined ? 'rgba(224,63,63,.2)' : 'rgba(59,130,246,.18)' }}>
+      <div className="tm-backdrop">
+        <div className="tm-modal tm-modal--narrow" style={{ border: `1px solid ${isApproved ? 'rgba(122,193,67,.4)' : isDeclined ? 'rgba(224,63,63,.4)' : 'rgba(59,130,246,.3)'}` }}>
+          <div className="tm-header" style={{ background: isApproved ? 'rgba(122,193,67,.06)' : isDeclined ? 'rgba(224,63,63,.06)' : 'rgba(59,130,246,.06)', borderBottomColor: isApproved ? 'rgba(122,193,67,.2)' : isDeclined ? 'rgba(224,63,63,.2)' : 'rgba(59,130,246,.18)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <CreditCard size={16} color={isApproved ? 'var(--green)' : isDeclined ? 'var(--red)' : 'var(--blue)'} />
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: isApproved ? 'var(--green)' : isDeclined ? 'var(--red)' : 'var(--blue)' }}>
                 {isApproved ? 'Card Approved' : isDeclined ? 'Card Declined' : 'Card Payment'}
               </span>
             </div>
-            <button onClick={onClose} style={s.closeBtn}><X size={16} /></button>
+            <button onClick={onClose} className="tm-close-btn"><X size={16} /></button>
           </div>
 
           <div style={{ padding: '2rem 1.5rem 1rem', textAlign: 'center' }}>
@@ -555,7 +514,7 @@ export default function TenderModal({
           <div style={{ padding: '0 1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {isApproved ? (
               /* After approved — complete the POS transaction */
-              <button onClick={complete} disabled={saving} style={s.bigBtn('var(--green)', saving)}>
+              <button onClick={complete} disabled={saving} className="tm-big-btn" style={{ background: saving ? undefined : 'var(--green)' }}>
                 {saving
                   ? <><RotateCcw size={18} style={{ animation: 'spin 1s linear infinite' }} /> Saving…</>
                   : <><Check size={18} /> Confirm &amp; Complete Sale</>}
@@ -565,7 +524,7 @@ export default function TenderModal({
               <>
                 <button
                   onClick={() => { setPayStatus(null); setPayResult(null); setCpTxId(null); }}
-                  style={s.bigBtn('var(--blue, #3b82f6)')}
+                  className="tm-big-btn" style={{ background: 'var(--blue, #3b82f6)' }}
                 >
                   <RotateCcw size={18} /> Try Again
                 </button>
@@ -585,7 +544,7 @@ export default function TenderModal({
             ) : (
               /* Idle — kick off payment */
               <>
-                <button onClick={complete} disabled={saving} style={s.bigBtn('var(--blue, #3b82f6)', saving)}>
+                <button onClick={complete} disabled={saving} className="tm-big-btn" style={{ background: saving ? undefined : 'var(--blue, #3b82f6)' }}>
                   {saving
                     ? <><RotateCcw size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing…</>
                     : hasCardPointe
@@ -608,10 +567,10 @@ export default function TenderModal({
   // ════════════════════════════════════════════════════════════════════════════
   if (method === 'manual_card' && splits.length === 0 && !initMethod) {
     return (
-      <div style={s.backdrop}>
-        <div style={s.modal(620)}>
+      <div className="tm-backdrop">
+        <div className="tm-modal" style={{ maxWidth: 620 }}>
           {/* Header */}
-          <div style={s.hdr}>
+          <div className="tm-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Smartphone size={16} color="var(--text-secondary)" />
               <div>
@@ -619,7 +578,7 @@ export default function TenderModal({
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>No terminal — enter amount manually</div>
               </div>
             </div>
-            <button onClick={onClose} style={s.closeBtn}><X size={16} /></button>
+            <button onClick={onClose} className="tm-close-btn"><X size={16} /></button>
           </div>
 
           {/* Side-by-side body */}
@@ -653,7 +612,7 @@ export default function TenderModal({
               )}
             </div>
             {/* Right — numpad */}
-            <div style={numpadCol}>
+            <div className="tm-numpad-col">
               <NumPadInline value={amount} onChange={setAmount} accentColor="var(--blue, #3b82f6)" />
             </div>
           </div>
@@ -661,11 +620,11 @@ export default function TenderModal({
           {/* Footer */}
           <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {canAddSplit && (
-              <button onClick={addSplitLine} style={s.splitAddBtn}>
+              <button onClick={addSplitLine} className="tm-split-add-btn">
                 <PlusCircle size={14} /> Add {fmt$(activeAmt)} Manual Card — pay {fmt$(remaining - activeAmt)} with another method
               </button>
             )}
-            <button onClick={complete} disabled={!canComplete || saving} style={s.bigBtn('var(--blue, #3b82f6)', !canComplete || saving)}>
+            <button onClick={complete} disabled={!canComplete || saving} className="tm-big-btn" style={{ background: (!canComplete || saving) ? undefined : 'var(--blue, #3b82f6)' }}>
               {saving ? <><RotateCcw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing…</> : <><CreditCard size={16} /> Complete Manual Card — {fmt$(Math.min(activeAmt || remaining, remaining))}</>}
             </button>
             <button onClick={() => switchMethod('cash')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'center' }}>
@@ -683,10 +642,10 @@ export default function TenderModal({
   if (method === 'manual_ebt' && splits.length === 0 && !initMethod) {
     const ebtMax = Math.min(totals.ebtTotal, remaining);
     return (
-      <div style={s.backdrop}>
-        <div style={s.modal(620)}>
+      <div className="tm-backdrop">
+        <div className="tm-modal" style={{ maxWidth: 620 }}>
           {/* Header */}
-          <div style={s.hdr}>
+          <div className="tm-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Leaf size={16} color="#6ee7b7" />
               <div>
@@ -694,7 +653,7 @@ export default function TenderModal({
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Enter EBT amount manually</div>
               </div>
             </div>
-            <button onClick={onClose} style={s.closeBtn}><X size={16} /></button>
+            <button onClick={onClose} className="tm-close-btn"><X size={16} /></button>
           </div>
 
           {/* Side-by-side body */}
@@ -731,7 +690,7 @@ export default function TenderModal({
               )}
             </div>
             {/* Right — numpad */}
-            <div style={numpadCol}>
+            <div className="tm-numpad-col">
               <NumPadInline value={amount} onChange={setAmount} accentColor="#34d399" />
             </div>
           </div>
@@ -739,11 +698,11 @@ export default function TenderModal({
           {/* Footer */}
           <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {canAddSplit && (
-              <button onClick={addSplitLine} style={{ ...s.splitAddBtn, background: 'rgba(52,211,153,.06)', border: '1px solid rgba(52,211,153,.2)', color: '#34d399' }}>
+              <button onClick={addSplitLine} className="tm-split-add-btn" style={{ background: 'rgba(52,211,153,.06)', border: '1px solid rgba(52,211,153,.2)', color: '#34d399' }}>
                 <PlusCircle size={14} /> Add {fmt$(activeAmt)} EBT — Pay {fmt$(remaining - activeAmt)} with cash/card
               </button>
             )}
-            <button onClick={complete} disabled={!canComplete || saving} style={s.bigBtn('#34d399', !canComplete || saving)}>
+            <button onClick={complete} disabled={!canComplete || saving} className="tm-big-btn" style={{ background: (!canComplete || saving) ? undefined : '#34d399' }}>
               {saving ? <><RotateCcw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing…</> : <><Check size={16} /> Complete with Manual EBT</>}
             </button>
             <button onClick={() => switchMethod('cash')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'center' }}>
@@ -767,15 +726,15 @@ export default function TenderModal({
                    : 'var(--green)';
 
   return (
-    <div style={s.backdrop}>
-      <div style={s.modal(720)}>
+    <div className="tm-backdrop">
+      <div className="tm-modal tm-modal--wide">
 
         {/* Header */}
-        <div style={s.hdr}>
+        <div className="tm-header">
           <span style={{ fontWeight: 800, fontSize: '1rem' }}>Tender</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--green)' }}>{fmt$(totals.grandTotal)}</span>
-            <button onClick={onClose} style={s.closeBtn}><X size={16} /></button>
+            <button onClick={onClose} className="tm-close-btn"><X size={16} /></button>
           </div>
         </div>
 
@@ -937,7 +896,7 @@ export default function TenderModal({
 
           {/* ── Right column — numpad (only for amount-entry methods) ── */}
           {showNumpad && (
-            <div style={numpadCol}>
+            <div className="tm-numpad-col">
               <NumPadInline value={amount} onChange={setAmount} accentColor={padColor} />
             </div>
           )}
@@ -947,12 +906,12 @@ export default function TenderModal({
         {/* Footer */}
         <div style={{ padding: '0.875rem 1rem', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {canAddSplit && (
-            <button onClick={addSplitLine} style={s.splitAddBtn}>
+            <button onClick={addSplitLine} className="tm-split-add-btn">
               <PlusCircle size={14} /> Add {fmt$(activeAmt)} {activeM?.label} — pay {fmt$(remaining - activeAmt)} separately
             </button>
           )}
           <button onClick={complete} disabled={!canComplete || saving}
-            style={s.bigBtn(method === 'card' ? 'var(--blue, #3b82f6)' : padColor, !canComplete || saving)}
+            className="tm-big-btn" style={{ background: (!canComplete || saving) ? undefined : (method === 'card' ? 'var(--blue, #3b82f6)' : padColor) }}
           >
             {saving
               ? <><RotateCcw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing…</>
@@ -1038,10 +997,7 @@ export default function TenderModal({
           </div>
         )}
 
-        <style>{`
-          @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
-          @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        `}</style>
+        {/* Animations moved to TenderModal.css */}
 
       </div>
     </div>

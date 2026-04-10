@@ -57,7 +57,7 @@ export default function OrderConfirmationPage() {
       <Head><title>Order Confirmed</title></Head>
       <Header />
 
-      <main className="sf-container" style={{ paddingTop: 40, paddingBottom: 80 }}>
+      <main className="sf-container oc-main">
         {loading ? (
           <div className="sf-loading">Loading order details...</div>
         ) : (
@@ -91,7 +91,7 @@ export default function OrderConfirmationPage() {
 
                 {order.lineItems && Array.isArray(order.lineItems) && (
                   <div className="oc-items">
-                    <h3 style={{ marginBottom: 8, fontSize: 15 }}>Items</h3>
+                    <h3 className="oc-items-heading">Items</h3>
                     {order.lineItems.map((item, i) => (
                       <div key={i} className="oc-item-row">
                         <span>{item.name} × {item.qty}</span>
@@ -103,7 +103,7 @@ export default function OrderConfirmationPage() {
               </div>
             )}
 
-            <Link href={`/products?store=${sq}`} className="cd-btn-checkout" style={{ marginTop: 24, display: 'inline-block', padding: '12px 32px' }}>
+            <Link href={`/products?store=${sq}`} className="cd-btn-checkout oc-continue-btn">
               Continue Shopping
             </Link>
           </div>

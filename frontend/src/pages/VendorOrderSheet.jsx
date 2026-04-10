@@ -19,6 +19,7 @@ import {
   getPurchaseOrderPDF,
 } from '../services/api';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
+import './VendorOrderSheet.css';
 import '../styles/portal.css';
 
 /* ─── Constants ─── */
@@ -58,35 +59,28 @@ function FactorBadges({ factors }) {
   if (!factors) return null;
   const badges = [];
   if (factors.weather)
-    badges.push(<span key="w" title={`Weather: ${factors.weather}`} style={factorStyle('#3b82f6')}><CloudSun size={11} /></span>);
+    badges.push(<span key="w" title={`Weather: ${factors.weather}`} className="vos-factor-badge" style={factorStyle('#3b82f6')}><CloudSun size={11} /></span>);
   if (factors.holiday)
-    badges.push(<span key="h" title={`Holiday: ${factors.holiday}`} style={factorStyle('#a855f7')}><PartyPopper size={11} /></span>);
+    badges.push(<span key="h" title={`Holiday: ${factors.holiday}`} className="vos-factor-badge" style={factorStyle('#a855f7')}><PartyPopper size={11} /></span>);
   if (factors.trend === 'up')
-    badges.push(<span key="tu" title="Trending up" style={factorStyle('#22c55e')}><TrendingUp size={11} /></span>);
+    badges.push(<span key="tu" title="Trending up" className="vos-factor-badge" style={factorStyle('#22c55e')}><TrendingUp size={11} /></span>);
   if (factors.trend === 'down')
-    badges.push(<span key="td" title="Trending down" style={factorStyle('#f59e0b')}><TrendingDown size={11} /></span>);
+    badges.push(<span key="td" title="Trending down" className="vos-factor-badge" style={factorStyle('#f59e0b')}><TrendingDown size={11} /></span>);
   if (factors.stockout)
-    badges.push(<span key="so" title="Stockout risk" style={factorStyle('#ef4444')}><AlertTriangle size={11} /></span>);
-  return <span style={{ display: 'inline-flex', gap: 3 }}>{badges}</span>;
+    badges.push(<span key="so" title="Stockout risk" className="vos-factor-badge" style={factorStyle('#ef4444')}><AlertTriangle size={11} /></span>);
+  return <span className="vos-factor-badges">{badges}</span>;
 }
 
 const factorStyle = (c) => ({
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 20, height: 20, borderRadius: '50%',
-  background: c + '18', color: c, cursor: 'help',
+  background: c + '18', color: c,
 });
 
 /* ─── Urgency Dot ─── */
 function UrgencyDot({ level }) {
   const u = URGENCY[level] || URGENCY.low;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 8px', borderRadius: 'var(--radius-full)',
-      background: u.bg, color: u.color,
-      fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-    }}>
-      <span style={{ width: 7, height: 7, borderRadius: '50%', background: u.color }} />
+    <span className="vos-urgency" style={{ background: u.bg, color: u.color }}>
+      <span className="vos-urgency-dot" style={{ background: u.color }} />
       {u.label}
     </span>
   );
@@ -251,7 +245,7 @@ function SuggestionsTab() {
   return (
     <>
       {/* Action bar */}
-      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div className="vos-action-bar">
         <button className="p-btn p-btn-primary" onClick={fetchSuggestions} disabled={loading}>
           {loading ? <Spinner /> : <RefreshCw size={15} />} Generate Suggestions
         </button>
@@ -260,7 +254,7 @@ function SuggestionsTab() {
             <button className="p-btn p-btn-success" onClick={handleCreateAll} disabled={!!creating}>
               {creating === 'all' ? <Spinner /> : <ShoppingCart size={15} />} Create All POs
             </button>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+            <div className="vos-export-btns">
               <button className="p-btn p-btn-ghost p-btn-sm" onClick={handleExportCSV}>
                 <Download size={14} /> CSV
               </button>
@@ -308,26 +302,19 @@ function SuggestionsTab() {
       {!loading && groups.map((vg) => (
         <div key={vg.vendorId} className="p-card" style={{ marginBottom: '0.875rem' }}>
           {/* Vendor header */}
-          <div
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer',
-              padding: '0.25rem 0', flexWrap: 'wrap',
-            }}
-            onClick={() => toggle(vg.vendorId)}
-          >
+          <div className="vos-vendor-header" onClick={() => toggle(vg.vendorId)}>
             {expanded[vg.vendorId] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+            <span className="vos-vendor-name">
               {vg.vendorName || 'Unknown Vendor'}
             </span>
             <span className="p-badge p-badge-brand">{vg.items?.length || 0} items</span>
-            <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--success)', fontSize: '0.9rem' }}>
+            <span className="vos-vendor-subtotal">
               {fmtCurrency(vg.subtotal)}
             </span>
             <button
               className="p-btn p-btn-secondary p-btn-sm"
               onClick={(e) => { e.stopPropagation(); handleCreateVendor(vg.vendorId); }}
               disabled={!!creating}
-              style={{ marginLeft: '0.5rem' }}
             >
               {creating === vg.vendorId ? <Spinner /> : <ShoppingCart size={13} />} Create PO
             </button>
@@ -335,7 +322,7 @@ function SuggestionsTab() {
 
           {/* Items table */}
           {expanded[vg.vendorId] && (
-            <div className="p-table-wrap" style={{ marginTop: '0.75rem' }}>
+            <div className="p-table-wrap vos-table-items">
               <table className="p-table">
                 <thead>
                   <tr>
@@ -348,21 +335,21 @@ function SuggestionsTab() {
                 <tbody>
                   {(vg.items || []).map((item, i) => (
                     <tr key={i}>
-                      <td className="p-td-strong" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <td className="p-td-strong vos-td-product">
                         {item.name || item.upc}
                       </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{item.upc || '--'}</td>
+                      <td className="vos-td-upc">{item.upc || '--'}</td>
                       <td>{item.department || '--'}</td>
-                      <td style={{ color: item.onHand <= 0 ? 'var(--error)' : 'var(--text-secondary)', fontWeight: 600 }}>
+                      <td className={item.onHand <= 0 ? 'vos-td-onhand-zero' : 'vos-td-onhand'}>
                         {item.onHand ?? '--'}
                       </td>
                       <td>{fmtNum(item.daysSupply, 0)}</td>
                       <td>{fmtNum(item.avgDaily)}</td>
                       <td>{fmtNum(item.forecast, 0)}</td>
                       <td>{fmtNum(item.safetyStock, 0)}</td>
-                      <td style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{item.orderQty ?? '--'}</td>
+                      <td className="vos-td-order-qty">{item.orderQty ?? '--'}</td>
                       <td>{item.cases ?? '--'}</td>
-                      <td style={{ fontWeight: 600 }}>{fmtCurrency(item.estCost)}</td>
+                      <td className="vos-td-cost">{fmtCurrency(item.estCost)}</td>
                       <td><UrgencyDot level={item.urgency} /></td>
                       <td><FactorBadges factors={item.factors} /></td>
                     </tr>
@@ -516,7 +503,7 @@ function PurchaseOrdersTab() {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem' }}>
+      <div className="vos-orders-actions">
         <button className="p-btn p-btn-ghost" onClick={fetchOrders} disabled={loading}>
           <RefreshCw size={15} /> Refresh
         </button>
@@ -586,15 +573,15 @@ function PurchaseOrdersTab() {
             {poDetail && !detailLoading && (
               <>
                 {/* Summary row */}
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                <div className="vos-po-summary">
                   <span>Status: <span className={(PO_STATUS[poDetail.status] || PO_STATUS.draft).cls}>{(PO_STATUS[poDetail.status] || PO_STATUS.draft).label}</span></span>
                   <span>Created: {fmtDate(poDetail.createdAt || poDetail.date)}</span>
                   <span>Expected: {fmtDate(poDetail.expectedDate)}</span>
-                  <span style={{ fontWeight: 700 }}>Total: {fmtCurrency(poDetail.total)}</span>
+                  <span className="vos-po-total">Total: {fmtCurrency(poDetail.total)}</span>
                 </div>
 
                 {/* Line items */}
-                <div className="p-table-wrap" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                <div className="p-table-wrap vos-po-items">
                   <table className="p-table">
                     <thead>
                       <tr>
@@ -610,8 +597,7 @@ function PurchaseOrdersTab() {
                             {poDetail.status === 'draft' && !receiving ? (
                               <input
                                 type="number"
-                                className="p-input"
-                                style={{ width: 70, padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}
+                                className="p-input p-input-sm"
                                 value={editQtys[i] ?? item.qtyOrdered}
                                 onChange={(e) => setEditQtys((prev) => ({ ...prev, [i]: e.target.value }))}
                                 min={0}
@@ -635,7 +621,7 @@ function PurchaseOrdersTab() {
                             )}
                           </td>
                           <td>{fmtCurrency(item.unitCost)}</td>
-                          <td style={{ fontWeight: 600 }}>{fmtCurrency(item.total || (item.qtyOrdered * item.unitCost))}</td>
+                          <td className="vos-td-cost">{fmtCurrency(item.total || (item.qtyOrdered * item.unitCost))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -643,7 +629,7 @@ function PurchaseOrdersTab() {
                 </div>
 
                 {/* Actions */}
-                <div className="p-form-actions" style={{ flexWrap: 'wrap' }}>
+                <div className="p-form-actions vos-po-actions">
                   {poDetail.status === 'draft' && !receiving && (
                     <>
                       <button className="p-btn p-btn-secondary p-btn-sm" onClick={handleSaveEdits} disabled={saving}>
@@ -736,12 +722,12 @@ function HistoryTab() {
   return (
     <>
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-        <div className="p-field" style={{ marginBottom: 0, minWidth: 140 }}>
+      <div className="vos-history-filters">
+        <div className="p-field">
           <label className="p-field-label">From</label>
           <input type="date" className="p-input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
-        <div className="p-field" style={{ marginBottom: 0, minWidth: 140 }}>
+        <div className="p-field">
           <label className="p-field-label">To</label>
           <input type="date" className="p-input" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
@@ -796,7 +782,7 @@ function HistoryTab() {
       {/* Read-only detail modal */}
       {selectedPO && (
         <div className="p-modal-overlay" onClick={closeDetail}>
-          <div className="p-modal p-modal-lg" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700 }}>
+          <div className="p-modal p-modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="p-modal-header">
               <h2 className="p-modal-title">
                 PO {poDetail?.poNumber || '...'} — {poDetail?.vendorName || ''}
@@ -812,13 +798,13 @@ function HistoryTab() {
 
             {poDetail && !detailLoading && (
               <>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                <div className="vos-po-summary">
                   <span>Status: <span className={(PO_STATUS[poDetail.status] || PO_STATUS.draft).cls}>{(PO_STATUS[poDetail.status] || PO_STATUS.draft).label}</span></span>
                   <span>Created: {fmtDate(poDetail.createdAt || poDetail.date)}</span>
-                  <span style={{ fontWeight: 700 }}>Total: {fmtCurrency(poDetail.total)}</span>
+                  <span className="vos-po-total">Total: {fmtCurrency(poDetail.total)}</span>
                 </div>
 
-                <div className="p-table-wrap" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                <div className="p-table-wrap vos-po-items">
                   <table className="p-table">
                     <thead>
                       <tr>
@@ -833,7 +819,7 @@ function HistoryTab() {
                           <td>{item.qtyOrdered ?? '--'}</td>
                           <td>{item.qtyReceived ?? '--'}</td>
                           <td>{fmtCurrency(item.unitCost)}</td>
-                          <td style={{ fontWeight: 600 }}>{fmtCurrency(item.total || (item.qtyOrdered * item.unitCost))}</td>
+                          <td className="vos-td-cost">{fmtCurrency(item.total || (item.qtyOrdered * item.unitCost))}</td>
                         </tr>
                       ))}
                     </tbody>

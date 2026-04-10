@@ -1,0 +1,307 @@
+/* OpenShiftModal.css — Open shift / count drawer */
+/* Prefix: osm- */
+
+.osm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+.osm-modal {
+  width: 100%;
+  max-width: 680px;
+  background: var(--bg-panel);
+  border-radius: 20px;
+  border: 1px solid rgba(122, 193, 67, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 95vh;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.75);
+}
+
+.osm-header {
+  padding: 0.875rem 1.25rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(122, 193, 67, 0.06);
+}
+
+.osm-header-left { display: flex; align-items: center; gap: 8px; }
+.osm-header-title { font-weight: 800; font-size: 0.95rem; color: var(--green); }
+.osm-header-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+.osm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+}
+
+/* Mode tabs */
+.osm-mode-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0.75rem 1.25rem 0;
+  flex-shrink: 0;
+}
+
+.osm-mode-tab {
+  flex: 1;
+  padding: 0.45rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.osm-mode-tab--active { background: var(--green); color: #fff; }
+.osm-mode-tab--inactive { background: var(--bg-input); color: var(--text-secondary); }
+
+/* Main body */
+.osm-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  gap: 0;
+}
+
+.osm-left {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+}
+
+.osm-right {
+  width: 200px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 6px;
+}
+
+/* Manual mode */
+.osm-manual-section { display: flex; flex-direction: column; gap: 8px; }
+.osm-manual-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
+
+.osm-manual-display {
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--bg-input);
+  border: 2px solid var(--green);
+  text-align: right;
+}
+
+.osm-manual-amount {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--green);
+  letter-spacing: -0.02em;
+}
+
+.osm-manual-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+.osm-manual-tip { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+
+/* Denomination grid */
+.osm-denom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+}
+
+.osm-denom-col-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+/* Denomination row */
+.osm-denom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0.625rem;
+  margin-bottom: 3px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.12s;
+}
+
+.osm-denom-row--active {
+  background: rgba(122, 193, 67, 0.12);
+  border-color: var(--green);
+}
+
+.osm-denom-row--has-qty { background: rgba(122, 193, 67, 0.04); }
+
+.osm-denom-label {
+  width: 58px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.osm-denom-label--active { color: var(--green); }
+.osm-denom-label--default { color: var(--text-primary); }
+
+.osm-denom-count {
+  flex: 1;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  min-width: 36px;
+}
+
+.osm-denom-count--has-qty { color: var(--text-primary); }
+.osm-denom-count--empty { color: var(--text-muted); }
+
+.osm-denom-subtotal {
+  width: 52px;
+  font-size: 0.825rem;
+  font-weight: 700;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.osm-denom-subtotal--has-qty { color: var(--green); }
+.osm-denom-subtotal--empty { color: var(--text-muted); }
+
+/* Note */
+.osm-note-section { margin-top: 10px; }
+.osm-note-label { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+
+.osm-note-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.825rem;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+
+.osm-error {
+  margin-top: 8px;
+  padding: 0.625rem;
+  border-radius: 8px;
+  background: rgba(224, 63, 63, 0.08);
+  border: 1px solid rgba(224, 63, 63, 0.25);
+  color: var(--red);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Numpad display */
+.osm-numpad-display {
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-weight: 800;
+  color: var(--green);
+  text-align: right;
+  word-break: break-all;
+}
+
+.osm-numpad-display--manual { font-size: 1.3rem; }
+.osm-numpad-display--denom { font-size: 1rem; }
+
+.osm-numpad-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.osm-numpad-btn {
+  height: 52px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.osm-numpad-btn--digit {
+  font-size: 1.2rem;
+  font-weight: 800;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.osm-numpad-btn--clear {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-card);
+  color: var(--red);
+}
+
+.osm-numpad-btn--back {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-card);
+  color: var(--amber);
+}
+
+.osm-numpad-btn--dim { opacity: 0.35; }
+.osm-numpad-btn:hover:not(:disabled) { background: var(--bg-hover); }
+
+/* Footer */
+.osm-footer {
+  border-top: 1px solid var(--border);
+  padding: 0.875rem 1.25rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.osm-footer-total { flex: 1; }
+.osm-footer-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+.osm-footer-amount { font-size: 1.6rem; font-weight: 900; color: var(--green); line-height: 1.1; }
+
+.osm-open-btn {
+  padding: 0.875rem 2rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.osm-open-btn--active { background: var(--green); color: #fff; cursor: pointer; }
+.osm-open-btn--loading { background: var(--bg-input); color: var(--text-muted); cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .osm-modal { max-width: 100%; border-radius: 16px; }
+  .osm-body { flex-direction: column; }
+  .osm-right { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+  .osm-denom-grid { grid-template-columns: 1fr; }
+}

@@ -1,17 +1,18 @@
 import React from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
 } from 'recharts';
 import { TrendingUp, Users, DollarSign, Package } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import './Dashboard.css';
 
 const data = [
   { name: 'Jan', revenue: 4000, points: 2400 },
@@ -23,18 +24,18 @@ const data = [
 ];
 
 const StatCard = ({ title, value, icon, color }) => (
-  <div className="glass-card" style={{ padding: '1.5rem', flex: 1, minWidth: '240px' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div className="glass-card dsh-stat-card">
+    <div className="dsh-stat-top">
       <div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{title}</p>
-        <h3 style={{ fontSize: '1.75rem', color: 'var(--text-primary)' }}>{value}</h3>
+        <p className="dsh-stat-label">{title}</p>
+        <h3 className="dsh-stat-value">{value}</h3>
       </div>
-      <div style={{ background: `${color}20`, padding: '0.75rem', borderRadius: '12px', color }}>
+      <div className="dsh-stat-icon" style={{ background: `${color}20`, color }}>
         {icon}
       </div>
     </div>
-    <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', color: 'var(--success)', fontSize: '0.875rem' }}>
-      <TrendingUp size={16} style={{ marginRight: '0.25rem' }} />
+    <div className="dsh-stat-trend">
+      <TrendingUp size={16} className="dsh-trend-icon" />
       <span>+12.5% from last month</span>
     </div>
   </div>
@@ -45,21 +46,21 @@ const Dashboard = () => {
     <div className="layout-container">
       <Sidebar />
       <main className="main-content animate-fade-in">
-        <header style={{ marginBottom: '2.5rem' }}>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Dashboard Overview</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Welcome back to your business analytics hub.</p>
+        <header className="dsh-header">
+          <h1 className="dsh-title">Dashboard Overview</h1>
+          <p className="dsh-subtitle">Welcome back to your business analytics hub.</p>
         </header>
 
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
+        <div className="dsh-stats-row">
           <StatCard title="Total Revenue" value="$42,500" icon={<DollarSign />} color="#3b82f6" />
           <StatCard title="Active Customers" value="1,284" icon={<Users />} color="#10b981" />
           <StatCard title="Total Products" value="452" icon={<Package />} color="#a855f7" />
           <StatCard title="Loyalty Points Issued" value="18.5k" icon={<TrendingUp />} color="#f59e0b" />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
-          <div className="glass-card" style={{ height: '400px' }}>
-            <h3 style={{ marginBottom: '1.5rem' }}>Revenue Trends</h3>
+        <div className="dsh-charts-grid">
+          <div className="glass-card dsh-chart-card">
+            <h3 className="dsh-chart-title">Revenue Trends</h3>
             <ResponsiveContainer width="100%" height="90%">
               <AreaChart data={data}>
                 <defs>
@@ -71,7 +72,7 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
                   itemStyle={{ color: 'var(--text-primary)' }}
                 />
@@ -80,14 +81,14 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="glass-card" style={{ height: '400px' }}>
-            <h3 style={{ marginBottom: '1.5rem' }}>Loyalty Points Activity</h3>
+          <div className="glass-card dsh-chart-card">
+            <h3 className="dsh-chart-title">Loyalty Points Activity</h3>
             <ResponsiveContainer width="100%" height="90%">
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
                 />
                 <Bar dataKey="points" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={40} />

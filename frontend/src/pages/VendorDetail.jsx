@@ -14,6 +14,7 @@ import {
   getVendorPayouts,
   getVendorStats,
 } from '../services/api';
+import './VendorDetail.css';
 import {
   Truck, ArrowLeft, Edit2, Check, X, Phone, Mail, Globe,
   Package, DollarSign, TrendingDown, BarChart2, Building2,

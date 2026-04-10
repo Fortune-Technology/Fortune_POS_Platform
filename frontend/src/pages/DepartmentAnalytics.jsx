@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import { getDepartmentSales, getDepartmentComparison } from '../services/api';
 import './analytics.css';
 import '../styles/portal.css';
+import './DepartmentAnalytics.css';
 
 /* ─── Constants ─── */
 const COLORS = [
@@ -29,16 +30,10 @@ const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); retur
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)',
-      padding: '0.75rem 1rem',
-      boxShadow: 'var(--shadow-md)',
-    }}>
-      <p style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}>{label}</p>
+    <div className="dan-tooltip">
+      <p className="dan-tooltip-label">{label}</p>
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color, fontSize: '0.8rem', margin: '0.1rem 0' }}>
+        <p key={i} className="dan-tooltip-entry" style={{ color: p.color }}>
           {p.name}: {typeof p.value === 'number' ? fmt(p.value) : p.value}
         </p>
       ))}
@@ -163,7 +158,7 @@ export default function DepartmentAnalytics({ embedded }) {
             <label>Prev To</label>
             <input type="date" value={prevRange.to2}
               onChange={(e) => setPrevRange((r) => ({ ...r, to2: e.target.value }))} />
-            <button className="btn btn-secondary" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button className="btn btn-secondary dan-btn-refresh" onClick={fetchData}>
               <RefreshCw size={15} /> Refresh
             </button>
             <button className="p-btn p-btn-ghost p-btn-sm" onClick={handleExportCSV}>
@@ -180,7 +175,7 @@ export default function DepartmentAnalytics({ embedded }) {
           <div className="analytics-error">
             <AlertCircle size={18} />
             <span>{error}</span>
-            <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '0.35rem 0.9rem' }} onClick={fetchData}>
+            <button className="btn btn-secondary dan-btn-retry" onClick={fetchData}>
               Retry
             </button>
           </div>
@@ -189,7 +184,7 @@ export default function DepartmentAnalytics({ embedded }) {
         {/* ── KPI Row ── */}
         <div className="analytics-stats-row">
           <div className="analytics-stat-card">
-            <div className="analytics-stat-icon" style={{ background: 'var(--brand-15)', color: 'var(--accent-primary)' }}>
+            <div className="analytics-stat-icon dan-stat-icon-brand">
               <TrendingUp size={22} />
             </div>
             <div>
@@ -198,16 +193,16 @@ export default function DepartmentAnalytics({ embedded }) {
             </div>
           </div>
           <div className="analytics-stat-card">
-            <div className="analytics-stat-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
+            <div className="analytics-stat-icon dan-stat-icon-blue">
               <Store size={22} />
             </div>
             <div>
-              <span className="analytics-stat-value" style={{ fontSize: '1rem' }}>{topDept}</span>
+              <span className="analytics-stat-value dan-stat-value-sm">{topDept}</span>
               <span className="analytics-stat-label">Top Department</span>
             </div>
           </div>
           <div className="analytics-stat-card">
-            <div className="analytics-stat-icon" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>
+            <div className="analytics-stat-icon dan-stat-icon-purple">
               <BarChart2 size={22} />
             </div>
             <div>
@@ -216,7 +211,7 @@ export default function DepartmentAnalytics({ embedded }) {
             </div>
           </div>
           <div className="analytics-stat-card">
-            <div className="analytics-stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+            <div className="analytics-stat-icon dan-stat-icon-green">
               <Store size={22} />
             </div>
             <div>
@@ -238,7 +233,7 @@ export default function DepartmentAnalytics({ embedded }) {
           <>
             {/* ── Bar + Pie ── */}
             <div className="analytics-grid-2">
-              <div className="analytics-chart-card" style={{ marginBottom: 0 }}>
+              <div className="analytics-chart-card dan-chart-flush">
                 <div className="analytics-chart-title">
                   Revenue by Department (Top 15)
                 </div>
@@ -256,7 +251,7 @@ export default function DepartmentAnalytics({ embedded }) {
                 </ResponsiveContainer>
               </div>
 
-              <div className="analytics-chart-card" style={{ marginBottom: 0 }}>
+              <div className="analytics-chart-card dan-chart-flush">
                 <div className="analytics-chart-title">Department Revenue Share</div>
                 <ResponsiveContainer width="100%" height={400}>
                   <PieChart>
@@ -278,8 +273,8 @@ export default function DepartmentAnalytics({ embedded }) {
 
             {/* ── Comparison Table ── */}
             {compDepts.length > 0 && (
-              <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-                <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              <div className="glass-card dan-section-card">
+                <p className="dan-section-title">
                   Period Comparison — Current vs Previous
                 </p>
                 <div className="table-container">
@@ -300,10 +295,10 @@ export default function DepartmentAnalytics({ embedded }) {
                         const up   = diff >= 0;
                         return (
                           <tr key={i}>
-                            <td style={{ fontWeight: 600 }}>{d.Name}</td>
-                            <td style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{fmt(d.TotalNetSales)}</td>
+                            <td className="dan-td-bold">{d.Name}</td>
+                            <td className="dan-td-accent">{fmt(d.TotalNetSales)}</td>
                             <td>{fmt(d.TotalNetSales2)}</td>
-                            <td style={{ color: up ? 'var(--success)' : 'var(--error)', fontWeight: 600 }}>
+                            <td className={up ? 'dan-td-diff-up' : 'dan-td-diff-down'}>
                               {up ? '+' : ''}{fmt(diff)}
                             </td>
                             <td>
@@ -324,8 +319,8 @@ export default function DepartmentAnalytics({ embedded }) {
 
             {/* ── Full Dept Breakdown ── */}
             {depts.length > 0 && (
-              <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-                <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              <div className="glass-card dan-section-card">
+                <p className="dan-section-title">
                   Full Department Breakdown
                 </p>
                 <div className="table-container">
@@ -344,11 +339,11 @@ export default function DepartmentAnalytics({ embedded }) {
                     <tbody>
                       {depts.map((d, i) => (
                         <tr key={i}>
-                          <td style={{ fontWeight: 600 }}>
+                          <td className="dan-td-bold">
                             <span className="color-dot" style={{ background: COLORS[i % COLORS.length] }} />
                             {d.Name}
                           </td>
-                          <td style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{fmt(d.TotalSales)}</td>
+                          <td className="dan-td-accent">{fmt(d.TotalSales)}</td>
                           <td>{fmt(d.TotalGrossSales)}</td>
                           <td>{fmtInt(d.TotalItems)}</td>
                           <td>{fmtInt(d.TotalTransactionsCount)}</td>
@@ -364,7 +359,7 @@ export default function DepartmentAnalytics({ embedded }) {
                                   }}
                                 />
                               </div>
-                              <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                              <span className="dan-pct-text">
                                 {fmtPct(d.TotalPercent)}
                               </span>
                             </div>
@@ -380,8 +375,8 @@ export default function DepartmentAnalytics({ embedded }) {
             {/* ── Section detail for top 3 depts ── */}
             {depts.slice(0, 3).map((dept, di) =>
               dept.Details && dept.Details.length > 0 ? (
-                <div key={di} className="glass-card" style={{ marginBottom: '1.5rem' }}>
-                  <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem' }}>
+                <div key={di} className="glass-card dan-section-card">
+                  <p className="dan-section-title">
                     {dept.Name} — Section Breakdown
                   </p>
                   <div className="table-container">
@@ -401,9 +396,9 @@ export default function DepartmentAnalytics({ embedded }) {
                         {dept.Details.map((sec, si) => (
                           <tr key={si}>
                             <td>{sec.Name}</td>
-                            <td style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{fmt(sec.Sales)}</td>
+                            <td className="dan-td-accent">{fmt(sec.Sales)}</td>
                             <td>{fmt(sec.GrossSales)}</td>
-                            <td style={{ color: 'var(--text-muted)' }}>{fmt(sec.LastYearSales)}</td>
+                            <td className="dan-td-muted">{fmt(sec.LastYearSales)}</td>
                             <td>{fmtInt(sec.Items)}</td>
                             <td>{fmt(sec.AveragePrice)}</td>
                             <td>{fmtPct(sec.Percent)}</td>

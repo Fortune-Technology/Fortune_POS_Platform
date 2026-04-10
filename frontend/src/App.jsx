@@ -112,7 +112,7 @@ import { StoreProvider } from './contexts/StoreContext';
 // Placeholder pages
 const Placeholder = ({ name }) => (
   <div className="layout-container">
-    <div className="sidebar" style={{ width: '260px' }}></div>
+    <div className="sidebar app-placeholder-sidebar"></div>
     <div className="main-content"><h1>{name} Page</h1><p>This module is coming soon.</p></div>
   </div>
 );
@@ -142,7 +142,7 @@ const ImpersonateLanding = () => {
       navigate('/login', { replace: true });
     }
   }, [searchParams, navigate]);
-  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>Loading...</div>;
+  return <div className="app-impersonate-loading">Loading...</div>;
 };
 
 

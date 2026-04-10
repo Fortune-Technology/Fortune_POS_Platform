@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import './DocumentUploader.css';
 
 const DocumentUploader = ({ onUploadSuccess }) => {
     const [file, setFile] = useState(null);
@@ -27,7 +28,6 @@ const DocumentUploader = ({ onUploadSuccess }) => {
         if (selectedFile) {
             const sizeMB = selectedFile.size / 1024 / 1024;
 
-            // Client side file size validation (50MB)
             if (selectedFile.size > MAX_SIZE) {
                 setError(`File too large (${sizeMB.toFixed(1)}MB). Max allowed is ${MAX_MB}MB.`);
                 setFile(null);
@@ -35,17 +35,16 @@ const DocumentUploader = ({ onUploadSuccess }) => {
                 setWarning(null);
                 return;
             }
-            
-            // Validate file typing manually if browser "accept" is bypassed
+
             const allowedTypes = [
-                'application/pdf', 
-                'image/jpeg', 
-                'image/png', 
-                'image/tiff', 
+                'application/pdf',
+                'image/jpeg',
+                'image/png',
+                'image/tiff',
                 'image/bmp',
                 'image/heif'
             ];
-            
+
             if (!allowedTypes.includes(selectedFile.type)) {
                 setError('Unsupported file type. Please upload a PDF, JPG, PNG, TIFF, or BMP.');
                 setFile(null);
@@ -63,7 +62,7 @@ const DocumentUploader = ({ onUploadSuccess }) => {
             setFile(selectedFile);
             setError(null);
             setSuccess(null);
-            
+
             if (previewUrl) URL.revokeObjectURL(previewUrl);
             const url = URL.createObjectURL(selectedFile);
             setPreviewUrl(url);
@@ -84,15 +83,11 @@ const DocumentUploader = ({ onUploadSuccess }) => {
 
         const formData = new FormData();
         formData.append('document', file);
-        // Also provide modelId in body as backup
         formData.append('modelId', modelId);
 
         try {
-            // Pass model as query param for robustness
             const response = await api.post(`/document/analyze?model=${modelId}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
             const data = response.data.data;
             setResult(data);
@@ -109,20 +104,17 @@ const DocumentUploader = ({ onUploadSuccess }) => {
     const handleFieldChange = (key, value) => {
         setEditingFields(prev => ({
             ...prev,
-            [key]: {
-                ...prev[key],
-                value: value
-            }
+            [key]: { ...prev[key], value: value }
         }));
     };
 
     const handleSaveEdits = async () => {
         if (!result?._id) return;
-        
+
         setIsSaving(true);
         setError(null);
         setSuccess(null);
-        
+
         try {
             const response = await api.patch(`/document/${result._id}`, {
                 extractedFields: editingFields
@@ -165,9 +157,9 @@ const DocumentUploader = ({ onUploadSuccess }) => {
             <div className="grid grid-2 mt-lg">
                 <div className="form-group mb-0">
                     <label className="form-label">Analysis Model</label>
-                    <select 
-                        className="form-select" 
-                        value={modelId} 
+                    <select
+                        className="form-select"
+                        value={modelId}
                         onChange={(e) => setModelId(e.target.value)}
                         disabled={loading}
                     >
@@ -182,9 +174,9 @@ const DocumentUploader = ({ onUploadSuccess }) => {
 
                 <div className="form-group mb-0">
                     <label className="form-label">Select File (Max size: 50MB for images (auto-compressed), 500MB for PDFs)</label>
-                    <input 
-                        type="file" 
-                        className="form-input" 
+                    <input
+                        type="file"
+                        className="form-input"
                         onChange={handleFileChange}
                         accept=".pdf,.jpg,.jpeg,.png,.tiff,.bmp"
                         disabled={loading}
@@ -195,14 +187,14 @@ const DocumentUploader = ({ onUploadSuccess }) => {
             {renderPreview()}
 
             <div className="mt-lg">
-                <button 
-                    className="btn btn-primary w-100" 
+                <button
+                    className="btn btn-primary w-100"
                     onClick={handleUpload}
                     disabled={!file || loading}
                 >
                     {loading ? (
                         <>
-                            <span className="spinner spinner-sm" style={{ marginRight: '8px' }}></span>
+                            <span className="spinner spinner-sm du-spinner-mr"></span>
                             Analyzing with AI...
                         </>
                     ) : (
@@ -224,7 +216,7 @@ const DocumentUploader = ({ onUploadSuccess }) => {
                              <span className="badge badge-info">Confidence: {(result.confidence * 100).toFixed(0)}%</span>
                         </div>
                     </div>
-                    
+
                     <div className="table-container mb-lg">
                         <table className="table">
                             <thead>
@@ -241,16 +233,15 @@ const DocumentUploader = ({ onUploadSuccess }) => {
                                             <td className="ocr-table-field-key">{key}</td>
                                             <td>
                                                 {key === "extractedText" ? (
-                                                    <textarea 
-                                                        className="ocr-inline-input" 
-                                                        style={{ minHeight: '150px', whiteSpace: 'pre-wrap', fontSize: '13px', paddingTop: '8px' }}
+                                                    <textarea
+                                                        className="ocr-inline-input du-textarea-tall"
                                                         value={field.value || ''}
                                                         onChange={(e) => handleFieldChange(key, e.target.value)}
                                                     />
                                                 ) : (
-                                                    <input 
-                                                        type="text" 
-                                                        className="ocr-inline-input" 
+                                                    <input
+                                                        type="text"
+                                                        className="ocr-inline-input"
                                                         value={typeof field.value === 'object' ? JSON.stringify(field.value) : field.value || ''}
                                                         onChange={(e) => handleFieldChange(key, e.target.value)}
                                                     />
@@ -258,7 +249,7 @@ const DocumentUploader = ({ onUploadSuccess }) => {
                                             </td>
                                             <td>
                                                 <span className={`badge ${
-                                                    (field.confidence || 1.0) > 0.8 ? 'badge-success' : 
+                                                    (field.confidence || 1.0) > 0.8 ? 'badge-success' :
                                                     (field.confidence || 1.0) > 0.5 ? 'badge-warning' : 'badge-error'
                                                 }`}>
                                                     {((field.confidence || 1.0) * 100).toFixed(0)}%
@@ -277,14 +268,14 @@ const DocumentUploader = ({ onUploadSuccess }) => {
                         </table>
                     </div>
 
-                    <button 
-                        className="btn btn-secondary w-100" 
+                    <button
+                        className="btn btn-secondary w-100"
                         onClick={handleSaveEdits}
                         disabled={isSaving}
                     >
                         {isSaving ? (
                             <>
-                                <span className="spinner spinner-sm" style={{ marginRight: '8px' }}></span>
+                                <span className="spinner spinner-sm du-spinner-mr"></span>
                                 Saving changes...
                             </>
                         ) : (

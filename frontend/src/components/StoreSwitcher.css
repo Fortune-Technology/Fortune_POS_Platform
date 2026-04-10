@@ -1,0 +1,218 @@
+/* StoreSwitcher.css — prefix: sw- */
+
+.sw-root {
+  position: relative;
+  margin: 0 10px 10px;
+}
+
+/* ── Trigger ── */
+.sw-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  width: 100%;
+  transition: background 0.12s;
+  background: #f8fafc;
+}
+.sw-trigger:hover {
+  background: #f1f5f9;
+}
+.sw-trigger--open {
+  background: #f1f5f9;
+}
+.sw-trigger--disabled {
+  cursor: default;
+}
+.sw-trigger--clickable {
+  cursor: pointer;
+}
+
+/* ── Avatar ── */
+.sw-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #3d56b5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #ffffff;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+.sw-avatar--loading {
+  background: rgba(61, 86, 181, 0.1);
+}
+
+/* ── Text ── */
+.sw-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.sw-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+.sw-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.sw-address {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 0.64rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-address-icon {
+  flex-shrink: 0;
+}
+.sw-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.sw-chevron--open {
+  transform: rotate(180deg);
+}
+.sw-loading-text {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* ── Dropdown ── */
+.sw-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  overflow: hidden;
+}
+.sw-dropdown-header {
+  padding: 7px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sw-dropdown-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+}
+
+/* ── Store option row ── */
+.sw-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background 0.1s;
+  background: transparent;
+}
+.sw-option:hover {
+  background: #f8fafc;
+}
+.sw-option--active {
+  background: rgba(61, 86, 181, 0.07);
+  cursor: default;
+}
+.sw-option-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+.sw-option-avatar--active {
+  background: #3d56b5;
+  color: #ffffff;
+}
+.sw-option-avatar--inactive {
+  background: rgba(61, 86, 181, 0.1);
+  color: #3d56b5;
+}
+.sw-option-text {
+  flex: 1;
+  min-width: 0;
+}
+.sw-option-name {
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-option-name--active {
+  font-weight: 700;
+  color: #3d56b5;
+}
+.sw-option-name--inactive {
+  font-weight: 500;
+  color: #0f172a;
+}
+.sw-option-addr {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-option-addr-icon {
+  flex-shrink: 0;
+}
+.sw-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #3d56b5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sw-root {
+    margin: 0 6px 10px;
+  }
+}

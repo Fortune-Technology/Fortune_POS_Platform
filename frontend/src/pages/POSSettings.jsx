@@ -5,6 +5,7 @@ import { Monitor, Save, Check, Palette, Sun, Moon, ShoppingBag } from 'lucide-re
 import { getStores } from '../services/api.js';
 import api from '../services/api.js';
 import Sidebar from '../components/Sidebar.jsx';
+import './POSSettings.css';
 
 // ── Branding constants ─────────────────────────────────────────────────────
 
@@ -163,25 +164,14 @@ const LAYOUT_PRESETS = [
 
 function Toggle({ checked, onChange, label }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+    <label className="pss-toggle-label">
       <div
         onClick={() => onChange(!checked)}
-        style={{
-          width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-          background: checked ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-          position: 'relative', transition: 'background .2s', cursor: 'pointer',
-          border: `1px solid ${checked ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-        }}
+        className={`pss-toggle-track ${checked ? 'pss-toggle-track--on' : 'pss-toggle-track--off'}`}
       >
-        <div style={{
-          position: 'absolute', top: 1,
-          left: checked ? 17 : 1,
-          width: 16, height: 16, borderRadius: '50%',
-          background: '#fff', transition: 'left .15s',
-          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-        }} />
+        <div className={`pss-toggle-thumb ${checked ? 'pss-toggle-thumb--on' : 'pss-toggle-thumb--off'}`} />
       </div>
-      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+      <span className="pss-toggle-text">{label}</span>
     </label>
   );
 }
@@ -192,16 +182,7 @@ function ChipToggle({ checked, onChange, label }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      style={{
-        padding: '0.4rem 0.85rem',
-        borderRadius: 20,
-        border: checked ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-        background: checked ? 'var(--brand-12)' : 'var(--bg-tertiary)',
-        color: checked ? 'var(--accent-primary)' : 'var(--text-muted)',
-        fontSize: '0.78rem', fontWeight: 600,
-        cursor: 'pointer', transition: 'all .15s',
-        display: 'flex', alignItems: 'center', gap: 5,
-      }}
+      className={`pss-chip ${checked ? 'pss-chip--on' : 'pss-chip--off'}`}
     >
       {checked && <Check size={10} />}
       {label}

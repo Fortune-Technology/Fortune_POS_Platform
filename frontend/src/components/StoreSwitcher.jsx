@@ -1,125 +1,45 @@
 /**
  * StoreSwitcher — compact store selector for the sidebar (light theme).
- * Shows active store with a click-to-switch dropdown when multiple stores exist.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Loader, MapPin, Store } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
-
-// ─── Light-theme design tokens ────────────────────────────────────────────────
-const T = {
-  cardBg:     '#f8fafc',
-  cardBorder: 'rgba(0,0,0,0.08)',
-  cardRadius: 10,
-
-  avatarBg:   '#3d56b5',
-  avatarText: '#ffffff',
-
-  labelColor: '#94a3b8',   // "Active Store" caption
-  nameColor:  '#0f172a',   // store name
-  addrColor:  '#94a3b8',
-  chevronClr: '#94a3b8',
-
-  dropBg:     '#ffffff',
-  dropBorder: 'rgba(0,0,0,0.09)',
-  dropShadow: '0 8px 30px rgba(0,0,0,0.12)',
-  dropHeader: '#f8fafc',
-
-  activeBg:   'rgba(61,86,181,0.07)',
-  hoverBg:    '#f8fafc',
-  activeText: '#3d56b5',
-  rowText:    '#0f172a',
-  rowMuted:   '#94a3b8',
-};
+import './StoreSwitcher.css';
 
 function storeInitial(name = '') {
   return name.trim().charAt(0).toUpperCase() || '?';
 }
 
 function StoreOption({ store, isActive, onSelect }) {
-  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onSelect}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '9px 12px',
-        border: 'none',
-        cursor: isActive ? 'default' : 'pointer',
-        textAlign: 'left',
-        background: isActive ? T.activeBg : hovered ? T.hoverBg : 'transparent',
-        borderBottom: '1px solid rgba(0,0,0,0.05)',
-        transition: 'background 0.1s',
-      }}
+      className={`sw-option ${isActive ? 'sw-option--active' : ''}`}
     >
-      <div style={{
-        width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-        background: isActive ? T.avatarBg : 'rgba(61,86,181,0.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '0.88rem', fontWeight: 800,
-        color: isActive ? T.avatarText : T.avatarBg,
-      }}>
+      <div className={`sw-option-avatar ${isActive ? 'sw-option-avatar--active' : 'sw-option-avatar--inactive'}`}>
         {storeInitial(store.name)}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: '0.84rem', fontWeight: isActive ? 700 : 500,
-          color: isActive ? T.activeText : T.rowText,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
+      <div className="sw-option-text">
+        <div className={`sw-option-name ${isActive ? 'sw-option-name--active' : 'sw-option-name--inactive'}`}>
           {store.name}
         </div>
         {store.address && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 3, marginTop: 2,
-            fontSize: '0.68rem', color: T.rowMuted,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            <MapPin size={9} style={{ flexShrink: 0 }} />
+          <div className="sw-option-addr">
+            <MapPin size={9} className="sw-option-addr-icon" />
             {store.address}
           </div>
         )}
       </div>
 
       {isActive && (
-        <div style={{
-          width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-          background: T.avatarBg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div className="sw-check">
           <Check size={10} color="#fff" strokeWidth={3} />
         </div>
       )}
     </button>
   );
 }
-
-// ─── Shared style objects (defined before component so triggerStyle works) ────
-const triggerBase = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 9,
-  padding: '9px 10px',
-  border: `1px solid ${T.cardBorder}`,
-  borderRadius: T.cardRadius,
-};
-
-const avatarStyle = {
-  width: 34, height: 34,
-  borderRadius: 9,
-  background: T.avatarBg,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '1rem', fontWeight: 900,
-  color: T.avatarText,
-  flexShrink: 0,
-  letterSpacing: '-0.02em',
-};
 
 export default function StoreSwitcher() {
   const { stores, activeStore, switchStore, loading } = useStore();
@@ -138,11 +58,11 @@ export default function StoreSwitcher() {
 
   if (loading) {
     return (
-      <div style={{ ...triggerBase, background: T.cardBg, margin: '0 10px 10px', cursor: 'default' }}>
-        <div style={{ ...avatarStyle, background: 'rgba(61,86,181,0.1)' }}>
-          <Loader size={13} color={T.avatarBg} style={{ animation: 'spin 1s linear infinite' }} />
+      <div className="sw-trigger sw-trigger--disabled" style={{ margin: '0 10px 10px' }}>
+        <div className="sw-avatar sw-avatar--loading">
+          <Loader size={13} color="#3d56b5" className="animate-spin" />
         </div>
-        <span style={{ fontSize: '0.78rem', color: T.labelColor, fontWeight: 500 }}>Loading…</span>
+        <span className="sw-loading-text">Loading…</span>
       </div>
     );
   }
@@ -150,93 +70,39 @@ export default function StoreSwitcher() {
   if (!activeStore) return null;
 
   return (
-    <div ref={ref} style={{ position: 'relative', margin: '0 10px 10px' }}>
+    <div ref={ref} className="sw-root">
 
       {/* ── Trigger card ── */}
       <button
         onClick={() => canSwitch && setOpen(v => !v)}
         disabled={!canSwitch}
         title={canSwitch ? 'Switch store' : activeStore.name}
-        style={{
-          ...triggerBase,
-          background: open ? '#f1f5f9' : T.cardBg,
-          cursor: canSwitch ? 'pointer' : 'default',
-          width: '100%',
-          transition: 'background 0.12s',
-        }}
-        onMouseEnter={e => { if (canSwitch && !open) e.currentTarget.style.background = '#f1f5f9'; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = T.cardBg; }}
+        className={`sw-trigger ${open ? 'sw-trigger--open' : ''} ${canSwitch ? 'sw-trigger--clickable' : 'sw-trigger--disabled'}`}
       >
-        {/* Avatar */}
-        <div style={avatarStyle}>
-          {storeInitial(activeStore.name)}
-        </div>
+        <div className="sw-avatar">{storeInitial(activeStore.name)}</div>
 
-        {/* Text labels */}
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <div style={{
-            fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.07em', color: T.labelColor, marginBottom: 2,
-          }}>
-            Active Store
-          </div>
-          <div style={{
-            fontSize: '0.85rem', fontWeight: 700, color: T.nameColor,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            lineHeight: 1.2,
-          }}>
-            {activeStore.name}
-          </div>
+        <div className="sw-text">
+          <div className="sw-label">Active Store</div>
+          <div className="sw-name">{activeStore.name}</div>
           {activeStore.address && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 3, marginTop: 2,
-              fontSize: '0.64rem', color: T.addrColor,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              <MapPin size={8} style={{ flexShrink: 0 }} />
+            <div className="sw-address">
+              <MapPin size={8} className="sw-address-icon" />
               {activeStore.address}
             </div>
           )}
         </div>
 
         {canSwitch && (
-          <ChevronDown
-            size={14}
-            color={T.chevronClr}
-            style={{
-              flexShrink: 0,
-              transform: open ? 'rotate(180deg)' : 'rotate(0)',
-              transition: 'transform 0.2s',
-            }}
-          />
+          <ChevronDown size={14} color="#94a3b8" className={`sw-chevron ${open ? 'sw-chevron--open' : ''}`} />
         )}
       </button>
 
       {/* ── Dropdown ── */}
       {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 5px)',
-          left: 0, right: 0,
-          background: T.dropBg,
-          border: `1px solid ${T.dropBorder}`,
-          borderRadius: 10,
-          boxShadow: T.dropShadow,
-          zIndex: 9999,
-          overflow: 'hidden',
-        }}>
-          {/* Dropdown header */}
-          <div style={{
-            padding: '7px 12px',
-            background: T.dropHeader,
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            <Store size={11} color={T.avatarBg} />
-            <span style={{
-              fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '0.07em', color: T.labelColor,
-            }}>
+        <div className="sw-dropdown">
+          <div className="sw-dropdown-header">
+            <Store size={11} color="#3d56b5" />
+            <span className="sw-dropdown-label">
               {stores.length} {stores.length === 1 ? 'Store' : 'Stores'}
             </span>
           </div>

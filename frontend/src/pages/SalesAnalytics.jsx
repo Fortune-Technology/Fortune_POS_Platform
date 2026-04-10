@@ -24,6 +24,7 @@ import {
 import { getWeatherInfo, getTempColor, getPrecipLabel } from '../utils/weatherIcons';
 import { toast } from 'react-toastify';
 import './analytics.css';
+import './SalesAnalytics.css';
 import '../styles/portal.css';
 
 /* ─── Helpers ─── */
@@ -157,31 +158,30 @@ const LocationModal = ({ onClose, onSaved }) => {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+        <div className="sa-modal-header">
           <h2 className="modal-title">Set Store Location</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+          <button onClick={onClose} className="sa-modal-close">
             <X size={18} />
           </button>
         </div>
         <p className="modal-subtitle">Required for weather integration and sales predictions.</p>
 
-        <button className="btn btn-secondary" onClick={detectLocation} disabled={detecting}
-          style={{ width: '100%', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+        <button className="btn btn-secondary sa-detect-btn" onClick={detectLocation} disabled={detecting}>
           <MapPin size={15} /> {detecting ? 'Detecting…' : 'Auto-detect My Location'}
         </button>
 
         <div className="modal-row">
-          <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="form-group">
             <label className="form-label">Latitude *</label>
             <input className="form-input" type="number" step="0.000001" placeholder="44.8016" value={lat} onChange={e => setLat(e.target.value)} />
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="form-group">
             <label className="form-label">Longitude *</label>
             <input className="form-input" type="number" step="0.000001" placeholder="-68.7712" value={lng} onChange={e => setLng(e.target.value)} />
           </div>
         </div>
 
-        <div className="form-group" style={{ marginTop: '0.75rem' }}>
+        <div className="form-group sa-form-group-mt">
           <label className="form-label">Timezone</label>
           <select className="form-select" value={tz} onChange={e => setTz(e.target.value)}>
             <option value="America/New_York">Eastern (ET)</option>
@@ -389,7 +389,7 @@ export default function SalesAnalytics({ embedded }) {
               onChange={(v) => setRange(r => ({ ...r, from: v }))} maxDate={range.to} />
             <DatePicker label="To" value={range.to}
               onChange={(v) => setRange(r => ({ ...r, to: v }))} minDate={range.from} maxDate={toISO(new Date())} />
-            <button className="btn btn-secondary" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button className="btn btn-secondary" onClick={fetchData}>
               <RefreshCw size={15} /> Refresh
             </button>
             <button className="p-btn p-btn-ghost p-btn-sm" onClick={handleExportCSV}>
@@ -424,7 +424,7 @@ export default function SalesAnalytics({ embedded }) {
           <div className="analytics-error">
             <AlertCircle size={18} />
             <span>{error}</span>
-            <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '0.35rem 0.9rem' }} onClick={fetchData}>
+            <button className="btn btn-secondary sa-edit-location-btn" onClick={fetchData}>
               Retry
             </button>
           </div>
@@ -464,8 +464,7 @@ export default function SalesAnalytics({ embedded }) {
                 </button>
               ))}
               {weatherEnabled && (
-                <button className="btn btn-secondary"
-                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                <button className="btn btn-secondary sa-edit-location-btn"
                   onClick={() => setShowLocationModal(true)}>
                   <MapPin size={13} /> Edit Location
                 </button>
@@ -479,7 +478,7 @@ export default function SalesAnalytics({ embedded }) {
                   <LayoutDashboard size={18} style={{ color: 'var(--accent-primary)' }} />
                   Master View — All Metrics
                   {needsScroll && (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.73rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                    <span className="sa-scroll-hint">
                       ← Scroll to explore {chartData.length} {tab.toLowerCase()} periods →
                     </span>
                   )}
@@ -654,9 +653,9 @@ export default function SalesAnalytics({ embedded }) {
 
             {/* ── DATA TABLE ── */}
             <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-              <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem' }}>
+              <p className="sa-records-title">
                 Detailed Records
-                {needsScroll && <span style={{ fontWeight: 400, fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>({chartData.length} periods)</span>}
+                {needsScroll && <span className="sa-records-count">({chartData.length} periods)</span>}
               </p>
               <div className="table-container">
                 <table>

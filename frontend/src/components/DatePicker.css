@@ -1,0 +1,13 @@
+/* DatePicker.css — prefix: dp- */
+
+/* Calendar icon opacity handled via CSS */
+.dp-trigger-icon {
+  opacity: 0.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .dp-wrapper {
+    width: 100%;
+  }
+}

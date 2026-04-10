@@ -1,0 +1,27 @@
+/* POSReports.css — prefix: posr- */
+
+.posr-placeholder {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+.posr-placeholder-icon {
+  opacity: 0.25;
+  margin-bottom: 12px;
+}
+.posr-placeholder-title {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.posr-placeholder-desc {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .posr-placeholder {
+    padding: 2rem 1rem;
+  }
+}

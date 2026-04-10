@@ -5,6 +5,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import { getAdminCareerApplications, updateAdminJobApplication } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminCareerApplications.css';
 
 const STATUS_COLORS = { new: '#3b82f6', reviewed: '#f59e0b', shortlisted: '#10b981', rejected: '#ef4444' };
 const STATUS_OPTIONS = ['new', 'reviewed', 'shortlisted', 'rejected'];
@@ -167,7 +168,7 @@ const AdminCareerApplications = () => {
                             className="admin-select"
                           >
                             {STATUS_OPTIONS.map(s => (
-                              <option key={s} value={s} style={{ background: '#1e1e2e', color: '#fff' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                              <option key={s} value={s} className="aca-option-dark">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                             ))}
                           </select>
 
@@ -185,8 +186,7 @@ const AdminCareerApplications = () => {
                           <button
                             onClick={() => handleSave(app.id)}
                             disabled={saving === app.id}
-                            className="admin-btn-primary"
-                            style={{ opacity: saving === app.id ? 0.6 : 1 }}
+                            className={`admin-btn-primary${saving === app.id ? ' aca-save-btn-disabled' : ''}`}
                           >
                             {saving === app.id ? <Loader className="animate-spin" size={14} /> : <Save size={14} />}
                             Save Changes

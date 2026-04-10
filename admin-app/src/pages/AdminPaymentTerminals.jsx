@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import AdminSidebar from '../components/AdminSidebar';
 import { getAdminPaymentTerminals, pingAdminTerminal } from '../services/api';
 import '../styles/admin.css';
+import './AdminPaymentTerminals.css';
 
 const STATUS_COLORS = {
   active:   { bg: 'rgba(34,197,94,.15)',  border: 'rgba(34,197,94,.4)',  text: '#22c55e' },
@@ -14,14 +15,8 @@ const STATUS_COLORS = {
 function StatusBadge({ status }) {
   const c = STATUS_COLORS[status] || STATUS_COLORS.unknown;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '2px 10px', borderRadius: 20,
-      background: c.bg, border: `1px solid ${c.border}`,
-      color: c.text, fontSize: '0.72rem', fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: '0.04em',
-    }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.text, flexShrink: 0 }} />
+    <span className="apt-status-badge" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+      <span className="apt-status-dot" style={{ background: c.text }} />
       {status}
     </span>
   );
@@ -49,7 +44,6 @@ export default function AdminPaymentTerminals() {
       const params = { page, limit };
       if (statusFilter) params.status = statusFilter;
       const res = await getAdminPaymentTerminals(params);
-      // Client-side search filter (name or HSN)
       const all = res.data || [];
       const filtered = search
         ? all.filter(t =>
@@ -94,11 +88,12 @@ export default function AdminPaymentTerminals() {
     }
   };
 
-  // Stats
   const active   = terminals.filter(t => t.status === 'active').length;
   const inactive = terminals.filter(t => t.status === 'inactive').length;
   const unknown  = terminals.filter(t => t.status === 'unknown').length;
   const totalPages = Math.ceil(total / limit);
+
+  const pingClass = (ms) => ms < 300 ? 'apt-ping-fast' : ms < 800 ? 'apt-ping-mid' : 'apt-ping-slow';
 
   return (
     <div className="admin-layout">
@@ -115,20 +110,16 @@ export default function AdminPaymentTerminals() {
         </div>
 
         {/* ── Stat cards ──────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        <div className="apt-stat-grid">
           {[
             { label: 'Total',    value: terminals.length, color: 'var(--text-primary)',   bg: 'var(--bg-card)' },
             { label: 'Active',   value: active,   color: '#22c55e', bg: 'rgba(34,197,94,.07)' },
             { label: 'Inactive', value: inactive, color: '#ef4444', bg: 'rgba(239,68,68,.07)' },
             { label: 'Unknown',  value: unknown,  color: '#94a3b8', bg: 'rgba(148,163,184,.07)' },
           ].map(c => (
-            <div key={c.label} style={{
-              background: c.bg, border: '1px solid var(--border)',
-              borderRadius: 10, padding: '14px 18px',
-              display: 'flex', flexDirection: 'column', gap: 4,
-            }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c.label}</span>
-              <span style={{ fontSize: '1.6rem', fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.value}</span>
+            <div key={c.label} className="apt-stat-card" style={{ background: c.bg }}>
+              <span className="apt-stat-label">{c.label}</span>
+              <span className="apt-stat-value" style={{ color: c.color }}>{c.value}</span>
             </div>
           ))}
         </div>
@@ -174,49 +165,40 @@ export default function AdminPaymentTerminals() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  <Loader size={18} className="spin" style={{ marginRight: 8 }} />Loading...
+                <tr><td colSpan={9} className="apt-empty">
+                  <Loader size={18} className="spin" /> Loading...
                 </td></tr>
               ) : terminals.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  <Monitor size={28} style={{ display: 'block', margin: '0 auto 8px', opacity: 0.3 }} />
+                <tr><td colSpan={9} className="apt-empty">
+                  <Monitor size={28} className="apt-empty-icon" />
                   No terminals found
                 </td></tr>
               ) : terminals.map(t => (
                 <tr key={t.id}>
                   <td>
-                    <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{t.orgName || t.orgId.slice(0, 8)}</div>
-                    <div style={{ fontSize: '0.71rem', color: 'var(--text-muted)' }}>
+                    <div className="apt-org-name">{t.orgName || t.orgId.slice(0, 8)}</div>
+                    <div className="apt-org-meta">
                       {t.merchant?.isLive ? '🟢 Live' : '🟡 UAT'} · {t.merchant?.site || '—'}
                     </div>
                   </td>
-                  <td style={{ fontWeight: 600 }}>{t.name || '—'}</td>
-                  <td><code style={{ fontSize: '0.78rem', background: 'var(--bg-input)', padding: '2px 6px', borderRadius: 4 }}>{t.hsn}</code></td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t.model || '—'}</td>
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t.station?.name || '—'}</td>
+                  <td className="apt-cell-bold">{t.name || '—'}</td>
+                  <td><code className="apt-code">{t.hsn}</code></td>
+                  <td className="apt-cell-muted">{t.model || '—'}</td>
+                  <td className="apt-cell-station">{t.station?.name || '—'}</td>
                   <td><StatusBadge status={t.status} /></td>
-                  <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{fmtDate(t.lastSeenAt)}</td>
+                  <td className="apt-cell-seen">{fmtDate(t.lastSeenAt)}</td>
                   <td>
                     {t.lastPingMs != null ? (
-                      <span style={{
-                        fontSize: '0.78rem', fontWeight: 700,
-                        color: t.lastPingMs < 300 ? '#22c55e' : t.lastPingMs < 800 ? '#f59e0b' : '#ef4444',
-                      }}>
+                      <span className={pingClass(t.lastPingMs)}>
                         {t.lastPingMs}ms
                       </span>
-                    ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>—</span>}
+                    ) : <span className="apt-ping-none">—</span>}
                   </td>
                   <td>
                     <button
                       onClick={() => handlePing(t)}
                       disabled={pingingId === t.id}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '4px 12px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
-                        background: 'var(--bg-input)', border: '1px solid var(--border)',
-                        color: 'var(--text-secondary)', cursor: pingingId === t.id ? 'not-allowed' : 'pointer',
-                        opacity: pingingId === t.id ? 0.6 : 1,
-                      }}
+                      className="apt-btn-ping"
                     >
                       {pingingId === t.id
                         ? <Loader size={12} className="spin" />
@@ -235,7 +217,7 @@ export default function AdminPaymentTerminals() {
         {totalPages > 1 && (
           <div className="admin-pagination">
             <button className="admin-btn admin-btn-secondary" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Page {page} of {totalPages}</span>
+            <span className="apt-page-info">Page {page} of {totalPages}</span>
             <button className="admin-btn admin-btn-secondary" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next →</button>
           </div>
         )}

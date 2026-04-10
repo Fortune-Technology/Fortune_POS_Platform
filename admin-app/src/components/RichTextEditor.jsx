@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import './RichTextEditor.css';
 
 const modules = {
   toolbar: [
@@ -29,22 +30,6 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Write content here...'
         formats={formats}
         placeholder={placeholder}
       />
-      <style>{`
-        .rich-text-editor-wrapper .ql-container {
-          min-height: 200px;
-          font-size: 0.9rem;
-          border-bottom-left-radius: 8px;
-          border-bottom-right-radius: 8px;
-        }
-        .rich-text-editor-wrapper .ql-toolbar {
-          border-top-left-radius: 8px;
-          border-top-right-radius: 8px;
-          background: #f9fafb;
-        }
-        .rich-text-editor-wrapper .ql-editor {
-          min-height: 200px;
-        }
-      `}</style>
     </div>
   );
 };

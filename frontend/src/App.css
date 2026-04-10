@@ -39,3 +39,16 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Placeholder page sidebar */
+.app-placeholder-sidebar {
+  width: 260px;
+}
+
+/* Impersonate loading screen */
+.app-impersonate-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}

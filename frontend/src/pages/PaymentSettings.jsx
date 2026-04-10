@@ -12,6 +12,7 @@ import { RefreshCw, Loader, Shield } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import './PaymentSettings.css';
 
 function fmt$(n) { return `$${Number(n || 0).toFixed(2)}`; }
 function fmtDate(d) {
@@ -25,7 +26,7 @@ const STATUS_COLORS = { approved: '#22c55e', declined: '#ef4444', voided: '#f59e
 function Badge({ val, colorMap }) {
   const color = colorMap?.[val] || '#94a3b8';
   return (
-    <span style={{ padding: '2px 9px', borderRadius: 10, background: `${color}22`, border: `1px solid ${color}44`, color, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+    <span className="pms-badge" style={{ background: `${color}22`, border: `1px solid ${color}44`, color }}>
       {val || '—'}
     </span>
   );
@@ -68,28 +69,24 @@ export default function PaymentSettings() {
         </div>
 
         {/* Admin-managed notice */}
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 12,
-          padding: '14px 18px', borderRadius: 10, marginBottom: 24,
-          background: 'rgba(59,130,246,.07)', border: '1px solid rgba(59,130,246,.2)',
-        }}>
-          <Shield size={18} style={{ color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
+        <div className="pms-notice">
+          <Shield size={18} className="pms-notice-icon" />
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.87rem', color: 'var(--text-primary)', marginBottom: 3 }}>
+            <div className="pms-notice-title">
               Payment terminals and settings are managed by POS Admin
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            <div className="pms-notice-desc">
               Merchant credentials, CardPointe terminal assignments, signature thresholds, and surcharge configuration are controlled exclusively through the POS Admin console for security purposes.
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="pms-filters">
           <select
             value={filters.type}
             onChange={e => { setFilters(f => ({ ...f, type: e.target.value })); setPage(1); }}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+            className="pms-filter-input"
           >
             <option value="">All Types</option>
             <option value="sale">Sale</option>
@@ -99,7 +96,7 @@ export default function PaymentSettings() {
           <select
             value={filters.status}
             onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+            className="pms-filter-input"
           >
             <option value="">All Statuses</option>
             <option value="approved">Approved</option>
@@ -108,41 +105,41 @@ export default function PaymentSettings() {
             <option value="refunded">Refunded</option>
           </select>
           <input type="date" value={filters.dateFrom} onChange={e => { setFilters(f => ({ ...f, dateFrom: e.target.value })); setPage(1); }}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+            className="pms-filter-input" />
           <input type="date" value={filters.dateTo} onChange={e => { setFilters(f => ({ ...f, dateTo: e.target.value })); setPage(1); }}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
-          <button onClick={fetchHistory} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}>
+            className="pms-filter-input" />
+          <button onClick={fetchHistory} className="pms-btn-refresh">
             <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
           </button>
-          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{total.toLocaleString()} records</span>
+          <span className="pms-record-count">{total.toLocaleString()} records</span>
         </div>
 
         {/* Table */}
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg-panel)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+        <div className="pms-table-wrap">
+          <table className="pms-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <tr>
                 {['Date', 'Type', 'Card', 'Amount', 'Auth Code', 'Status', 'Mode'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                  <Loader size={20} className="spin" style={{ marginRight: 8 }} />Loading...
+                <tr><td colSpan={7} className="pms-td-loading">
+                  <Loader size={20} className="spin pms-td-loading" />Loading...
                 </td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>No transactions found</td></tr>
+                <tr><td colSpan={7} className="pms-td-empty">No transactions found</td></tr>
               ) : rows.map(r => (
-                <tr key={r.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{fmtDate(r.createdAt)}</td>
-                  <td style={{ padding: '10px 14px' }}><Badge val={r.type} colorMap={TYPE_COLORS} /></td>
-                  <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.82rem' }}>{r.acctType ? `${r.acctType} ···· ${r.lastFour}` : '—'}</td>
-                  <td style={{ padding: '10px 14px', fontWeight: 700, color: r.type === 'refund' ? '#ef4444' : 'var(--text-primary)' }}>{r.type === 'refund' ? '-' : ''}{fmt$(r.amount)}</td>
-                  <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{r.authCode || '—'}</td>
-                  <td style={{ padding: '10px 14px' }}><Badge val={r.status} colorMap={STATUS_COLORS} /></td>
-                  <td style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{r.entryMode || '—'}</td>
+                <tr key={r.id}>
+                  <td className="pms-td-date">{fmtDate(r.createdAt)}</td>
+                  <td><Badge val={r.type} colorMap={TYPE_COLORS} /></td>
+                  <td className="pms-td-card">{r.acctType ? `${r.acctType} ···· ${r.lastFour}` : '—'}</td>
+                  <td className={`pms-td-amount ${r.type === 'refund' ? 'pms-td-amount--refund' : ''}`}>{r.type === 'refund' ? '-' : ''}{fmt$(r.amount)}</td>
+                  <td className="pms-td-auth">{r.authCode || '—'}</td>
+                  <td><Badge val={r.status} colorMap={STATUS_COLORS} /></td>
+                  <td className="pms-td-mode">{r.entryMode || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -151,14 +148,14 @@ export default function PaymentSettings() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, justifyContent: 'center' }}>
+          <div className="pms-pagination">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>
+              className="pms-page-btn">
               ← Prev
             </button>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Page {page} of {totalPages}</span>
+            <span className="pms-page-info">Page {page} of {totalPages}</span>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>
+              className="pms-page-btn">
               Next →
             </button>
           </div>

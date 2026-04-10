@@ -16,6 +16,7 @@ import {
   Percent, Plus, Pencil, Trash2, Check, X as XIcon,
   AlertCircle, ChevronDown, Info,
 } from 'lucide-react';
+import './TaxRules.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const US_STATES = [
@@ -551,7 +552,7 @@ export default function TaxRules({ embedded }) {
   if (embedded) return <div className="p-tab-content">{content}</div>;
 
   return (
-    <div style={{ padding: '1.5rem 2rem', maxWidth: 900, margin: '0 auto' }}>
+    <div className="tr-container">
       {content}
     </div>
   );

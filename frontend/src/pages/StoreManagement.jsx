@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import './analytics.css';
+import './StoreManagement.css';
 import {
   Store, Plus, X, Loader, AlertCircle, RefreshCw,
   MapPin, Clock, Pencil, PowerOff, Eye, EyeOff, Save,

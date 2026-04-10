@@ -1,0 +1,26 @@
+/* AdminSystemConfig.css — prefix: asc- */
+
+.asc-save-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.asc-save-enabled {
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-add-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-config-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+@media (max-width: 480px) {
+  .admin-add-form {
+    padding: 0.75rem;
+  }
+}

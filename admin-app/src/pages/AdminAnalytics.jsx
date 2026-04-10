@@ -5,6 +5,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import { getAdminAnalyticsDashboard } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminAnalytics.css';
 
 const StatCard = ({ icon, label, value, color }) => (
   <div className="admin-stat-card">

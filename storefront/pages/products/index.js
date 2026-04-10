@@ -107,7 +107,7 @@ export default function ProductsPage({ store, products, departments, total, page
             <div className="sf-empty-icon">🔍</div>
             <p>No products found</p>
             {(filters.search || filters.department) && (
-              <Link href={`/products?${sq}`} className="sc-continue-btn" style={{ marginTop: 12 }}>
+              <Link href={`/products?${sq}`} className="sc-continue-btn sc-continue-btn--mt12">
                 Clear Filters
               </Link>
             )}

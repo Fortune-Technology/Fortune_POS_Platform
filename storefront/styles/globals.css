@@ -483,6 +483,10 @@ button {
   font-size: 48px;
 }
 
+.sf-product-image-placeholder--dept {
+  background: linear-gradient(135deg, var(--sf-ph-from, #f1f5f9), var(--sf-ph-to, #e2e8f0));
+}
+
 .sf-placeholder-initial {
   font-size: 36px;
   font-weight: 800;
@@ -1848,6 +1852,36 @@ button {
     justify-content: center;
     gap: 8px;
   }
+
+  .sc-summary {
+    flex: auto;
+    position: static;
+  }
+
+  .ck-sidebar {
+    flex: auto;
+    position: static;
+  }
+
+  .sc-item-qty {
+    order: 3;
+  }
+
+  .sc-item-total {
+    order: 4;
+  }
+
+  .sf-pdp-name {
+    font-size: 22px;
+  }
+
+  .od-step-label {
+    font-size: 10px;
+  }
+
+  .oc-subtitle {
+    font-size: 14px;
+  }
 }
 
 /* ═══ CMS PAGES ═══════════════════════════════════════════════════════════════ */
@@ -1921,6 +1955,12 @@ button {
   text-align: center;
   color: var(--sf-text-muted);
   font-size: 13px;
+}
+
+.sf-footer-powered {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 /* ═══ STORE DISCOVERY ═════════════════════════════════════════════════════════ */
@@ -2100,6 +2140,26 @@ button {
   .sd-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .sf-pdp {
+    gap: 32px;
+  }
+
+  .sf-pdp-image {
+    flex: 0 0 380px;
+  }
+
+  .ck-sidebar {
+    flex: 0 0 300px;
+  }
+
+  .sc-summary {
+    flex: 0 0 300px;
+  }
+
+  .sf-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -2117,6 +2177,149 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══ UTILITY / INLINE STYLE REPLACEMENTS ════════════════════════════════════ */
+
+/* Store discovery: empty state */
+.sd-empty { padding-top: 60px; }
+.sd-empty-icon { opacity: 0.3; margin-bottom: 12px; }
+
+/* Store discovery: card banner with dynamic background color (via CSS var) */
+.sd-card-banner--color { background: var(--sd-banner-bg, var(--sf-primary)); }
+
+/* Cart page: continue shopping link spacing */
+.cd-btn-viewcart--mt8 { margin-top: 8px; }
+
+/* Checkout: card fields column */
+.ck-card-fields { display: flex; flex-direction: column; gap: 12px; }
+
+/* Checkout: iframe for card input */
+.ck-card-iframe {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 8px;
+  display: block;
+}
+
+/* Checkout: token captured confirmation */
+.ck-token-ok {
+  font-size: 0.72rem;
+  color: #22c55e;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Checkout: PCI notice */
+.ck-pci-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.07);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: 0.73rem;
+  color: #64748b;
+}
+
+/* Checkout: cash notice */
+.ck-cash-notice {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+/* Checkout: sidebar subtotal spacing */
+.sc-summary-row--mt12 { margin-top: 12px; }
+
+/* Checkout: card hint text */
+.ck-card-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* Checkout: submit button spacing and opacity */
+.ck-submit-btn { margin-top: 16px; }
+.ck-submit-btn:disabled { opacity: 0.55; }
+
+/* Checkout: secured-by notice */
+.ck-secured-by {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Checkout: empty state */
+.ck-empty { padding-top: 80px; }
+
+/* CMS / slug page: empty state */
+.cms-empty { padding-top: 60px; }
+
+/* Product detail: image placeholder */
+.sf-pdp-placeholder { border-radius: 12px; height: 420px; }
+.sf-pdp-placeholder-initial { font-size: 64px; }
+
+/* Account page: main spacing */
+.acc-main { padding-top: 24px; padding-bottom: 60px; }
+
+/* Account page: title spacing */
+.sf-page-title--mb20 { margin-bottom: 20px; }
+
+/* Account page: disabled email input */
+.acc-input--disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Account page: address label field width */
+.acc-input--label { max-width: 160px; font-weight: 600; }
+
+/* Account page: address field full span */
+.acc-field--full { grid-column: 1 / -1; }
+
+/* Account page: save btn spacing */
+.acc-save-btn--mt16 { margin-top: 16px; }
+
+/* Account page: empty orders icon */
+.acc-empty-icon { opacity: 0.2; margin-bottom: 12px; }
+
+/* Account page: continue shopping link in empty */
+.sc-continue-btn--mt12 { margin-top: 12px; }
+
+/* Account page: fulfillment type inline display */
+.acc-fulfillment-type { display: flex; align-items: center; gap: 4px; }
+
+/* Order detail: main narrow container */
+.od-main {
+  padding-top: 24px;
+  padding-bottom: 60px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Order detail: fulfillment row */
+.od-fulfillment-type { display: flex; align-items: center; gap: 6px; }
+
+/* Order detail: address text */
+.od-address-text { color: var(--sf-text-secondary); font-size: 14px; }
+
+/* Order detail: notes text */
+.od-notes-text { font-size: 14px; color: var(--sf-text-secondary); }
+
+/* Order confirmation: main spacing */
+.oc-main { padding-top: 40px; padding-bottom: 80px; }
+
+/* Order confirmation: items heading */
+.oc-items-heading { margin-bottom: 8px; font-size: 15px; }
+
+/* Order confirmation: continue shopping btn */
+.oc-continue-btn { margin-top: 24px; display: inline-block; padding: 12px 32px; }
 
 /* ═══ RESPONSIVE ══════════════════════════════════════════════════════════════ */
 
@@ -2243,6 +2446,12 @@ button {
     font-size: 13px;
   }
 
+  .acc-tab--logout {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
   .auth-card {
     padding: 24px;
     margin: 0 8px;
@@ -2251,6 +2460,44 @@ button {
   .sf-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .acc-main {
+    padding-top: 16px;
+    padding-bottom: 40px;
+  }
+
+  .od-main {
+    padding-top: 16px;
+    padding-bottom: 40px;
+  }
+
+  .oc-main {
+    padding-top: 24px;
+    padding-bottom: 40px;
+  }
+
+  .od-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .od-timeline {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .od-step-line {
+    min-width: 20px;
+  }
+
+  .ck-card-fields {
+    gap: 10px;
+  }
+
+  .sd-empty {
+    padding-top: 40px;
   }
 }
 
@@ -2327,5 +2574,52 @@ button {
   .sf-dept-badge {
     padding: 5px 12px;
     font-size: 12px;
+  }
+
+  .oc-title {
+    font-size: 24px;
+  }
+
+  .oc-wrapper {
+    padding: 32px 0 40px;
+  }
+
+  .oc-icon {
+    font-size: 56px;
+  }
+
+  .oc-continue-btn {
+    padding: 10px 24px;
+  }
+
+  .od-order-num {
+    font-size: 20px;
+  }
+
+  .acc-avatar-row {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .acc-stats-row {
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .sf-pdp-placeholder {
+    height: 280px;
+  }
+
+  .sd-hero {
+    padding: 40px 0;
+  }
+
+  .ck-submit-btn {
+    font-size: 14px;
+  }
+
+  .sf-page-title--mb20 {
+    margin-bottom: 12px;
   }
 }

@@ -2456,5 +2456,115 @@ The sales service queries POS transaction data directly from PostgreSQL via Pris
 
 ---
 
-*Last updated: April 2026 — Session 14: Vendor Auto-Ordering System + Sales Service Rewrite + Purchase Order Lifecycle*
+*Last updated: April 2026 — Session 15: Full CSS Refactoring & Responsiveness Across All Apps*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 15)
+
+### Full CSS Refactoring & Responsiveness — All 4 Applications
+
+Complete UI refactoring across admin-app, frontend, cashier-app, and storefront to remove inline styles, enforce external CSS with unique class-name prefixes, and add comprehensive responsive media queries.
+
+#### Scope
+- **~160 JSX/JS files** refactored across all 4 applications
+- **~105 new CSS files** created with unique class-name prefixes
+- **All `<style>` tags** extracted to external CSS (TenderModal, CustomerDisplayScreen, StationSetupScreen, RichTextEditor, Support, CmsPage)
+- **Responsive breakpoints** added at 1024px, 768px, and 480px across all new CSS files
+- **All 3 Vite apps** (admin-app, frontend, cashier-app) build successfully with zero errors
+
+#### Admin App (14 new CSS files, 18 total)
+| CSS File | Prefix | Source Component |
+|----------|--------|------------------|
+| `AdminBilling.css` | `ab-` | Billing management (plans, subscriptions, invoices, equipment) |
+| `AdminPaymentSettings.css` | `aps-` | Payment gateway configuration |
+| `AdminPaymentTerminals.css` | `apt-` | Terminal management |
+| `AdminDashboard.css` | `adsh-` | Dashboard stats |
+| `AdminAnalytics.css` | `aan-` | Analytics charts |
+| `AdminCareers.css` | `acr-` | Career postings |
+| `AdminCareerApplications.css` | `aca-` | Applications management |
+| `AdminCmsPages.css` | `acms-` | CMS editor |
+| `AdminOrgAnalytics.css` | `aoa-` | Org analytics |
+| `AdminSystemConfig.css` | `asc-` | System config |
+| `AdminUserActivity.css` | `aua-` | User activity |
+| `AdminSidebar.css` | `asb-` | Sidebar nav |
+| `RichTextEditor.css` | `rte-` | Quill editor wrapper |
+| `StoreveuLogo.css` | `svl-` | Brand SVG |
+
+#### Frontend Portal (70+ new CSS files, 90 total)
+New CSS files created for all pages that had inline styles:
+
+**Heavy pages (100+ inline styles each, fully converted):**
+`BulkImport.css` (`bi-`), `InvoiceImport.css` (`ii-`), `POSSettings.css` (`pss-`), `Promotions.css` (`prm-`), `Organisation.css` (`org-`), `UserManagement.css` (`um-`), `VendorDetail.css` (`vd-`), `SalesPredictions.css` (`sp-`), `StoreManagement.css` (`sm-`), `Departments.css` (`dept-`)
+
+**Medium pages:**
+`InventoryCount.css` (`ic-`), `Vendors.css` (`ven-`), `ReceiptSettings.css` (`rs-`), `TaxRules.css` (`tr-`), `StoreBranding.css` (`sbr-`), `SalesAnalytics.css` (`sa-`), `PayoutsReport.css` (`pr-`), `ProductCatalog.css` (`pc-`), `VendorOrderSheet.css` (`vos-`), `BillingPortal.css` (`bp-`)
+
+**Smaller pages + components:**
+`ProductAnalytics.css` (`pan-`), `DepartmentAnalytics.css` (`dan-`), `FeesMappings.css` (`fm-`), `PaymentSettings.css` (`pms-`), `PriceUpdate.css` (`pu-`), `ForgotPassword.css` (`fp-`), `Signup.css` (`su-`), `Login.css` (`lg-`), `Dashboard.css` (`dsh-`), `EcommIntegration.css` (`ei-`), `EcomAnalytics.css` (`ean-`), `EcomCustomers.css` (`ecust-`), `PhoneLookup.css` (`pl-`), `Onboarding.css` (`ob-`), `TransformPage.css` (`tp-`), `UploadPage.css` (`up-`), `PreviewPage.css` (`pp-`), `HistoryPage.css` (`hp-`), `OCRPage.css` (`ocr-`), `DepositMapPage.css` (`dmp-`), `POSReports.css` (`posr-`)
+
+**Components:**
+`Navbar.css` (`nav-`), `SetupGuide.css` (`sg-`), `StoreSwitcher.css` (`sw-`), `WeatherWidget.css` (`ww-`), `DatePicker.css` (`dp-`), `DocumentHistory.css` (`dh-`), `DocumentUploader.css` (`du-`), `EcomOrderNotifier.css` (`eon-`), `BillingBanner.css` (`bb-`)
+
+**Marketing pages:**
+`Careers.css` (`mcr-`), `CartPage.css` (`mcp-`), `ProductPage.css` (`mpp-`), `ShopCheckout.css` (`msc-`), `ShopPage.css` (`msp-`), `Support.css` (`msup-`), `CmsPage.css` (`cms-`)
+
+#### Cashier App (35 new CSS files, 42 total)
+**Screens:**
+`POSScreen.css` (`pos-`), `PinLoginScreen.css` (`pls-`), `LoginScreen.css` (`ls-`), `StationSetupScreen.css` (`sss-`), `CustomerDisplayScreen.css` (`cds-`), `StoreSelect.css` (`ssel-`)
+
+**Tender:**
+`TenderModal.css` (`tm-`), `ReceiptModal.css` (`rm-`)
+
+**POS components:**
+`ActionBar.css` (`ab-`), `CategoryPanel.css` (`cp-`), `NumPadInline.css` (`npi-`), `NumpadModal.css` (`npm-`)
+
+**Cart:**
+`CartItem.css` (`ci-`), `CartTotals.css` (`ct-`), `BagFeeRow.css` (`bfr-`)
+
+**Layout:**
+`StatusBar.css` (`sb-`), `App.css` (`app-`)
+
+**Modals (18 new):**
+`LotteryModal.css` (`lm-`), `LotteryPayoutModal.css` (`lpm-`), `LotterySaleModal.css` (`lsam-`), `AddProductModal.css` (`apm-`), `AgeVerificationModal.css` (`avm-`), `CloseShiftModal.css` (`csm-`), `CustomerLookupModal.css` (`clm-`), `DiscountModal.css` (`dm-`), `EndOfDayModal.css` (`eod-`), `HardwareSettingsModal.css` (`hsm-`), `HoldRecallModal.css` (`hrm-`), `ManagerPinModal.css` (`mpm-`), `OpenShiftModal.css` (`osm-`), `PriceCheckModal.css` (`pcm-`), `RefundModal.css` (`rfm-`), `ReprintReceiptModal.css` (`rrm-`), `TransactionHistoryModal.css` (`thm-`), `VoidModal.css` (`vm-`)
+
+#### Storefront (3 CSS files enhanced, 23 JS files updated)
+- `globals.css` — ~40 new utility classes added with responsive enhancements
+- `templates.css` — ~50 new classes for template components
+- Dynamic template values (gradients, brand colors) use CSS custom properties: `style={{ '--tpl-hero-bg': section.bg }}` with CSS consuming `var(--tpl-hero-bg)`
+
+#### Responsive Design Patterns Applied
+```css
+@media (max-width: 1024px) {
+  /* Grid layouts: reduce columns (4→2) */
+  /* Stat card grids compact */
+  /* Side edit panels reduce width */
+}
+@media (max-width: 768px) {
+  /* Split layouts: stack vertically */
+  /* Side panels: full width below content */
+  /* Tables: horizontal scroll wrapper */
+  /* Filter bars: wrap to multiple lines */
+  /* Modals: near full-width */
+}
+@media (max-width: 480px) {
+  /* Single column everything */
+  /* Increased touch targets (min 44px) */
+  /* Reduced padding/margins */
+  /* Font size scaling */
+}
+```
+
+#### Remaining Inline Styles (acceptable)
+A small number of `style={{}}` remain where values are computed at runtime:
+- **Recharts chart props** — library API requires inline objects for `contentStyle`, `fill`, `stroke`
+- **Dynamic data colors** — status badges, chart legend dots, department colors from database
+- **CSS custom property injection** — `style={{ '--var': dynamicValue }}` pattern for storefront templates
+- **POS layout config** — dynamic widths/order from `layoutCfg` presets in POSScreen
+
+#### Responsive Navigation
+- **Frontend Sidebar**: Already had hamburger menu at 768px (implemented in prior session)
+- **Admin Sidebar**: Already had hamburger menu at 768px (implemented in prior session)
+- **Cashier App**: N/A — runs on dedicated POS terminals
+- **Storefront**: Responsive header with mobile menu already in place
 

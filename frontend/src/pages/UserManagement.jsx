@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import './analytics.css';
+import './UserManagement.css';
 import {
   Users, UserPlus, X, Loader, AlertCircle,
   RefreshCw, Shield, ChevronDown, Trash2, Eye, EyeOff, Store, ArrowLeft,

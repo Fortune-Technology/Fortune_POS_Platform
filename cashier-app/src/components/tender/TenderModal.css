@@ -1,0 +1,126 @@
+/* TenderModal.css — prefix: tm- */
+
+@keyframes tm-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes tm-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.tm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.tm-modal {
+  width: 100%;
+  background: var(--bg-panel);
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  max-height: 94vh;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.65);
+  position: relative;
+}
+
+.tm-modal--wide { max-width: 720px; }
+.tm-modal--narrow { max-width: 440px; }
+
+.tm-header {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.tm-big-btn {
+  width: 100%;
+  padding: 1.1rem;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: background 0.12s;
+  border: none;
+  color: #fff;
+}
+
+.tm-big-btn:disabled {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.tm-split-add-btn {
+  width: 100%;
+  padding: 0.7rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Numpad column */
+.tm-numpad-col {
+  width: 252px;
+  flex-shrink: 0;
+  padding: 0.875rem;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid var(--border);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .tm-modal--wide {
+    max-width: 100%;
+  }
+
+  .tm-numpad-col {
+    width: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tm-numpad-col {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}

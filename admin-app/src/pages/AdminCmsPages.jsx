@@ -5,6 +5,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import RichTextEditor from '../components/RichTextEditor';
 import { getAdminCmsPages, createAdminCmsPage, updateAdminCmsPage, deleteAdminCmsPage } from '../services/api';
 import '../styles/admin.css';
+import './AdminCmsPages.css';
 
 const toSlug = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -82,7 +83,7 @@ const AdminCmsPages = () => {
                 <div>
                   <div className="admin-header-icon">
                     <span className="admin-card-title">{p.title}</span>
-                    <span className="mono" style={{ fontSize: '0.7rem' }}>/{p.slug}</span>
+                    <span className="mono acms-slug">/{p.slug}</span>
                     {p.published ? (
                       <span className="admin-badge sm active"><Eye size={10} /> Published</span>
                     ) : (

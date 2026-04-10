@@ -169,7 +169,7 @@ const About = () => {
           {differentiators.map((d, i) => (
             <div key={i} className="timeline-item">
               <div className="timeline-dot"></div>
-              <div className="timeline-year" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{d.icon}</div>
+              <div className="timeline-year timeline-year--icon">{d.icon}</div>
               <div className="timeline-content">
                 <h3>{d.title}</h3>
                 <p>{d.desc}</p>
@@ -200,7 +200,7 @@ const About = () => {
         <div className="team-grid">
           {team.map((t, i) => (
             <div key={i} className="team-card">
-              <div className="team-avatar" style={{ backgroundColor: `${t.color}20`, color: t.color }}>
+              <div className="team-avatar" style={{ '--avatar-color': t.color }}>
                 {t.initials}
               </div>
               <h3>{t.name}</h3>

@@ -1,0 +1,285 @@
+/* CartItem.css — prefix: ci- */
+
+/* ── Lottery item ── */
+.ci-lottery {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.ci-lottery--selected-sale {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.ci-lottery--selected-payout {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.ci-lottery-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ci-lottery-emoji {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.ci-lottery-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ci-lottery-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ci-lottery-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.ci-lottery-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ci-lottery-total--sale { font-size: 0.95rem; font-weight: 700; color: var(--green); }
+.ci-lottery-total--payout { font-size: 0.95rem; font-weight: 700; color: var(--amber); }
+
+/* ── Regular item ── */
+.ci-item {
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  margin-bottom: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.ci-item--selected {
+  background: rgba(122, 193, 67, 0.10);
+  border-color: rgba(122, 193, 67, 0.35);
+}
+
+.ci-main-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Qty controls */
+.ci-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ci-qty-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: none;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.ci-qty-btn:hover {
+  background: rgba(122, 193, 67, 0.2);
+}
+
+.ci-qty-btn--dec:hover {
+  background: rgba(224, 63, 63, 0.2);
+}
+
+.ci-qty-display {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background 0.1s, color 0.1s;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid transparent;
+}
+
+.ci-qty-display--selected {
+  background: rgba(122, 193, 67, 0.2);
+  color: var(--green);
+  border-color: rgba(122, 193, 67, 0.35);
+}
+
+/* Name + badges */
+.ci-name-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.ci-name-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.ci-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.ci-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ci-badge--discount {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--amber);
+}
+
+.ci-badge--promo {
+  border: 1px solid;
+}
+
+.ci-badge--ebt {
+  background: rgba(122, 193, 67, 0.2);
+  color: var(--green);
+}
+
+.ci-badge--age {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--amber);
+}
+
+.ci-badge--ovrd {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--blue);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Price sub-line */
+.ci-price-line {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ci-price-struck {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.ci-price-effective {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* Line total */
+.ci-total-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ci-total-struck {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  line-height: 1;
+}
+
+.ci-total-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Remove button */
+.ci-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(224, 63, 63, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Deposit sub-line */
+.ci-deposit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-left: 80px;
+}
+
+.ci-deposit-label {
+  font-size: 0.68rem;
+  color: var(--text-deposit);
+}
+
+.ci-deposit-value {
+  font-size: 0.68rem;
+  color: var(--text-deposit);
+  font-weight: 600;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ci-name {
+    max-width: 120px;
+  }
+}

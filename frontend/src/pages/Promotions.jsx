@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
+import './Promotions.css';
 import {
   getCatalogPromotions,
   createCatalogPromotion,

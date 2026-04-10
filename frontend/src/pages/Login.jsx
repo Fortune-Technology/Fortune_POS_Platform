@@ -4,6 +4,7 @@ import { Mail, Lock, LogIn, ChevronRight, Loader } from 'lucide-react';
 import { login } from '../services/api';
 import { toast } from 'react-toastify';
 import StoreveuLogo from '../components/StoreveuLogo';
+import './Login.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -26,30 +27,29 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top right, var(--accent-primary)10, transparent), radial-gradient(circle at bottom left, var(--error)10, transparent)' }}>
-      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '3rem', background: '#ffffff', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link to="/" style={{ display: 'inline-block', marginBottom: '1.5rem', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+    <div className="lg-page">
+      <div className="glass-card animate-fade-in lg-card">
+        <div className="lg-header">
+          <Link to="/" className="lg-back-home">
             ← Back to Home
           </Link>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <div className="lg-logo-row">
             <StoreveuLogo height={44} darkMode={true} showTagline={true} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+          <h1 className="lg-title">
             Portal Login
           </h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Enter your credentials to access the portal</p>
+          <p className="lg-subtitle">Enter your credentials to access the portal</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Mail size={18} /></span>
-              <input 
-                type="email" 
-                className="form-input" 
-                style={{ paddingLeft: '3rem' }} 
+            <div className="lg-input-wrap">
+              <span className="lg-input-icon"><Mail size={18} /></span>
+              <input
+                type="email"
+                className="form-input lg-input-icon-pad"
                 placeholder="name@company.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -59,16 +59,15 @@ const Login = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <label className="form-label lg-label-between">
               Password
-              <Link to="/forgot-password" style={{ color: 'var(--accent-primary)', fontSize: '0.75rem', textDecoration: 'none' }}>Forgot password?</Link>
+              <Link to="/forgot-password" className="lg-forgot-link">Forgot password?</Link>
             </label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Lock size={18} /></span>
-              <input 
-                type="password" 
-                className="form-input" 
-                style={{ paddingLeft: '3rem' }} 
+            <div className="lg-input-wrap">
+              <span className="lg-input-icon"><Lock size={18} /></span>
+              <input
+                type="password"
+                className="form-input lg-input-icon-pad"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -77,13 +76,13 @@ const Login = () => {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem' }} disabled={loading}>
-            {loading ? <Loader className="animate-spin" /> : <>Log In <ChevronRight size={18} style={{ marginLeft: '0.5rem' }} /></>}
+          <button type="submit" className="btn btn-primary lg-submit" disabled={loading}>
+            {loading ? <Loader className="animate-spin" /> : <>Log In <ChevronRight size={18} className="lg-submit-icon" /></>}
           </button>
         </form>
 
-        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-          Don't have an account? <Link to="/signup" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600 }}>Create account</Link>
+        <div className="lg-footer">
+          Don't have an account? <Link to="/signup" className="lg-signup-link">Create account</Link>
         </div>
       </div>
     </div>

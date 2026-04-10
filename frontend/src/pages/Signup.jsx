@@ -4,6 +4,7 @@ import { Mail, Lock, User as UserIcon, Phone, UserPlus, ChevronRight, Loader } f
 import { signup } from '../services/api';
 import { toast } from 'react-toastify';
 import StoreveuLogo from '../components/StoreveuLogo';
+import './Signup.css';
 
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email?.trim());
 const validatePhone = (phone) => !phone || /^\+?[\d\s\-\(\)]{7,15}$/.test(phone?.replace(/\s/g, ''));
@@ -55,31 +56,30 @@ const Signup = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top right, var(--accent-primary)10, transparent), radial-gradient(circle at bottom left, var(--error)10, transparent)' }}>
-      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '3rem', background: '#ffffff', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link to="/" style={{ display: 'inline-block', marginBottom: '1.5rem', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+    <div className="su-page">
+      <div className="glass-card animate-fade-in su-card">
+        <div className="su-header">
+          <Link to="/" className="su-back-home">
             ← Back to Home
           </Link>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <div className="su-logo-row">
             <StoreveuLogo height={44} darkMode={true} showTagline={true} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+          <h1 className="su-title">
             Create Account
           </h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Join our business portal today</p>
+          <p className="su-subtitle">Join our business portal today</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="su-name-grid">
             <div className="form-group">
               <label className="form-label">First Name</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><UserIcon size={18} /></span>
+              <div className="su-input-wrap">
+                <span className="su-input-icon"><UserIcon size={18} /></span>
                 <input
                   type="text"
-                  className="form-input"
-                  style={{ paddingLeft: '3rem' }}
+                  className="form-input su-input-icon-pad"
                   placeholder="John"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -89,12 +89,11 @@ const Signup = () => {
             </div>
             <div className="form-group">
               <label className="form-label">Last Name</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><UserIcon size={18} /></span>
+              <div className="su-input-wrap">
+                <span className="su-input-icon"><UserIcon size={18} /></span>
                 <input
                   type="text"
-                  className="form-input"
-                  style={{ paddingLeft: '3rem' }}
+                  className="form-input su-input-icon-pad"
                   placeholder="Doe"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -106,12 +105,11 @@ const Signup = () => {
 
           <div className="form-group">
             <label className="form-label">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Mail size={18} /></span>
+            <div className="su-input-wrap">
+              <span className="su-input-icon"><Mail size={18} /></span>
               <input
                 type="email"
-                className="form-input"
-                style={{ paddingLeft: '3rem', borderColor: errors.email ? 'var(--error)' : undefined }}
+                className={`form-input su-input-icon-pad ${errors.email ? 'su-input--error' : ''}`}
                 placeholder="name@company.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -119,17 +117,16 @@ const Signup = () => {
                 required
               />
             </div>
-            {errors.email && <p style={{ color: 'var(--error)', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>{errors.email}</p>}
+            {errors.email && <p className="su-field-error">{errors.email}</p>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Phone Number</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Phone size={18} /></span>
+            <div className="su-input-wrap">
+              <span className="su-input-icon"><Phone size={18} /></span>
               <input
                 type="tel"
-                className="form-input"
-                style={{ paddingLeft: '3rem', borderColor: errors.phone ? 'var(--error)' : undefined }}
+                className={`form-input su-input-icon-pad ${errors.phone ? 'su-input--error' : ''}`}
                 placeholder="+1 (234) 567 890"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -137,17 +134,16 @@ const Signup = () => {
                 required
               />
             </div>
-            {errors.phone && <p style={{ color: 'var(--error)', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>{errors.phone}</p>}
+            {errors.phone && <p className="su-field-error">{errors.phone}</p>}
           </div>
 
           <div className="form-group">
             <label className="form-label">Password</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Lock size={18} /></span>
-              <input 
-                type="password" 
-                className="form-input" 
-                style={{ paddingLeft: '3rem' }} 
+            <div className="su-input-wrap">
+              <span className="su-input-icon"><Lock size={18} /></span>
+              <input
+                type="password"
+                className="form-input su-input-icon-pad"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -156,13 +152,13 @@ const Signup = () => {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem' }} disabled={loading}>
-            {loading ? <Loader className="animate-spin" /> : <>Sign Up <ChevronRight size={18} style={{ marginLeft: '0.5rem' }} /></>}
+          <button type="submit" className="btn btn-primary su-submit" disabled={loading}>
+            {loading ? <Loader className="animate-spin" /> : <>Sign Up <ChevronRight size={18} className="su-submit-icon" /></>}
           </button>
         </form>
 
-        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-          Already have an account? <Link to="/login" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600 }}>Log In</Link>
+        <div className="su-footer">
+          Already have an account? <Link to="/login" className="su-login-link">Log In</Link>
         </div>
       </div>
     </div>

@@ -15,8 +15,8 @@ export default function AboutMultiSection({ content, store }) {
 
   return (
     <div className="sf-container">
-      <section className="tpl-section" style={{ textAlign: 'center', paddingBottom: 16 }}>
-        <h1 className="tpl-about-heading" style={{ fontSize: 40 }}>{story.heading || 'About Us'}</h1>
+      <section className="tpl-section tpl-section--centered-heading">
+        <h1 className="tpl-about-heading tpl-about-heading--xl">{story.heading || 'About Us'}</h1>
       </section>
 
       {/* Section 1: Text left, image right */}
@@ -33,13 +33,13 @@ export default function AboutMultiSection({ content, store }) {
       {/* Section 2: Image left, text right (reversed) */}
       {(mission.heading || mission.text) && (
         <section className="tpl-about-hero">
-          <div className="tpl-about-split" style={{ flexDirection: 'row-reverse' }}>
+          <div className="tpl-about-split tpl-about-split--reverse">
             <div className="tpl-about-text">
               <h2 className="tpl-about-heading">{mission.heading || 'Our Mission'}</h2>
               <p className="tpl-about-body">{mission.text || ''}</p>
             </div>
-            <div className="tpl-about-image" style={{ flex: '0 0 300px' }}>
-              <div style={{ width: '100%', aspectRatio: '1', background: 'linear-gradient(135deg, var(--sf-primary-light), var(--sf-primary))', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🎯</div>
+            <div className="tpl-about-image tpl-about-image--narrow">
+              <div className="tpl-about-icon-block">🎯</div>
             </div>
           </div>
         </section>

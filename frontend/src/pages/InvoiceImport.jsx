@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import './analytics.css';
+import './InvoiceImport.css';
 import {
   Upload as UploadIcon,
   FileText,
@@ -173,48 +174,39 @@ function InvoiceCard({ inv, selected, onOpen, onDelete }) {
   return (
     <div
       onClick={() => onOpen(inv)}
-      style={{
-        background: selected ? 'rgba(99,102,241,0.06)' : 'var(--bg-secondary)',
-        border: `1px solid ${selected ? 'rgba(99,102,241,0.4)' : 'var(--border-color)'}`,
-        borderRadius: '10px', padding: '1rem 1.25rem', cursor: inv.status === 'processing' ? 'default' : 'pointer',
-        transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '1rem',
-      }}
+      className={`ii-card ${selected ? 'ii-card--selected' : ''} ${inv.status === 'processing' ? 'ii-card--processing' : ''}`}
     >
-      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        {inv.status === 'processing' && <Loader size={18} color={s.color} style={{ animation: 'spin 1s linear infinite' }} />}
+      <div className="ii-card-icon" style={{ background: s.bg }}>
+        {inv.status === 'processing' && <Loader size={18} color={s.color} className="ii-spin" />}
         {inv.status === 'draft'      && <FileText size={18} color={s.color} />}
         {inv.status === 'failed'     && <AlertCircle size={18} color={s.color} />}
         {(inv.status === 'synced' || inv.status === 'processed') && <CheckCircle size={18} color={s.color} />}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
-            {inv.vendorName || inv.fileName}
-          </span>
-          <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 700, background: s.bg, color: s.color, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>
-            {s.label}
-          </span>
+      <div className="ii-card-body">
+        <div className="ii-card-title-row">
+          <span className="ii-card-name">{inv.vendorName || inv.fileName}</span>
+          <span className="ii-card-badge" style={{ background: s.bg, color: s.color }}>{s.label}</span>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+        <div className="ii-card-meta">
           {inv.vendorName           && <span style={{ color: 'var(--text-secondary)' }}>{inv.fileName}</span>}
           {inv.invoiceNumber        && <span>#{inv.invoiceNumber}</span>}
           {inv.invoiceDate          && <span>{inv.invoiceDate}</span>}
           {inv.totalInvoiceAmount > 0 && <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{fmt(inv.totalInvoiceAmount)}</span>}
           {inv.lineItems?.length > 0 && <span>{inv.lineItems.length} items</span>}
-          {inv.status === 'processing' && <span style={{ color: '#818cf8' }}>AI is reading your invoice…</span>}
+          {inv.status === 'processing' && <span style={{ color: '#818cf8' }}>AI is reading your invoice...</span>}
           {inv.status === 'failed'     && <span style={{ color: '#ef4444' }}>{inv.processingError || 'Extraction failed'}</span>}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{timeAgo(inv.uploadedAt || inv.createdAt)}</span>
+      <div className="ii-card-actions">
+        <span className="ii-card-time">{timeAgo(inv.uploadedAt || inv.createdAt)}</span>
         {inv.status === 'draft' && (
-          <button onClick={e => { e.stopPropagation(); onOpen(inv); }} className="btn btn-primary btn-sm" style={{ fontSize: '0.78rem', padding: '6px 14px', whiteSpace: 'nowrap' }}>Review →</button>
+          <button onClick={e => { e.stopPropagation(); onOpen(inv); }} className="btn btn-primary btn-sm">Review &rarr;</button>
         )}
         {(inv.status === 'synced' || inv.status === 'processed') && (
-          <button onClick={e => { e.stopPropagation(); onOpen(inv); }} className="btn btn-secondary btn-sm" style={{ fontSize: '0.78rem', padding: '6px 14px', whiteSpace: 'nowrap' }}>View</button>
+          <button onClick={e => { e.stopPropagation(); onOpen(inv); }} className="btn btn-secondary btn-sm">View</button>
         )}
         {inv.status !== 'synced' && inv.status !== 'processed' && (
-          <button onClick={e => onDelete(inv.id, e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex' }} title="Delete">
+          <button onClick={e => onDelete(inv.id, e)} className="ii-card-delete" title="Delete">
             <Trash2 size={15} />
           </button>
         )}
@@ -400,24 +392,24 @@ function ReviewPanel({
   const lbl = { fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: '3px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', background: 'rgba(100,100,100,0.3)', backdropFilter: 'blur(25px)' }}>
+    <div className="ii-review-overlay">
 
       {/* ── Top bar ── */}
-      <div className="review-topbar" style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-color)', padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.2)', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+      <div className="ii-review-topbar">
+        <div className="ii-review-topbar-left">
+          <button onClick={onClose} className="ii-review-close">
             <X size={18} /> Close
           </button>
-          <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', flexShrink: 0 }} />
+          <div className="ii-review-divider" />
           <div style={{ minWidth: 0 }}>
             <span style={{ fontWeight: 700, fontSize: '1rem' }}>{invoice.vendorName || invoice.fileName}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '0.75rem' }}>
-              {invoice.fileName}{invoice.invoiceNumber && ` · #${invoice.invoiceNumber}`}{invoice.invoiceDate && ` · ${invoice.invoiceDate}`}
+              {invoice.fileName}{invoice.invoiceNumber && ` \u00b7 #${invoice.invoiceNumber}`}{invoice.invoiceDate && ` \u00b7 ${invoice.invoiceDate}`}
             </span>
           </div>
-          {posLoading && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Loading POS data…</span>}
+          {posLoading && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Loader size={12} className="ii-spin" /> Loading POS data...</span>}
         </div>
-        <div className="review-topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        <div className="ii-review-topbar-right">
           {!readOnly && (
             <>
               <span style={{ fontSize: '0.8rem', color: unmatchedCount > 0 ? '#f59e0b' : '#10b981' }}>
@@ -434,24 +426,22 @@ function ReviewPanel({
             </>
           )}
           {readOnly && (
-            <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 12px', borderRadius: '999px' }}>
-              ✅ Synced — read only
-            </span>
+            <span className="ii-synced-badge">Synced — read only</span>
           )}
         </div>
       </div>
 
       {/* ── Body ── */}
-      <div className="review-body" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="ii-review-body">
         {/* Left: invoice image */}
         {hasPages && (
-          <div className="review-image-pane" style={{ width: '50%', flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)', overflow: 'hidden' }}>
+          <div className="ii-review-image-pane">
             <InvoiceImageViewer pages={invoice.pages} />
           </div>
         )}
 
         {/* Right: form */}
-        <div className="review-form-pane" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="ii-review-form-pane">
 
           {/* ── Invoice header ── */}
           <section>
@@ -528,17 +518,17 @@ function ReviewPanel({
           })()}
 
           {/* ── Summary strip ── */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="ii-summary-strip">
             {[
               { label: 'Line Items', value: lineItems.length, icon: <Package size={15} /> },
               { label: 'Unmatched', value: unmatchedCount, icon: <AlertCircle size={15} />, color: unmatchedCount > 0 ? '#ef4444' : '#10b981' },
               { label: 'Total', value: fmt((editData || invoice).totalInvoiceAmount), icon: <DollarSign size={15} /> },
             ].map(c => (
-              <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.6rem 1rem', flex: 1, minWidth: '100px' }}>
+              <div key={c.label} className="ii-summary-card">
                 <span style={{ color: c.color || 'var(--text-muted)' }}>{c.icon}</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: c.color || 'var(--text-primary)' }}>{c.value}</div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{c.label}</div>
+                  <div className="ii-summary-card-value" style={{ color: c.color || 'var(--text-primary)' }}>{c.value}</div>
+                  <div className="ii-summary-card-label">{c.label}</div>
                 </div>
               </div>
             ))}
@@ -1634,52 +1624,51 @@ const InvoiceImport = () => {
     <div className="layout-container">
       <Sidebar />
       <main className="main-content">
-        <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+        <header className="ii-header">
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.3rem' }}>Invoice Import</h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Drop files to instantly queue · AI extracts line items · Review and push to POS when ready</p>
+            <h1>Invoice Import</h1>
+            <p>Drop files to instantly queue · AI extracts line items · Review and push to POS when ready</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="ii-header-actions">
             <button
               onClick={handleRefreshPOS}
               disabled={isRefreshingPOS}
               className="btn btn-secondary btn-sm"
               title="Clear cached POS products — forces a fresh fetch on next upload."
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
             >
               {isRefreshingPOS
-                ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> Refreshing…</>
+                ? <><Loader size={14} className="ii-spin" /> Refreshing...</>
                 : <><RefreshCw size={14} /> Refresh POS Data</>}
             </button>
-            <button onClick={loadInvoices} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+            <button onClick={loadInvoices} className="btn btn-secondary btn-sm">
               <RotateCcw size={14} /> Refresh
             </button>
           </div>
         </header>
 
-        <div {...getRootProps()} style={{ border: `2px dashed ${isDragActive ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '12px', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', background: isDragActive ? 'rgba(99,102,241,0.06)' : 'var(--bg-secondary)', transition: 'all 0.2s ease', marginBottom: '2rem' }}>
+        <div {...getRootProps()} className={`ii-dropzone ${isDragActive ? 'ii-dropzone--active' : ''}`}>
           <input {...getInputProps()} />
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: isDragActive ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
-            {isUploading ? <Loader size={26} style={{ animation: 'spin 1s linear infinite' }} /> : <UploadIcon size={26} />}
+          <div className={`ii-dropzone-icon ${isDragActive ? 'ii-dropzone-icon--active' : ''}`}>
+            {isUploading ? <Loader size={26} className="ii-spin" /> : <UploadIcon size={26} />}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontWeight: 600, marginBottom: '3px' }}>
-              {isDragActive ? 'Drop to queue for AI processing' : isUploading ? 'Uploading…' : 'Drop invoices here or click to browse'}
+          <div className="ii-dropzone-text">
+            <div className="ii-dropzone-text-title">
+              {isDragActive ? 'Drop to queue for AI processing' : isUploading ? 'Uploading...' : 'Drop invoices here or click to browse'}
             </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>PDF (multi-page), PNG, JPG — instantly queued, AI extracts all pages in background</div>
+            <div className="ii-dropzone-text-sub">PDF (multi-page), PNG, JPG — instantly queued, AI extracts all pages in background</div>
           </div>
           {invoices.length > 0 && (
-            <div style={{ display: 'flex', gap: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', width: '100%', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {stats.processing > 0 && <span style={{ fontSize: '0.8rem', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '5px' }}><Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> {stats.processing} processing</span>}
-              {stats.draft      > 0 && <span style={{ fontSize: '0.8rem', color: '#f59e0b' }}>📋 {stats.draft} ready to review</span>}
-              {stats.synced     > 0 && <span style={{ fontSize: '0.8rem', color: '#10b981' }}>✅ {stats.synced} synced</span>}
-              {stats.failed     > 0 && <span style={{ fontSize: '0.8rem', color: '#ef4444' }}>❌ {stats.failed} failed</span>}
+            <div className="ii-dropzone-stats">
+              {stats.processing > 0 && <span className="ii-dropzone-stat" style={{ color: '#818cf8' }}><Loader size={13} className="ii-spin" /> {stats.processing} processing</span>}
+              {stats.draft      > 0 && <span className="ii-dropzone-stat" style={{ color: '#f59e0b' }}>{stats.draft} ready to review</span>}
+              {stats.synced     > 0 && <span className="ii-dropzone-stat" style={{ color: '#10b981' }}>{stats.synced} synced</span>}
+              {stats.failed     > 0 && <span className="ii-dropzone-stat" style={{ color: '#ef4444' }}>{stats.failed} failed</span>}
             </div>
           )}
         </div>
 
         {invoices.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div className="ii-filters">
             {[
               { key: 'all',        label: `All (${stats.all})` },
               { key: 'processing', label: `Processing (${stats.processing})` },
@@ -1687,7 +1676,7 @@ const InvoiceImport = () => {
               { key: 'synced',     label: `Synced (${stats.synced})` },
               ...(stats.failed > 0 ? [{ key: 'failed', label: `Failed (${stats.failed})` }] : []),
             ].map(tab => (
-              <button key={tab.key} onClick={() => setFilter(tab.key)} style={{ padding: '5px 14px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: filter === tab.key ? 700 : 400, cursor: 'pointer', background: filter === tab.key ? 'var(--accent-primary)' : 'var(--bg-secondary)', color: filter === tab.key ? 'white' : 'var(--text-secondary)', border: `1px solid ${filter === tab.key ? 'var(--accent-primary)' : 'var(--border-color)'}`, transition: 'all 0.15s' }}>
+              <button key={tab.key} onClick={() => setFilter(tab.key)} className={`ii-filter-btn ${filter === tab.key ? 'ii-filter-btn--active' : ''}`}>
                 {tab.label}
               </button>
             ))}
@@ -1695,17 +1684,17 @@ const InvoiceImport = () => {
         )}
 
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-            <Loader size={28} style={{ animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
-            <p>Loading invoices…</p>
+          <div className="ii-loading">
+            <Loader size={28} className="ii-spin" />
+            <p>Loading invoices...</p>
           </div>
         ) : filteredInvoices.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 2rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+          <div className="ii-empty">
             <FileText size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-            <p style={{ fontWeight: 500 }}>{filter === 'all' ? 'No invoices yet — drop files above to get started' : `No ${filter} invoices`}</p>
+            <p>{filter === 'all' ? 'No invoices yet — drop files above to get started' : `No ${filter} invoices`}</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div className="ii-invoice-list">
             {filteredInvoices.map(inv => (
               <InvoiceCard key={inv.id} inv={inv} selected={selectedId === inv.id} onOpen={openReview} onDelete={handleDelete} />
             ))}

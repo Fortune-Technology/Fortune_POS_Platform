@@ -1,0 +1,12 @@
+/* EcomOrderNotifier.css — prefix: eon- */
+
+.eon-toast {
+  cursor: pointer;
+}
+.eon-toast-detail {
+  font-size: 12px;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+/* No layout/responsive needed — component renders null */

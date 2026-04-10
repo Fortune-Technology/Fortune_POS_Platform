@@ -78,7 +78,7 @@ export default function CartPage() {
               <Link href={`/checkout?store=${storeSlug}`} className="cd-btn-checkout">
                 Proceed to Checkout
               </Link>
-              <Link href={`/products?store=${storeSlug}`} className="cd-btn-viewcart" style={{ marginTop: 8 }}>
+              <Link href={`/products?store=${storeSlug}`} className="cd-btn-viewcart cd-btn-viewcart--mt8">
                 Continue Shopping
               </Link>
             </div>

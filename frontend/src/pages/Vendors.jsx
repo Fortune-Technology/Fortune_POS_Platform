@@ -18,6 +18,7 @@ import {
   Mail, Globe, ExternalLink, ToggleLeft, ToggleRight,
   Building2, ChevronRight, Package, Copy,
 } from 'lucide-react';
+import './Vendors.css';
 
 // ─── ID Chip (click to copy) ──────────────────────────────────────────────────
 function IdChip({ id }) {
@@ -29,21 +30,7 @@ function IdChip({ id }) {
     import('react-toastify').then(({ toast }) => toast.success(`Vendor ID ${id} copied`, { autoClose: 1500 }));
   };
   return (
-    <div
-      onClick={copy}
-      title="Click to copy Vendor ID"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 700,
-        color: '#3d56b5', background: 'rgba(61,86,181,0.1)',
-        border: '1px solid rgba(61,86,181,0.22)',
-        padding: '3px 7px', borderRadius: 5, cursor: 'pointer',
-        userSelect: 'none', whiteSpace: 'nowrap',
-        transition: 'background .15s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(61,86,181,0.18)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'rgba(61,86,181,0.1)'}
-    >
+    <div onClick={copy} title="Click to copy Vendor ID" className="ven-id-chip">
       #{id} <Copy size={9} />
     </div>
   );
@@ -490,7 +477,7 @@ export default function Vendors() {
   return (
     <div className="layout-container">
       <Sidebar />
-      <div className="main-content" style={{ padding: '2rem', overflowY: 'auto' }}>
+      <div className="main-content ven-content">
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: 12 }}>

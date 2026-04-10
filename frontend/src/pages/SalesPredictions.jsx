@@ -18,6 +18,7 @@ import {
   getSalesPredictionsResiduals,
 } from '../services/api';
 import '../styles/portal.css';
+import './SalesPredictions.css';
 
 /* ================================================================
    Helpers

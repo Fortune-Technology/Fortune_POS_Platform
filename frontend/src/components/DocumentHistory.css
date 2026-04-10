@@ -1,0 +1,29 @@
+/* DocumentHistory.css — prefix: dh- */
+
+.dh-doc-icon {
+  font-size: 1.5rem;
+  opacity: 1;
+}
+.dh-filename {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+.dh-field-key {
+  width: 30%;
+}
+.dh-extracted-pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .dh-field-key {
+    width: 40%;
+  }
+}

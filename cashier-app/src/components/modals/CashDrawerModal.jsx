@@ -68,7 +68,7 @@ export default function CashDrawerModal({ onClose, onPrint }) {
   if (success) {
     return (
       <div className="cdm-backdrop">
-        <div className="cdm-modal" style={{ maxWidth: 420 }}>
+        <div className="cdm-modal cdm-modal--narrow">
           <div className="cdm-header">
             <div className="cdm-header-left">
               <ArrowDownCircle size={18} color="var(--amber)" />
@@ -99,7 +99,7 @@ export default function CashDrawerModal({ onClose, onPrint }) {
 
           <div className="cdm-footer">
             <button className="cdm-btn-cancel" onClick={handlePrint}>
-              <Printer size={14} style={{ marginRight: 6 }} /> Print Receipt
+              <Printer size={14} className="cdm-print-icon" /> Print Receipt
             </button>
             <button
               className="cdm-btn-submit cdm-btn-submit--active"
@@ -155,7 +155,7 @@ export default function CashDrawerModal({ onClose, onPrint }) {
           <div className="cdm-right-col">
             <div className="cdm-amount-display">
               <span className="cdm-amount-value">
-                {amountStr ? `$${amountStr}` : <span style={{ opacity: 0.3 }}>$0.00</span>}
+                {amountStr ? `$${amountStr}` : <span className="cdm-amount-placeholder">$0.00</span>}
               </span>
               <span className="cdm-amount-hint">Tap digits to enter amount</span>
             </div>

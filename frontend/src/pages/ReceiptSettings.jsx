@@ -7,6 +7,7 @@ import { Save, Printer, RefreshCw, Info, FileText, Check } from 'lucide-react';
 import { getStores, getStoreBranding, updateStoreBranding } from '../services/api.js';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar.jsx';
+import './ReceiptSettings.css';
 
 // ── Preview helpers ───────────────────────────────────────────────────────────
 const W80 = 42;
@@ -740,7 +741,7 @@ export default function ReceiptSettings({ embedded }) {
   return (
     <div className="layout-container">
       <Sidebar />
-      <div className="main-content" style={{ padding: '2rem', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <div className="main-content rs-content">
         {content}
       </div>
     </div>

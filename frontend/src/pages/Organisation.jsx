@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import './analytics.css';
+import './Organisation.css';
 import {
   Building2, Save, Loader, AlertCircle, RefreshCw,
   Receipt, CreditCard, Globe, Clock, DollarSign, Gift,

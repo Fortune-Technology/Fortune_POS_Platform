@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
+import './Departments.css';
 import {
   getCatalogDepartments,
   createCatalogDepartment,

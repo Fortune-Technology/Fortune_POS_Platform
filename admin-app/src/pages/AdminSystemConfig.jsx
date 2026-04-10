@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import AdminSidebar from '../components/AdminSidebar';
 import { getAdminSystemConfig, updateAdminSystemConfig } from '../services/api';
 import '../styles/admin.css';
+import './AdminSystemConfig.css';
 
 const AdminSystemConfig = () => {
   const [configs, setConfigs] = useState([]);
@@ -96,7 +97,7 @@ const ConfigRow = ({ config, onSave }) => {
       <input value={value} onChange={e => setValue(e.target.value)} className="admin-config-input" />
       <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description" className="admin-config-desc" />
       <button onClick={() => onSave(config.key, value, desc || null)} disabled={!changed}
-        className="admin-btn-primary" style={{ opacity: changed ? 1 : 0.4, cursor: changed ? 'pointer' : 'not-allowed' }}>
+        className={`admin-btn-primary ${changed ? 'asc-save-enabled' : 'asc-save-disabled'}`}>
         <Save size={12} /> Save
       </button>
     </div>

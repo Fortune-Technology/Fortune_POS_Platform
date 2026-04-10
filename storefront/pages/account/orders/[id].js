@@ -47,7 +47,7 @@ export default function OrderDetailPage() {
       <Head><title>Order {order?.orderNumber || ''}</title></Head>
       <Header />
       <CartDrawer />
-      <main className="sf-container" style={{ paddingTop: 24, paddingBottom: 60, maxWidth: 800, margin: '0 auto' }}>
+      <main className="sf-container od-main">
         <Link href={`/account?store=${sq}`} className="od-back"><ArrowLeft size={16} /> Back to My Account</Link>
 
         {loading ? <p className="acc-loading">Loading order...</p> : !order ? (
@@ -85,10 +85,10 @@ export default function OrderDetailPage() {
             <div className="od-section">
               <h3 className="od-section-title">Fulfillment</h3>
               <div className="od-info-row">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><FulfillmentIcon type={order.fulfillmentType} size={18} /> {order.fulfillmentType === 'pickup' ? 'Pickup' : 'Delivery'}</span>
+                <span className="od-fulfillment-type"><FulfillmentIcon type={order.fulfillmentType} size={18} /> {order.fulfillmentType === 'pickup' ? 'Pickup' : 'Delivery'}</span>
               </div>
               {order.shippingAddress && (
-                <div className="od-info-row" style={{ color: 'var(--sf-text-secondary)', fontSize: 14 }}>
+                <div className="od-info-row od-address-text">
                   {order.shippingAddress.street}, {order.shippingAddress.city} {order.shippingAddress.state} {order.shippingAddress.zip}
                 </div>
               )}
@@ -124,7 +124,7 @@ export default function OrderDetailPage() {
             {order.notes && (
               <div className="od-section">
                 <h3 className="od-section-title">Notes</h3>
-                <p style={{ fontSize: 14, color: 'var(--sf-text-secondary)' }}>{order.notes}</p>
+                <p className="od-notes-text">{order.notes}</p>
               </div>
             )}
           </>

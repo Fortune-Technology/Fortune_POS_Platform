@@ -4,6 +4,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import { getAdminOrgAnalytics } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminOrgAnalytics.css';
 
 const PLAN_COLORS = {
   free: '#6b7280', starter: '#3b82f6', pro: '#8b5cf6', enterprise: '#f59e0b',
@@ -57,7 +58,7 @@ const AdminOrgAnalytics = () => {
     <th className="sortable" onClick={() => handleSort(field)}>
       <span className="admin-header-icon">
         {children}
-        <ArrowUpDown size={12} style={{ opacity: sortField === field ? 1 : 0.3 }} />
+        <ArrowUpDown size={12} className={sortField === field ? 'aoa-sort-icon-active' : 'aoa-sort-icon-dim'} />
       </span>
     </th>
   );

@@ -171,7 +171,7 @@ export default function CheckoutPage() {
         <Header />
         <CartDrawer />
         <main className="sf-container">
-          <div className="sf-empty" style={{ paddingTop: 80 }}>
+          <div className="sf-empty ck-empty">
             <div className="sf-empty-icon">🛒</div>
             <p>Your cart is empty — add some products first.</p>
           </div>
@@ -252,7 +252,7 @@ export default function CheckoutPage() {
             <section className="ck-section">
               <h2 className="ck-section-title">Payment</h2>
 
-              <div className="ck-toggle-row" style={{ marginBottom: 16 }}>
+              <div className="ck-toggle-row">
                 <button type="button" className={`ck-toggle-btn ${payMethod === 'card' ? 'ck-toggle-btn--active' : ''}`} onClick={() => setPayMethod('card')}>
                   💳 Pay by Card
                 </button>
@@ -262,7 +262,7 @@ export default function CheckoutPage() {
               </div>
 
               {payMethod === 'card' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="ck-card-fields">
                   {/* Card number — CardPointe iFrame (PCI compliant) */}
                   <div className="ck-field">
                     <label className="ck-label">Card Number</label>
@@ -272,14 +272,10 @@ export default function CheckoutPage() {
                       src={ITOKE_URL}
                       scrolling="no"
                       frameBorder="0"
-                      style={{
-                        width: '100%', height: 44,
-                        border: 'none', borderRadius: 8,
-                        display: 'block',
-                      }}
+                      className="ck-card-iframe"
                     />
                     {tokenReady && (
-                      <span style={{ fontSize: '0.72rem', color: '#22c55e', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span className="ck-token-ok">
                         ✓ Card number captured securely
                       </span>
                     )}
@@ -315,23 +311,14 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px', borderRadius: 8,
-                    background: 'rgba(59,130,246,.07)', border: '1px solid rgba(59,130,246,.2)',
-                    fontSize: '0.73rem', color: '#64748b',
-                  }}>
+                  <div className="ck-pci-notice">
                     🔒 Your card number is entered in a secure, PCI-compliant iframe hosted by CardPointe. We never see your raw card number.
                   </div>
                 </div>
               )}
 
               {payMethod === 'cash_on_pickup' && (
-                <div style={{
-                  padding: '12px 16px', borderRadius: 8,
-                  background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.2)',
-                  fontSize: '0.85rem', color: '#64748b',
-                }}>
+                <div className="ck-cash-notice">
                   💵 You'll pay in cash when you pick up your order.
                 </div>
               )}
@@ -357,7 +344,7 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
-            <div className="sc-summary-row" style={{ marginTop: 12 }}>
+            <div className="sc-summary-row sc-summary-row--mt12">
               <span>Subtotal</span><span>{fmt(cartTotal)}</span>
             </div>
             <div className="sc-summary-row sc-summary-row--muted">
@@ -373,16 +360,15 @@ export default function CheckoutPage() {
             </div>
 
             {payMethod === 'card' && !tokenReady && (
-              <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 10, textAlign: 'center' }}>
+              <p className="ck-card-hint">
                 Enter your card number above to proceed
               </p>
             )}
 
             <button
               type="submit"
-              className="cd-btn-checkout"
+              className="cd-btn-checkout ck-submit-btn"
               disabled={loading || !canPlaceOrder}
-              style={{ marginTop: 16, opacity: (loading || !canPlaceOrder) ? 0.55 : 1 }}
             >
               {loading
                 ? 'Processing...'
@@ -392,7 +378,7 @@ export default function CheckoutPage() {
             </button>
 
             {payMethod === 'card' && (
-              <div style={{ textAlign: 'center', marginTop: 8, fontSize: '0.72rem', color: '#64748b' }}>
+              <div className="ck-secured-by">
                 🔒 Secured by CardPointe
               </div>
             )}

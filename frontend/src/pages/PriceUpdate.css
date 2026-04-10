@@ -1,0 +1,136 @@
+/* PriceUpdate.css — prefix: pu- */
+
+.pu-header {
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pu-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.pu-subtitle {
+  color: var(--text-secondary);
+}
+.pu-sync-btn {
+  padding: 0.875rem 2rem;
+}
+.pu-save-icon {
+  margin-left: 0.5rem;
+}
+.pu-card {
+  padding: 1.5rem;
+}
+
+/* ── Search bar ── */
+.pu-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: var(--bg-tertiary);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+}
+.pu-search-input {
+  background: transparent;
+  border: none;
+  color: white;
+  outline: none;
+  width: 100%;
+}
+
+/* ── Table cells ── */
+.pu-th-price {
+  width: 200px;
+}
+.pu-product-cell {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.pu-product-icon {
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.pu-product-name {
+  font-weight: 500;
+}
+.pu-sku-code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+.pu-category {
+  color: var(--text-secondary);
+}
+.pu-current-price {
+  font-weight: 600;
+}
+
+/* ── Price input ── */
+.pu-price-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pu-dollar-sign {
+  color: var(--text-secondary);
+}
+.pu-price-input {
+  padding: 0.4rem 0.6rem;
+}
+.pu-price-input--active {
+  background: rgba(99, 102, 241, 0.1);
+}
+.pu-price-input--default {
+  background: var(--bg-tertiary);
+}
+
+/* ── Sync status ── */
+.pu-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+}
+.pu-sync-status--synced {
+  color: var(--success);
+}
+.pu-sync-status--error {
+  color: var(--error);
+}
+.pu-sync-status--pending {
+  color: var(--text-muted);
+}
+
+/* ── Empty state ── */
+.pu-empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .pu-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+@media (max-width: 768px) {
+  .pu-th-price {
+    width: auto;
+  }
+}
+@media (max-width: 480px) {
+  .pu-title {
+    font-size: 1.5rem;
+  }
+  .pu-sync-btn {
+    padding: 0.75rem 1.25rem;
+  }
+}
