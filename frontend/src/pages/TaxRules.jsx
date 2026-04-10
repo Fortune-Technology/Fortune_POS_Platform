@@ -16,6 +16,7 @@ import {
   Percent, Plus, Pencil, Trash2, Check, X as XIcon,
   AlertCircle, ChevronDown, Info,
 } from 'lucide-react';
+import './TaxRules.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const US_STATES = [
@@ -384,39 +385,33 @@ export default function TaxRules({ embedded }) {
     <>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'rgba(99,102,241,.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <Percent size={18} color="#818cf8" />
+      <div className="p-header">
+        <div className="p-header-left">
+          <div className="p-header-icon">
+            <Percent size={22} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary, #e2e8f0)' }}>
-              Tax Rules
-            </h1>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted, #6b7280)' }}>
-              Define tax slabs by category, state, and county
-            </p>
+            <h1 className="p-title">Tax Rules</h1>
+            <p className="p-subtitle">Define tax slabs by category, state, and county</p>
           </div>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm('new')}
-            style={{
-              height: 38, padding: '0 1.25rem',
-              background: 'rgba(99,102,241,.9)', border: 'none',
-              borderRadius: 8, color: '#fff',
-              fontWeight: 800, fontSize: '0.875rem',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <Plus size={15} /> Add Tax Rule
-          </button>
-        )}
+        <div className="p-header-actions">
+          {!showForm && (
+            <button
+              onClick={() => setShowForm('new')}
+              style={{
+                height: 38, padding: '0 1.25rem',
+                background: 'rgba(99,102,241,.9)', border: 'none',
+                borderRadius: 8, color: '#fff',
+                fontWeight: 800, fontSize: '0.875rem',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <Plus size={15} /> Add Tax Rule
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Info note ── */}
@@ -551,7 +546,7 @@ export default function TaxRules({ embedded }) {
   if (embedded) return <div className="p-tab-content">{content}</div>;
 
   return (
-    <div style={{ padding: '1.5rem 2rem', maxWidth: 900, margin: '0 auto' }}>
+    <div className="tr-container">
       {content}
     </div>
   );

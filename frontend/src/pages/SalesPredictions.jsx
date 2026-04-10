@@ -8,7 +8,6 @@ import {
   AlertCircle, RefreshCw, Target, Sun, CloudRain, Snowflake,
   Thermometer, Flame, Gift, Loader,
 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
 import {
   getSalesPredictionsDaily,
   getSalesPredictionsWeekly,
@@ -18,6 +17,7 @@ import {
   getSalesPredictionsResiduals,
 } from '../services/api';
 import '../styles/portal.css';
+import './SalesPredictions.css';
 
 /* ================================================================
    Helpers
@@ -981,14 +981,7 @@ export default function SalesPredictions({ embedded }) {
 
   if (embedded) return content;
 
-  return (
-    <div className="layout-container">
-      <Sidebar />
-      <main className="main-content animate-fade-in">
-        {content}
-      </main>
-    </div>
-  );
+  return content;
 }
 
 /* ================================================================

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, Download, Loader, Save } from 'lucide-react';
-import AdminSidebar from '../components/AdminSidebar';
+import { ArrowLeft, ChevronDown, ChevronUp, Download, Loader, Save, FileText } from 'lucide-react';
+
 import { getAdminCareerApplications, updateAdminJobApplication } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminCareerApplications.css';
 
 const STATUS_COLORS = { new: '#3b82f6', reviewed: '#f59e0b', shortlisted: '#10b981', rejected: '#ef4444' };
 const STATUS_OPTIONS = ['new', 'reviewed', 'shortlisted', 'rejected'];
@@ -66,9 +67,7 @@ const AdminCareerApplications = () => {
   };
 
   return (
-    <div className="layout-container">
-      <AdminSidebar />
-      <main className="main-content admin-page">
+    <>
         {/* Back Link */}
         <Link to="/careers" className="admin-back-link">
           <ArrowLeft size={16} /> Back to Careers
@@ -77,10 +76,13 @@ const AdminCareerApplications = () => {
         {/* Header */}
         <div className="admin-header">
           <div className="admin-header-left">
-            <h1>{posting?.title || 'Job Applications'}</h1>
-            {posting?.department && (
-              <p>Department: {posting.department}</p>
-            )}
+            <div className="admin-header-icon"><FileText size={22} /></div>
+            <div>
+              <h1>{posting?.title || 'Job Applications'}</h1>
+              {posting?.department && (
+                <p>Department: {posting.department}</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -167,7 +169,7 @@ const AdminCareerApplications = () => {
                             className="admin-select"
                           >
                             {STATUS_OPTIONS.map(s => (
-                              <option key={s} value={s} style={{ background: '#1e1e2e', color: '#fff' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                              <option key={s} value={s} className="aca-option-dark">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                             ))}
                           </select>
 
@@ -185,8 +187,7 @@ const AdminCareerApplications = () => {
                           <button
                             onClick={() => handleSave(app.id)}
                             disabled={saving === app.id}
-                            className="admin-btn-primary"
-                            style={{ opacity: saving === app.id ? 0.6 : 1 }}
+                            className={`admin-btn-primary${saving === app.id ? ' aca-save-btn-disabled' : ''}`}
                           >
                             {saving === app.id ? <Loader className="animate-spin" size={14} /> : <Save size={14} />}
                             Save Changes
@@ -200,8 +201,7 @@ const AdminCareerApplications = () => {
             })}
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 };
 

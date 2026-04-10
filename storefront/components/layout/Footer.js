@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="sf-footer">
       <div className="sf-container">
         <p>&copy; {new Date().getFullYear()} {store?.storeName || 'Store'}. All rights reserved.</p>
-        <p style={{ marginTop: 4, fontSize: 11, color: '#94a3b8' }}>Powered by Storeveu</p>
+        <p className="sf-footer-powered">Powered by Storeveu</p>
       </div>
     </footer>
   );

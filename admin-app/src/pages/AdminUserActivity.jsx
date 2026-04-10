@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Loader } from 'lucide-react';
+import { Loader, Activity } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import AdminSidebar from '../components/AdminSidebar';
+
 import { getAdminUserActivity } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
+import './AdminUserActivity.css';
 
 const ROLE_COLORS = ['#3b82f6', 'var(--accent-primary)', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 const STATUS_COLORS = { active: '#10b981', pending: '#f59e0b', suspended: '#ef4444' };
@@ -44,13 +45,14 @@ const AdminUserActivity = () => {
   const statusData = (data?.statusDistribution || []).map(s => ({ ...s, name: s.status, value: s.count }));
 
   return (
-    <div className="layout-container">
-      <AdminSidebar />
-      <main className="main-content admin-page">
+    <>
         <div className="admin-header">
           <div className="admin-header-left">
-            <h1>User Activity</h1>
-            <p>User distribution, signups, and recent activity</p>
+            <div className="admin-header-icon"><Activity size={22} /></div>
+            <div>
+              <h1>User Activity</h1>
+              <p>User distribution, signups, and recent activity</p>
+            </div>
           </div>
         </div>
 
@@ -145,8 +147,7 @@ const AdminUserActivity = () => {
             </div>
           </>
         )}
-      </main>
-    </div>
+    </>
   );
 };
 

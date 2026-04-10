@@ -88,8 +88,8 @@ export default function AccountPage() {
       <Head><title>My Account</title></Head>
       <Header />
       <CartDrawer />
-      <main className="sf-container" style={{ paddingTop: 24, paddingBottom: 60 }}>
-        <h1 className="sf-page-title" style={{ marginBottom: 20 }}>My Account</h1>
+      <main className="sf-container acc-main">
+        <h1 className="sf-page-title sf-page-title--mb20">My Account</h1>
 
         <div className="acc-tabs">
           {TABS.map(t => (
@@ -127,7 +127,7 @@ export default function AccountPage() {
                   </div>
                   <div className="acc-field">
                     <label className="acc-label">Email</label>
-                    <input className="acc-input" value={profile.email} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                    <input className="acc-input acc-input--disabled" value={profile.email} disabled />
                   </div>
                   <div className="acc-field">
                     <label className="acc-label">Phone</label>
@@ -150,7 +150,7 @@ export default function AccountPage() {
             {tab === 'orders' && (
               <div className="acc-section">
                 {orders.length === 0 ? (
-                  <div className="sf-empty"><Package size={48} style={{ opacity: 0.2, marginBottom: 12 }} /><p>No orders yet</p><Link href={`/products?store=${sq}`} className="sc-continue-btn" style={{ marginTop: 12 }}>Start Shopping</Link></div>
+                  <div className="sf-empty"><Package size={48} className="acc-empty-icon" /><p>No orders yet</p><Link href={`/products?store=${sq}`} className="sc-continue-btn sc-continue-btn--mt12">Start Shopping</Link></div>
                 ) : (
                   <div className="acc-order-list">
                     {orders.map(o => (
@@ -161,7 +161,7 @@ export default function AccountPage() {
                         </div>
                         <div className="acc-order-meta">
                           <span>{fmtDate(o.createdAt)}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FulfillmentIcon type={o.fulfillmentType} /> {o.fulfillmentType === 'pickup' ? 'Pickup' : 'Delivery'}</span>
+                          <span className="acc-fulfillment-type"><FulfillmentIcon type={o.fulfillmentType} /> {o.fulfillmentType === 'pickup' ? 'Pickup' : 'Delivery'}</span>
                           <span className="acc-order-total">{fmt(o.grandTotal)}</span>
                         </div>
                         <div className="acc-order-items">
@@ -183,11 +183,11 @@ export default function AccountPage() {
                 {(profile.addresses || []).map((addr, idx) => (
                   <div key={idx} className="acc-address-card">
                     <div className="acc-address-header">
-                      <input className="acc-input acc-input--sm" value={addr.label || ''} onChange={e => setAddr(idx, 'label', e.target.value)} placeholder="Label (Home, Work...)" style={{ maxWidth: 160, fontWeight: 600 }} />
+                      <input className="acc-input acc-input--sm acc-input--label" value={addr.label || ''} onChange={e => setAddr(idx, 'label', e.target.value)} placeholder="Label (Home, Work...)" />
                       <button className="acc-remove-btn" onClick={() => handleRemoveAddress(idx)}><Trash2 size={14} /></button>
                     </div>
                     <div className="acc-form-grid">
-                      <div className="acc-field" style={{ gridColumn: '1 / -1' }}><label className="acc-label">Street</label><input className="acc-input" value={addr.street || ''} onChange={e => setAddr(idx, 'street', e.target.value)} /></div>
+                      <div className="acc-field acc-field--full"><label className="acc-label">Street</label><input className="acc-input" value={addr.street || ''} onChange={e => setAddr(idx, 'street', e.target.value)} /></div>
                       <div className="acc-field"><label className="acc-label">City</label><input className="acc-input" value={addr.city || ''} onChange={e => setAddr(idx, 'city', e.target.value)} /></div>
                       <div className="acc-field"><label className="acc-label">State</label><input className="acc-input" value={addr.state || ''} onChange={e => setAddr(idx, 'state', e.target.value)} /></div>
                       <div className="acc-field"><label className="acc-label">ZIP</label><input className="acc-input" value={addr.zip || ''} onChange={e => setAddr(idx, 'zip', e.target.value)} /></div>
@@ -195,7 +195,7 @@ export default function AccountPage() {
                   </div>
                 ))}
                 <button className="acc-add-addr-btn" onClick={handleAddAddress}><Plus size={16} /> Add Address</button>
-                <button className="acc-save-btn" onClick={handleSaveProfile} disabled={saving} style={{ marginTop: 16 }}>
+                <button className="acc-save-btn acc-save-btn--mt16" onClick={handleSaveProfile} disabled={saving}>
                   <Save size={16} /> {saving ? 'Saving...' : 'Save Addresses'}
                 </button>
               </div>
@@ -206,4 +206,9 @@ export default function AccountPage() {
       <Footer />
     </>
   );
+}
+
+export async function getServerSideProps(ctx) {
+  const { withStore } = await import('../../lib/resolveStore.js');
+  return withStore(ctx);
 }

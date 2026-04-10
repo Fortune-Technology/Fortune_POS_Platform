@@ -374,6 +374,11 @@
   margin: 0;
 }
 
+.vpm-success-amount-highlight { color: #a855f7; }
+.vpm-success-vendor-highlight { color: var(--text-primary); }
+.vpm-success-type-cap { text-transform: capitalize; }
+.vpm-amount-placeholder { opacity: 0.3; }
+
 .vpm-success-detail {
   font-size: 0.85rem;
   color: var(--text-secondary);

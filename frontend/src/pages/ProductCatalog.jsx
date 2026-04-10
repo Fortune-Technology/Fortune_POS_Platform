@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+
 import {
   getCatalogProducts, searchCatalogProducts,
   deleteCatalogProduct,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 import { SetupGuide } from '../components/SetupGuide';
+import './ProductCatalog.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -41,28 +42,6 @@ const TAX_CLASSES = [
   { value: 'non_taxable', label: 'Non-Tax',     color: '#94a3b8' },
   { value: 'none',        label: 'No Tax',      color: '#94a3b8' },
 ];
-
-const MarginBadge = ({ cost, retail }) => {
-  const m = calcMargin(cost, retail);
-  if (m === null) return <span style={{ color:'var(--text-muted)' }}>—</span>;
-  const color = m >= 30 ? '#10b981' : m >= 20 ? '#f59e0b' : '#ef4444';
-  return (
-    <span style={{ fontSize:'0.72rem', fontWeight:700, padding:'2px 7px',
-      borderRadius:4, background:color+'18', color }}>
-      {m.toFixed(1)}%
-    </span>
-  );
-};
-
-const TaxBadge = ({ tc }) => {
-  const t = TAX_CLASSES.find(x => x.value === tc) || TAX_CLASSES[4];
-  return (
-    <span style={{ fontSize:'0.68rem', fontWeight:600, padding:'2px 6px',
-      borderRadius:4, background:t.color+'18', color:t.color }}>
-      {t.label}
-    </span>
-  );
-};
 
 const packSummary = (p) => {
   const su = p.sellUnit || 'each';
@@ -142,29 +121,26 @@ export default function ProductCatalog() {
   };
 
   return (
-    <div className="layout-container">
-      <Sidebar />
-      <main className="main-content" style={{ padding:0 }}>
+      <div className="p-page">
 
         {/* ── Top bar ── */}
-        <div style={{ padding:'1.25rem 1.75rem 0', display:'flex', alignItems:'center',
-          justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
-          <div>
-            <h1 style={{ fontSize:'1.2rem', fontWeight:700, margin:0 }}>Product Catalog</h1>
-            <p style={{ fontSize:'0.78rem', color:'var(--text-muted)', margin:'2px 0 0' }}>
-              {pagination.total > 0 ? `${pagination.total} products` : 'Organization-level master catalog'}
-            </p>
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <Package size={22} />
+            </div>
+            <div>
+              <h1 className="p-title">Product Catalog</h1>
+              <p className="p-subtitle">
+                {pagination.total > 0 ? `${pagination.total} products` : 'Organization-level master catalog'}
+              </p>
+            </div>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => { loadProducts(q, page, filters); loadSupport(); }}
-              style={{ background:'none', border:'1px solid var(--border-color)', borderRadius:6,
-                padding:'0.45rem', cursor:'pointer', color:'var(--text-muted)', display:'flex', alignItems:'center' }}>
+          <div className="p-header-actions">
+            <button onClick={() => { loadProducts(q, page, filters); loadSupport(); }} className="pc-refresh-btn">
               <RefreshCw size={14} />
             </button>
-            <button onClick={() => navigate('/portal/catalog/new')}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'0.5rem 1rem',
-                borderRadius:6, border:'none', background:'var(--accent-primary)', color:'#fff',
-                cursor:'pointer', fontSize:'0.85rem', fontWeight:600 }}>
+            <button onClick={() => navigate('/portal/catalog/new')} className="pc-add-btn">
               <Plus size={14} /> Add Product
             </button>
           </div>
@@ -172,7 +148,7 @@ export default function ProductCatalog() {
 
         {/* ── Setup guide (shown during onboarding phase) ── */}
         {!setup.loading && !guideDismissed && setup.stage <= 2 && (
-          <div style={{ paddingTop:'1rem' }}>
+          <div className="pc-setup">
             <SetupGuide
               stage={setup.stage}
               storeCount={setup.storeCount}
@@ -183,28 +159,25 @@ export default function ProductCatalog() {
         )}
 
         {/* ── Filters ── */}
-        <div style={{ padding:'1rem 1.75rem', display:'flex', gap:'0.75rem', flexWrap:'wrap', alignItems:'center' }}>
-          <div style={{ position:'relative', flex:1, minWidth:220 }}>
-            <Search size={14} style={{ position:'absolute', left:10, top:'50%',
-              transform:'translateY(-50%)', color:'var(--text-muted)' }} />
+        <div className="pc-filters">
+          <div className="pc-search-wrap">
+            <Search size={14} className="pc-search-icon" />
             <input
-              style={{ width:'100%', paddingLeft:32, paddingRight:12, height:36,
-                border:'1px solid var(--border-color)', borderRadius:6,
-                background:'var(--bg-secondary)', color:'var(--text-primary)', fontSize:'0.85rem' }}
+              className="pc-search-input"
               placeholder="Search name, UPC, brand…"
               value={q} onChange={e => { setQ(e.target.value); setPage(1); }} />
           </div>
-          <select style={filterSelect} value={filters.departmentId}
+          <select className="pc-filter-select" value={filters.departmentId}
             onChange={e => { setFilters(f=>({...f,departmentId:e.target.value})); setPage(1); }}>
             <option value="">All Departments</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <select style={filterSelect} value={filters.taxClass}
+          <select className="pc-filter-select" value={filters.taxClass}
             onChange={e => { setFilters(f=>({...f,taxClass:e.target.value})); setPage(1); }}>
             <option value="">All Tax Classes</option>
             {TAX_CLASSES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <select style={filterSelect} value={filters.active}
+          <select className="pc-filter-select" value={filters.active}
             onChange={e => { setFilters(f=>({...f,active:e.target.value})); setPage(1); }}>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -213,36 +186,28 @@ export default function ProductCatalog() {
         </div>
 
         {/* ── Table ── */}
-        <div style={{ overflowX:'auto', padding:'0 1.75rem' }}>
+        <div className="pc-table-wrap">
           {loading ? (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
-              padding:'4rem', color:'var(--text-muted)', gap:8 }}>
-              <Loader size={18} style={{ animation:'spin 1s linear infinite' }} /> Loading…
+            <div className="pc-loading">
+              <Loader size={18} className="p-spin" /> Loading…
             </div>
           ) : products.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'4rem', color:'var(--text-muted)' }}>
-              <Package size={40} style={{ opacity:.25, marginBottom:12 }} />
-              <div style={{ fontWeight:600, marginBottom:4 }}>No products found</div>
-              <div style={{ fontSize:'0.82rem', marginBottom:'1rem' }}>
+            <div className="pc-empty">
+              <Package size={40} className="pc-empty-icon" />
+              <div className="pc-empty-title">No products found</div>
+              <div className="pc-empty-desc">
                 Add your first product or adjust your filters.
               </div>
-              <button onClick={() => navigate('/portal/catalog/new')}
-                style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'0.5rem 1.25rem',
-                  borderRadius:6, border:'none', background:'var(--accent-primary)', color:'#fff',
-                  cursor:'pointer', fontSize:'0.85rem', fontWeight:600 }}>
+              <button onClick={() => navigate('/portal/catalog/new')} className="pc-empty-add-btn">
                 <Plus size={14} /> Add First Product
               </button>
             </div>
           ) : (
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.82rem' }}>
+            <table className="pc-table">
               <thead>
-                <tr style={{ borderBottom:'1px solid var(--border-color)' }}>
+                <tr>
                   {['Product','Pack','Cost','Retail','Margin','Department','Tax','Flags',''].map(h => (
-                    <th key={h} style={{ textAlign:'left', padding:'0.5rem 0.75rem', fontSize:'0.65rem',
-                      fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em',
-                      color:'var(--text-muted)', whiteSpace:'nowrap' }}>
-                      {h}
-                    </th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -251,20 +216,16 @@ export default function ProductCatalog() {
                   const dept    = departments.find(d => d.id === p.departmentId);
                   const promos  = activePromos(p.id);
                   return (
-                    <tr key={p.id}
-                      style={{ borderBottom:'1px solid var(--border-color)', cursor:'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background='var(--bg-tertiary)'}
-                      onMouseLeave={e => e.currentTarget.style.background=''}>
+                    <tr key={p.id}>
 
                       {/* Name + brand + UPC */}
-                      <td style={{ padding:'0.6rem 0.75rem', maxWidth:240 }}
+                      <td className="pc-td-name"
                         onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
-                        <div style={{ fontWeight:600, fontSize:'0.83rem', lineHeight:1.3 }}>{p.name}</div>
-                        {p.brand && <div style={{ fontSize:'0.72rem', color:'var(--text-muted)' }}>{p.brand}</div>}
-                        {p.upc   && <div style={{ fontSize:'0.68rem', color:'var(--text-muted)', fontFamily:'monospace' }}>{p.upc}</div>}
+                        <div className="pc-product-name">{p.name}</div>
+                        {p.brand && <div className="pc-product-brand">{p.brand}</div>}
+                        {p.upc   && <div className="pc-product-upc">{p.upc}</div>}
                         {promos.length > 0 && (
-                          <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'1px 6px', borderRadius:3, marginTop:2,
-                            display:'inline-block', background:(promos[0].badgeColor||'#ef4444')+'25',
+                          <span className="pc-promo-badge" style={{ background:(promos[0].badgeColor||'#ef4444')+'25',
                             color:promos[0].badgeColor||'#ef4444' }}>
                             {promos[0].badgeLabel || promos[0].promoType.toUpperCase()}
                           </span>
@@ -272,53 +233,48 @@ export default function ProductCatalog() {
                       </td>
 
                       {/* Pack */}
-                      <td style={{ padding:'0.6rem 0.75rem', whiteSpace:'nowrap' }}
+                      <td className="pc-td-nowrap"
                         onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
-                        <span style={{ fontSize:'0.75rem', fontWeight:600,
-                          color:(p.pack||0)>1?'var(--accent-primary)':'var(--text-muted)' }}>
+                        <span className={`pc-pack-text ${(p.pack||0)>1 ? 'pc-pack-active' : 'pc-pack-muted'}`}>
                           {packSummary(p)}
                         </span>
                       </td>
 
                       {/* Cost */}
-                      <td style={{ padding:'0.6rem 0.75rem', fontFamily:'monospace', whiteSpace:'nowrap' }}
+                      <td className="pc-td-mono"
                         onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                         {fmt$(p.defaultCostPrice)}
                       </td>
 
                       {/* Retail */}
-                      <td style={{ padding:'0.6rem 0.75rem', fontFamily:'monospace', fontWeight:700, whiteSpace:'nowrap' }}
+                      <td className="pc-td-bold"
                         onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                         {fmt$(p.defaultRetailPrice)}
                       </td>
 
                       {/* Margin */}
-                      <td style={{ padding:'0.6rem 0.75rem', whiteSpace:'nowrap' }}
+                      <td className="pc-td-nowrap"
                         onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                         <MarginBadge cost={p.defaultCostPrice} retail={p.defaultRetailPrice} />
                       </td>
 
                       {/* Dept */}
-                      <td style={{ padding:'0.6rem 0.75rem' }}
-                        onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
+                      <td onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                         {dept ? (
-                          <span style={{ fontSize:'0.72rem', fontWeight:600, padding:'2px 8px', borderRadius:4,
-                            background:(dept.color||'#6366f1')+'20', color:dept.color||'#6366f1' }}>
+                          <span className="pc-dept-badge" style={{ background:(dept.color||'#6366f1')+'20', color:dept.color||'#6366f1' }}>
                             {dept.name}
                           </span>
-                        ) : <span style={{ color:'var(--text-muted)', fontSize:'0.75rem' }}>—</span>}
+                        ) : <span className="pc-pack-muted">—</span>}
                       </td>
 
                       {/* Tax */}
-                      <td style={{ padding:'0.6rem 0.75rem' }}
-                        onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
+                      <td onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                         <TaxBadge tc={p.taxClass} />
                       </td>
 
                       {/* Flags */}
-                      <td style={{ padding:'0.6rem 0.75rem' }}
-                        onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
-                        <div style={{ display:'flex', gap:3, flexWrap:'wrap' }}>
+                      <td onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
+                        <div className="pc-flag-wrap">
                           {p.ebtEligible   && <Flag color="#10b981">EBT</Flag>}
                           {p.ageRequired   && <Flag color="#ef4444">{p.ageRequired}+</Flag>}
                           {p.depositRuleId && <Flag color="#06b6d4">DEP</Flag>}
@@ -327,16 +283,16 @@ export default function ProductCatalog() {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding:'0.6rem 0.75rem' }}>
-                        <div style={{ display:'flex', gap:4 }}>
+                      <td>
+                        <div className="pc-action-btns">
                           <button title="Edit"
                             onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}
-                            style={actionBtn}>
+                            className="pc-action-btn">
                             <Edit2 size={13} />
                           </button>
                           <button title="Delete"
                             onClick={() => handleDelete(p)}
-                            style={{ ...actionBtn, color:'#ef4444' }}>
+                            className="pc-action-btn delete">
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -351,20 +307,18 @@ export default function ProductCatalog() {
 
         {/* ── Pagination ── */}
         {pagination.pages > 1 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-            padding:'1.25rem', borderTop:'1px solid var(--border-color)' }}>
-            <button disabled={page<=1} onClick={() => setPage(p=>p-1)} style={{ ...actionBtn, opacity:page<=1?.4:1 }}>
+          <div className="pc-pagination">
+            <button disabled={page<=1} onClick={() => setPage(p=>p-1)} className="pc-pagination-btn">
               <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>
+            <span className="pc-pagination-text">
               Page {page} of {pagination.pages} · {pagination.total} products
             </span>
-            <button disabled={page>=pagination.pages} onClick={() => setPage(p=>p+1)} style={{ ...actionBtn, opacity:page>=pagination.pages?.4:1 }}>
+            <button disabled={page>=pagination.pages} onClick={() => setPage(p=>p+1)} className="pc-pagination-btn">
               <ChevronRight size={14} />
             </button>
           </div>
         )}
-      </main>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -376,20 +330,27 @@ export default function ProductCatalog() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Flag = ({ color, children }) => (
-  <span style={{ fontSize:'0.62rem', fontWeight:700, padding:'1px 5px',
-    borderRadius:3, background:color+'18', color }}>
+  <span className="pc-flag" style={{ background:color+'18', color }}>
     {children}
   </span>
 );
 
-const filterSelect = {
-  height:36, border:'1px solid var(--border-color)', borderRadius:6,
-  background:'var(--bg-secondary)', color:'var(--text-primary)', fontSize:'0.82rem',
-  padding:'0 0.75rem', cursor:'pointer',
+const MarginBadge = ({ cost, retail }) => {
+  const m = calcMargin(cost, retail);
+  if (m === null) return <span className="pc-pack-muted">—</span>;
+  const color = m >= 30 ? '#10b981' : m >= 20 ? '#f59e0b' : '#ef4444';
+  return (
+    <span className="pc-margin-badge" style={{ background:color+'18', color }}>
+      {m.toFixed(1)}%
+    </span>
+  );
 };
 
-const actionBtn = {
-  background:'none', border:'1px solid var(--border-color)', borderRadius:5,
-  cursor:'pointer', padding:'0.25rem 0.45rem', color:'var(--text-muted)',
-  display:'flex', alignItems:'center',
+const TaxBadge = ({ tc }) => {
+  const t = TAX_CLASSES.find(x => x.value === tc) || TAX_CLASSES[4];
+  return (
+    <span className="pc-tax-badge" style={{ background:t.color+'18', color:t.color }}>
+      {t.label}
+    </span>
+  );
 };

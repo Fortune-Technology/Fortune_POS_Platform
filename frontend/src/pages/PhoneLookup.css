@@ -1,0 +1,84 @@
+/* PhoneLookup.css — prefix: pl- */
+
+.pl-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}
+.pl-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 3rem;
+}
+.pl-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.pl-title {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+.pl-subtitle {
+  color: var(--text-secondary);
+}
+
+/* ── Input with icon ── */
+.pl-input-wrap {
+  position: relative;
+}
+.pl-input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.pl-input-icon-pad {
+  padding-left: 3rem;
+}
+
+/* ── Submit ── */
+.pl-submit {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.pl-submit-icon {
+  margin-left: 0.5rem;
+}
+
+/* ── Footer ── */
+.pl-footer {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.pl-back-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pl-back-icon {
+  margin-right: 0.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pl-card {
+    padding: 2rem 1.5rem;
+    max-width: 95%;
+  }
+}
+@media (max-width: 480px) {
+  .pl-title {
+    font-size: 1.75rem;
+  }
+  .pl-card {
+    padding: 1.5rem 1rem;
+  }
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+
 import { toast } from 'react-toastify';
 import {
   Settings, Palette, FileText, Truck, Search, RefreshCw, BarChart3,
@@ -234,16 +234,16 @@ function SyncSection() {
   return (
     <div className="es-section">
       <div className="es-section-title">Product Sync</div>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+      <p className="es-text-sm es-text-muted es-mb-16">
         Pull all products and departments from your POS catalog into the online store. New products are synced automatically when created, but use this to do a full initial sync.
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button className="es-enable-btn" onClick={handleSync} disabled={syncing} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="es-flex-center">
+        <button className="es-enable-btn es-sync-btn" onClick={handleSync} disabled={syncing}>
           <RefreshCw size={16} className={syncing ? 'es-spin' : ''} />
           {syncing ? 'Syncing...' : 'Sync Products Now'}
         </button>
         {result && (
-          <span style={{ fontSize: 13, color: 'var(--success)' }}>
+          <span className="es-text-success">
             {result.products} products, {result.departments} departments synced
           </span>
         )}
@@ -261,8 +261,8 @@ function AnalyticsTab() {
     api('GET', '/manage/analytics').then(d => setData(d.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="es-section"><p style={{ color: 'var(--text-muted)' }}>Loading analytics...</p></div>;
-  if (!data) return <div className="es-section"><p style={{ color: 'var(--text-muted)' }}>No data available</p></div>;
+  if (loading) return <div className="es-section"><p className="es-text-muted">Loading analytics...</p></div>;
+  if (!data) return <div className="es-section"><p className="es-text-muted">No data available</p></div>;
 
   const { kpis, statusCounts, revenueTrend, topProducts } = data;
 
@@ -294,7 +294,7 @@ function AnalyticsTab() {
 
         <div className="es-section">
           <div className="es-section-title">Orders by Status</div>
-          {Object.entries(statusCounts).length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No orders yet</p> : (
+          {Object.entries(statusCounts).length === 0 ? <p className="es-text-sm es-text-muted">No orders yet</p> : (
             <div className="es-status-list">
               {Object.entries(statusCounts).map(([status, count]) => (
                 <div key={status} className="es-status-row">
@@ -309,7 +309,7 @@ function AnalyticsTab() {
 
       <div className="es-section">
         <div className="es-section-title">Top Products</div>
-        {topProducts.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No sales data yet</p> : (
+        {topProducts.length === 0 ? <p className="es-text-sm es-text-muted">No sales data yet</p> : (
           <table className="es-top-table">
             <thead><tr><th>Product</th><th>Sold</th><th>Revenue</th></tr></thead>
             <tbody>
@@ -346,20 +346,20 @@ function CustomersTab() {
   return (
     <div className="es-section">
       <div className="es-section-title">Customers</div>
-      <input className="es-input" placeholder="Search by name, email, phone..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginBottom: 16, maxWidth: 400 }} />
-      {loading ? <p style={{ color: 'var(--text-muted)' }}>Loading...</p> : customers.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No customers found</p>
+      <input className="es-input es-search-input" placeholder="Search by name, email, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+      {loading ? <p className="es-text-muted">Loading...</p> : customers.length === 0 ? (
+        <p className="es-text-muted">No customers found</p>
       ) : (
         <table className="es-top-table">
           <thead><tr><th>Name</th><th>Email</th><th>Orders</th><th>Spent</th><th>Joined</th></tr></thead>
           <tbody>
             {customers.map(c => (
-              <tr key={c.id} onClick={() => loadCustomerDetail(c.id, setSelected)} style={{ cursor: 'pointer' }}>
-                <td style={{ fontWeight: 600 }}>{c.firstName || c.name || '—'} {c.lastName || ''}</td>
+              <tr key={c.id} onClick={() => loadCustomerDetail(c.id, setSelected)} className="es-cursor-pointer">
+                <td className="es-td-bold">{c.firstName || c.name || '—'} {c.lastName || ''}</td>
                 <td>{c.email}</td>
                 <td>{c.orderCount}</td>
                 <td>${Number(c.totalSpent).toFixed(2)}</td>
-                <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+                <td className="es-td-small-muted">{new Date(c.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>
@@ -380,32 +380,32 @@ function CustomerDetail({ customer, onBack }) {
   const orders = customer.orders || [];
   return (
     <div className="es-section">
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', cursor: 'pointer', marginBottom: 16, fontSize: 13 }}>← Back to Customers</button>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--brand-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>
+      <button onClick={onBack} className="es-back-btn">← Back to Customers</button>
+      <div className="es-flex-gap-16">
+        <div className="es-avatar">
           {customer.firstName?.charAt(0) || customer.name?.charAt(0) || '?'}
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>{customer.firstName} {customer.lastName}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{customer.email} {customer.phone ? `· ${customer.phone}` : ''}</div>
+          <div className="es-customer-name">{customer.firstName} {customer.lastName}</div>
+          <div className="es-customer-meta">{customer.email} {customer.phone ? `· ${customer.phone}` : ''}</div>
         </div>
       </div>
-      <div className="es-analytics-kpis" style={{ marginBottom: 20 }}>
+      <div className="es-analytics-kpis es-mb-20">
         <div className="es-kpi"><div><span className="es-kpi-num">{customer.orderCount}</span><span className="es-kpi-label">Orders</span></div></div>
         <div className="es-kpi"><div><span className="es-kpi-num">${Number(customer.totalSpent).toFixed(2)}</span><span className="es-kpi-label">Total Spent</span></div></div>
         <div className="es-kpi"><div><span className="es-kpi-num">{new Date(customer.createdAt).toLocaleDateString()}</span><span className="es-kpi-label">Joined</span></div></div>
       </div>
       <div className="es-section-title">Order History</div>
-      {orders.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No orders</p> : (
+      {orders.length === 0 ? <p className="es-text-muted">No orders</p> : (
         <table className="es-top-table">
           <thead><tr><th>Order</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
           <tbody>
             {orders.map(o => (
               <tr key={o.id}>
-                <td style={{ fontWeight: 600 }}>{o.orderNumber}</td>
+                <td className="es-td-bold">{o.orderNumber}</td>
                 <td><span className={`eo-badge eo-badge--${o.status}`}>{o.status}</span></td>
                 <td>${Number(o.grandTotal).toFixed(2)}</td>
-                <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                <td className="es-td-small-muted">{new Date(o.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>
@@ -426,22 +426,22 @@ function PageEditorView({ page, onBack, onSave }) {
   };
 
   return (
-    <div className="layout-container"><Sidebar /><main className="main-content">
+    <div className="p-page">
       <div className="es-header">
         <div>
           <h1 className="es-title">Edit: {page.title}</h1>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Template: {page.templateId} · /{page.slug}</div>
+          <div className="es-section-detail">Template: {page.templateId} · /{page.slug}</div>
         </div>
-        <button className="es-save-btn" onClick={onBack} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxShadow: 'none' }}>Back</button>
+        <button className="es-save-btn es-back-save-btn" onClick={onBack}>Back</button>
       </div>
-      {sections.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No editable sections for this template.</p>}
+      {sections.length === 0 && <p className="es-text-muted">No editable sections for this template.</p>}
       {sections.map(s => (
         <SectionEditor key={s.key} section={s} values={editContent[s.key]} onChange={handleFieldChange} />
       ))}
       <div className="es-save-bar">
         <button className="es-save-btn" onClick={() => onSave(page, editContent)}>Save Page Content</button>
       </div>
-    </main></div>
+    </div>
   );
 }
 
@@ -539,13 +539,13 @@ export default function EcomSetup() {
   const setSo = (k, v) => setForm(f => ({ ...f, socialLinks: { ...f.socialLinks, [k]: v } }));
   const setF = (k, v) => setForm(f => ({ ...f, fulfillmentConfig: { ...f.fulfillmentConfig, [k]: v } }));
 
-  if (loading) return <div className="layout-container"><Sidebar /><main className="main-content"><p style={{ color: 'var(--text-muted)' }}>Loading...</p></main></div>;
+  if (loading) return <div className="p-page"><p className="es-text-muted">Loading...</p></div>;
 
   if (!store || !store.enabled) {
     return (
-      <div className="layout-container"><Sidebar /><main className="main-content">
+      <div className="p-page">
         <div className="es-section es-enable-card">
-          <Store size={48} color="var(--brand-primary)" style={{ marginBottom: 16 }} />
+          <Store size={48} color="var(--brand-primary)" className="es-setup-icon" />
           <h2>Launch Your Online Store</h2>
           <p>Enable e-commerce to let customers shop online with pickup or delivery.</p>
           <div className="es-field" style={{ maxWidth: 400, margin: '0 auto 20px' }}>
@@ -554,7 +554,7 @@ export default function EcomSetup() {
           </div>
           <button className="es-enable-btn" onClick={handleEnable}>Enable E-Commerce</button>
         </div>
-      </main></div>
+      </div>
     );
   }
 
@@ -570,13 +570,20 @@ export default function EcomSetup() {
   }
 
   return (
-    <div className="layout-container"><Sidebar /><main className="main-content">
-      <div className="es-header">
-        <div>
-          <h1 className="es-title">Online Store Setup</h1>
-          <div className="es-url-preview">Live at: <a href={`http://localhost:3000?store=${store.slug}`} target="_blank" rel="noreferrer">localhost:3000?store={store.slug}</a></div>
+    <div className="p-page">
+      <div className="p-header">
+        <div className="p-header-left">
+          <div className="p-header-icon">
+            <Globe size={22} />
+          </div>
+          <div>
+            <h1 className="p-title">Online Store Setup</h1>
+            <p className="p-subtitle">Live at: <a href={`${import.meta.env.VITE_STOREFRONT_URL || ''}?store=${store.slug}`} target="_blank" rel="noreferrer">{(import.meta.env.VITE_STOREFRONT_URL || '').replace(/^https?:\/\//, '')}?store={store.slug}</a></p>
+          </div>
         </div>
-        <span className={`es-status ${store.enabled ? 'es-status--on' : 'es-status--off'}`}>{store.enabled ? '● Live' : '○ Disabled'}</span>
+        <div className="p-header-actions">
+          <span className={`es-status ${store.enabled ? 'es-status--on' : 'es-status--off'}`}>{store.enabled ? '● Live' : '○ Disabled'}</span>
+        </div>
       </div>
 
       <div className="es-tabs">
@@ -596,7 +603,7 @@ export default function EcomSetup() {
           <div className="es-section-title">Store Information</div>
           <div className="es-grid">
             <div className="es-field"><label className="es-label">Store Name</label><input className="es-input" value={form.storeName} readOnly style={{ opacity: 0.6 }} /></div>
-            <div className="es-field"><label className="es-label">URL Slug</label><input className="es-input" value={form.slug} readOnly style={{ opacity: 0.6 }} /><div className="es-url-preview">Store URL: <strong>localhost:3000?store={form.slug}</strong></div></div>
+            <div className="es-field"><label className="es-label">URL Slug</label><input className="es-input" value={form.slug} readOnly style={{ opacity: 0.6 }} /><div className="es-url-preview">Store URL: <strong>{(import.meta.env.VITE_STOREFRONT_URL || '').replace(/^https?:\/\//, '')}?store={form.slug}</strong></div></div>
           </div>
         </div>
         <div className="es-section">
@@ -751,6 +758,6 @@ export default function EcomSetup() {
         <button className="es-disable-btn" onClick={handleDisable}>Disable E-Commerce</button>
         <button className="es-save-btn" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save All Changes'}</button>
       </div>
-    </main></div>
+    </div>
   );
 }

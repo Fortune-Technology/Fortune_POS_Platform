@@ -1,0 +1,20 @@
+/* AdminCmsPages.css — prefix: acms- */
+
+.acms-slug {
+  font-size: 0.7rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-modal {
+    max-width: 95vw;
+  }
+  .admin-modal-row {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .admin-card-actions {
+    flex-wrap: wrap;
+  }
+}

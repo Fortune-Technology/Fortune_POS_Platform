@@ -9,9 +9,9 @@ export default function AboutCards({ content, store }) {
 
   return (
     <div className="sf-container">
-      <section className="tpl-section" style={{ textAlign: 'center', paddingTop: 40 }}>
-        <h1 className="tpl-about-heading" style={{ fontSize: 36 }}>{main.heading || 'About Us'}</h1>
-        {main.text && <p className="tpl-about-body" style={{ maxWidth: 700, margin: '16px auto 0' }}>{main.text}</p>}
+      <section className="tpl-section tpl-section--centered">
+        <h1 className="tpl-about-heading tpl-about-heading--lg">{main.heading || 'About Us'}</h1>
+        {main.text && <p className="tpl-about-body tpl-about-body--centered">{main.text}</p>}
       </section>
 
       <section className="tpl-section">

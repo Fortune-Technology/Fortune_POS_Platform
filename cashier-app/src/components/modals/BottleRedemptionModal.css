@@ -322,6 +322,11 @@
   gap: 8px;
 }
 
+/* Utility modifiers */
+.brm-icon-faded { opacity: 0.4; }
+.brm-empty-hint { font-size: 0.75rem; }
+.brm-nkey--hidden { visibility: hidden; }
+
 /* Responsive: stack on small screens */
 @media (max-width: 540px) {
   .brm-modal { max-width: 100%; }

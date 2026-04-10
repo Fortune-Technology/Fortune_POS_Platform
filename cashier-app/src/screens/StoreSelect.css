@@ -1,0 +1,129 @@
+/* StoreSelect.css — prefix: ssel- */
+
+.ssel-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  padding: 1.5rem;
+}
+
+.ssel-container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.ssel-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.ssel-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ssel-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Store list */
+.ssel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ssel-store-btn {
+  padding: 1.1rem 1.25rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-primary);
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.ssel-store-btn:hover {
+  border-color: var(--green);
+}
+
+.ssel-store-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ssel-store-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--green-dim);
+  border: 1px solid var(--green-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssel-store-info {
+  text-align: left;
+}
+
+.ssel-store-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.ssel-store-addr {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Empty state */
+.ssel-empty {
+  padding: 2rem;
+  text-align: center;
+  background: var(--bg-panel);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Logout */
+.ssel-logout {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .ssel-container {
+    max-width: 100%;
+  }
+
+  .ssel-title {
+    font-size: 1.2rem;
+  }
+}

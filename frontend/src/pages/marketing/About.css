@@ -227,6 +227,14 @@
   justify-content: center;
   font-size: 1.5rem;
   font-weight: 800;
+  background-color: color-mix(in srgb, var(--avatar-color) 12%, transparent);
+  color: var(--avatar-color);
+}
+
+.timeline-year--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .team-card h3 { font-size: 1.15rem; margin-bottom: 0.25rem; }
@@ -287,4 +295,25 @@
   .team-grid      { grid-template-columns: 1fr; }
   .about-cta-actions { flex-direction: column; width: 100%; gap: 1rem; }
   .timeline-container { padding-left: 20px; }
+  .story-stats    { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .stat-number    { font-size: 2rem; }
+  .about-cta-card h2 { font-size: 2rem; }
+  .about-cta-card p  { font-size: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .about-hero     { padding: 100px 1rem 50px; }
+  .about-title    { font-size: 2rem; }
+  .about-subtitle { font-size: 1.05rem; }
+  .story-content h2 { font-size: 1.75rem; }
+  .story-stats    { grid-template-columns: 1fr; gap: 1.5rem; text-align: center; }
+  .stat-number    { font-size: 2.2rem; }
+  .value-card     { padding: 2rem; }
+  .timeline-item  { padding-left: 45px; margin-bottom: 2.5rem; }
+  .timeline-content h3 { font-size: 1.2rem; }
+  .timeline-content p  { font-size: 1rem; }
+  .about-final-cta { padding: 60px 1rem; }
+  .about-cta-card h2 { font-size: 1.6rem; }
+  .about-cta-card p  { font-size: 1rem; margin-bottom: 2rem; }
+  .story-blob { width: 200px; height: 200px; }
 }

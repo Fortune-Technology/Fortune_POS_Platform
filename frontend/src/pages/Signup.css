@@ -1,0 +1,114 @@
+/* Signup.css — prefix: su- */
+
+.su-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top right, var(--accent-primary)10, transparent),
+              radial-gradient(circle at bottom left, var(--error)10, transparent);
+}
+.su-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 3rem;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+.su-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.su-back-home {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.su-logo-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+.su-title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+.su-subtitle {
+  color: var(--text-secondary);
+}
+
+/* ── Name grid ── */
+.su-name-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Input with icon ── */
+.su-input-wrap {
+  position: relative;
+}
+.su-input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.su-input-icon-pad {
+  padding-left: 3rem;
+}
+.su-input--error {
+  border-color: var(--error);
+}
+.su-field-error {
+  color: var(--error);
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+/* ── Submit ── */
+.su-submit {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.su-submit-icon {
+  margin-left: 0.5rem;
+}
+
+/* ── Footer ── */
+.su-footer {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.su-login-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .su-card {
+    padding: 2rem 1.5rem;
+    max-width: 95%;
+  }
+}
+@media (max-width: 480px) {
+  .su-card {
+    padding: 1.5rem 1rem;
+  }
+  .su-name-grid {
+    grid-template-columns: 1fr;
+  }
+  .su-title {
+    font-size: 1.25rem;
+  }
+}

@@ -1,0 +1,413 @@
+/* CustomerLookupModal.css — Customer search, create, loyalty rewards */
+/* Prefix: clm- */
+
+.clm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.clm-modal {
+  background: var(--bg-panel);
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.clm-header {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.clm-header-title { flex: 1; font-weight: 800; color: var(--text-primary); }
+
+.clm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Tab bar */
+.clm-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0.6rem 1rem 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.clm-tab {
+  flex: 1;
+  padding: 0.45rem;
+  border-radius: 8px 8px 0 0;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.clm-tab--active {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-bottom-color: var(--green);
+}
+
+.clm-tab-badge {
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.62rem;
+  font-weight: 900;
+  border-radius: 99px;
+  padding: 0 5px;
+  line-height: 15px;
+}
+
+/* Body */
+.clm-body {
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Currently attached */
+.clm-current {
+  background: rgba(122, 193, 67, 0.08);
+  border: 1px solid rgba(122, 193, 67, 0.25);
+  border-radius: 10px;
+  padding: 0.7rem 0.875rem;
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clm-current-name { font-weight: 700; color: var(--green); font-size: 0.88rem; }
+
+.clm-current-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.clm-current-points { color: #f59e0b; font-weight: 700; }
+
+.clm-current-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Redemption indicator */
+.clm-redemption {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.clm-redemption-name { font-weight: 700; }
+
+.clm-redemption-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Search */
+.clm-search-wrap {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.clm-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.clm-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 2.25rem;
+  height: 44px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  outline: none;
+}
+
+/* Results */
+.clm-results { max-height: 240px; overflow-y: auto; }
+
+.clm-loading {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1rem;
+  font-size: 0.83rem;
+}
+
+.clm-no-results {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.5rem 0;
+  font-size: 0.83rem;
+}
+
+.clm-add-new-link {
+  background: none;
+  border: none;
+  color: var(--green);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.clm-result-row {
+  width: 100%;
+  padding: 0.7rem 0.5rem;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 0;
+}
+
+.clm-result-row:hover { background: var(--bg-hover); }
+
+.clm-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(122, 193, 67, 0.15);
+  color: var(--green);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.clm-result-name { font-weight: 700; color: var(--text-primary); font-size: 0.88rem; }
+
+.clm-result-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+}
+
+.clm-result-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.clm-result-points { font-size: 0.7rem; color: #f59e0b; font-weight: 700; }
+.clm-result-discount { font-size: 0.68rem; color: #10b981; font-weight: 700; }
+
+/* Create form */
+.clm-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.clm-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.625rem;
+}
+
+.clm-form-input {
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.clm-submit-btn {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+  background: var(--green);
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.clm-err-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: #ef4444;
+  font-size: 0.78rem;
+  margin-top: 0.5rem;
+}
+
+/* Rewards tab */
+.clm-points-card {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clm-points-value { font-weight: 800; color: #f59e0b; font-size: 1rem; }
+.clm-points-label { font-size: 0.7rem; color: var(--text-muted); }
+
+.clm-applied-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(122, 193, 67, 0.1);
+  border-radius: 8px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* Active redemption */
+.clm-active-reward {
+  background: rgba(122, 193, 67, 0.08);
+  border: 1px solid rgba(122, 193, 67, 0.25);
+  border-radius: 10px;
+  padding: 0.7rem 0.875rem;
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clm-active-reward-info { flex: 1; font-size: 0.82rem; }
+.clm-active-reward-pts { color: var(--text-muted); margin-left: 6px; }
+
+.clm-remove-reward-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Reward list */
+.clm-rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clm-reward-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.7rem 0.875rem;
+  border-radius: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.1s;
+  border: 1px solid var(--border-light);
+  background: var(--bg-panel);
+}
+
+.clm-reward-btn:hover { background: var(--bg-hover); }
+.clm-reward-btn--disabled { cursor: not-allowed; opacity: 0.55; }
+
+.clm-reward-btn--applied {
+  border: 1.5px solid var(--green);
+  background: rgba(122, 193, 67, 0.08);
+}
+
+.clm-reward-btn--cant-afford { background: var(--bg-input); }
+
+.clm-reward-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clm-reward-icon--applied { background: rgba(122, 193, 67, 0.15); color: var(--green); }
+.clm-reward-icon--default { background: var(--bg-hover); color: var(--text-muted); }
+
+.clm-reward-name { font-weight: 700; color: var(--text-primary); font-size: 0.85rem; }
+.clm-reward-desc { font-size: 0.7rem; color: var(--text-muted); }
+.clm-reward-cost { font-weight: 800; color: #f59e0b; font-size: 0.82rem; }
+.clm-reward-value { font-size: 0.72rem; color: var(--green); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .clm-modal { max-width: 100%; border-radius: 16px; }
+  .clm-form-row { grid-template-columns: 1fr; }
+}

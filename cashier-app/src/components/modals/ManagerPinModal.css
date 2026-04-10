@@ -1,0 +1,163 @@
+/* ManagerPinModal.css — Manager PIN override */
+/* Prefix: mpm- */
+
+.mpm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mpm-modal {
+  background: var(--bg-panel);
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  padding: 2rem;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+}
+
+.mpm-shield {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  margin: 0 auto 1rem;
+  background: rgba(122, 193, 67, 0.12);
+  border: 1px solid rgba(122, 193, 67, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mpm-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.mpm-action-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+/* PIN dots */
+.mpm-dots {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.mpm-dots--shake {
+  animation: shake 0.5s ease;
+}
+
+.mpm-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.1s;
+}
+
+.mpm-dot--filled {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+/* Error */
+.mpm-error {
+  color: var(--red);
+  font-size: 0.78rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.mpm-error-spacer { height: 22px; }
+
+/* Numpad */
+.mpm-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.mpm-key {
+  height: 56px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+
+.mpm-key--empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.mpm-key--delete {
+  background: var(--red-dim);
+  border-color: rgba(224, 63, 63, 0.2);
+  color: var(--red);
+}
+
+/* Confirm button */
+.mpm-confirm-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+.mpm-confirm-btn--active {
+  background: var(--green);
+  color: #0f1117;
+  cursor: pointer;
+}
+
+.mpm-confirm-btn--disabled {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Cancel link */
+.mpm-cancel-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+@media (max-width: 768px) {
+  .mpm-modal { width: 280px; padding: 1.5rem; }
+}

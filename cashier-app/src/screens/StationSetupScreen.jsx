@@ -14,6 +14,7 @@ import StoreveuLogo      from '../components/StoreveuLogo.jsx';
 import { useStationStore }  from '../stores/useStationStore.js';
 import { loginWithPassword, registerStation } from '../api/pos.js';
 import api from '../api/client.js';
+import './StationSetupScreen.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const HW_KEY = 'storv_hardware_config';
@@ -85,76 +86,58 @@ const SCALE_BAUD_DEFAULTS = {
   generic:   9600,
 };
 
-// ── Style helpers ──────────────────────────────────────────────────────────
+// ── Style helpers (retained for backward compat with deeply nested form elements) ──
 const S = {
-  wrap:  { height: '100%', background: '#0b0d14', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto', overflowX: 'hidden' },
-  card:  { width: '100%', maxWidth: 580, background: '#13161e', border: '1px solid rgba(255,255,255,.07)', borderRadius: 20, padding: '2rem', marginTop: '1rem', marginBottom: '2rem' },
-  field: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, color: '#e8eaf0', padding: '0.8rem 1rem', fontSize: '0.95rem', outline: 'none', transition: 'border-color .15s' },
-  select: { width: '100%', boxSizing: 'border-box', background: '#1a1d27', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, color: '#e8eaf0', padding: '0.8rem 1rem', fontSize: '0.95rem', outline: 'none', cursor: 'pointer' },
-  label: { display: 'block', color: '#6b7280', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 },
-  row:   { display: 'grid', gap: 10 },
-  btn:   (active, color = '#3d56b5') => ({
-    padding: '0.85rem 1.25rem', borderRadius: 10, border: 'none', cursor: active ? 'pointer' : 'not-allowed',
-    background: active ? color : 'rgba(255,255,255,.05)', color: active ? '#fff' : '#4b5563',
-    fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    transition: 'background .15s', opacity: active ? 1 : 0.6,
-  }),
-  hwSection: (open) => ({
-    border: `1px solid ${open ? 'rgba(61,86,181,.4)' : 'rgba(255,255,255,.06)'}`,
-    borderRadius: 14, marginBottom: 10, overflow: 'hidden',
-    background: open ? 'rgba(61,86,181,.04)' : 'rgba(255,255,255,.02)',
-    transition: 'border-color .2s',
-  }),
-  hwHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', cursor: 'pointer', userSelect: 'none' },
-  testBtn: (status) => ({
-    padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)',
-    background: status === 'ok' ? 'rgba(22,163,74,.15)' : status === 'err' ? 'rgba(239,68,68,.12)' : 'rgba(255,255,255,.06)',
-    color: status === 'ok' ? '#4ade80' : status === 'err' ? '#f87171' : '#94a3b8',
-    fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-    whiteSpace: 'nowrap',
-  }),
-  statusDot: (status) => ({
-    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-    background: status === 'ok' ? '#4ade80' : status === 'err' ? '#f87171' : status === 'testing' ? '#f59e0b' : '#374151',
-  }),
+  field: 'sss-field',
+  select: 'sss-select',
+  label: 'sss-label',
+  row:   'sss-hw-grid',
 };
 
 // ── Section wrapper component ──────────────────────────────────────────────
 function HWSection({ icon: Icon, title, status, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
+  const dotClass = status === 'ok' ? 'sss-hw-status-dot--ok'
+    : status === 'err' ? 'sss-hw-status-dot--err'
+    : status === 'testing' ? 'sss-hw-status-dot--testing'
+    : 'sss-hw-status-dot--none';
+  const labelClass = status === 'ok' ? 'sss-hw-status-label--ok'
+    : status === 'err' ? 'sss-hw-status-label--err'
+    : 'sss-hw-status-label--none';
   return (
-    <div style={S.hwSection(open)}>
-      <div style={S.hwHeader} onClick={() => setOpen(o => !o)}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(61,86,181,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div className={`sss-hw-section ${open ? 'sss-hw-section--open' : 'sss-hw-section--closed'}`}>
+      <div className="sss-hw-header" onClick={() => setOpen(o => !o)}>
+        <div className="sss-hw-icon-wrap">
           <Icon size={16} color="#7b95e0" />
         </div>
-        <span style={{ flex: 1, fontWeight: 700, color: '#e8eaf0', fontSize: '0.92rem' }}>{title}</span>
-        <div style={S.statusDot(status)} />
-        <span style={{ fontSize: '0.72rem', color: status === 'ok' ? '#4ade80' : status === 'err' ? '#f87171' : '#4b5563', marginRight: 6 }}>
+        <span className="sss-hw-title">{title}</span>
+        <div className={`sss-hw-status-dot ${dotClass}`} />
+        <span className={`sss-hw-status-label ${labelClass}`}>
           {status === 'ok' ? 'Configured' : status === 'err' ? 'Error' : 'Optional'}
         </span>
         {open ? <ChevronUp size={14} color="#4b5563" /> : <ChevronDown size={14} color="#4b5563" />}
       </div>
-      {open && <div style={{ padding: '0 16px 16px' }}>{children}</div>}
+      {open && <div className="sss-hw-body">{children}</div>}
     </div>
   );
 }
 
 // ── Field + label combo ────────────────────────────────────────────────────
-function Field({ label, children, half }) {
+function Field({ label, children }) {
   return (
-    <div style={{ ...(half ? {} : {}) }}>
-      <label style={S.label}>{label}</label>
+    <div>
+      <label className="sss-label">{label}</label>
       {children}
     </div>
   );
 }
 
 function TestButton({ onClick, status, loading, label }) {
+  const cls = status === 'ok' ? 'sss-test-btn--ok' : status === 'err' ? 'sss-test-btn--err' : 'sss-test-btn--idle';
   return (
-    <button onClick={onClick} disabled={loading} style={S.testBtn(status)}>
+    <button onClick={onClick} disabled={loading} className={`sss-test-btn ${cls}`}>
       {loading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <TestTube size={12} />}
-      {loading ? 'Testing…' : label || 'Test'}
+      {loading ? 'Testing\u2026' : label || 'Test'}
     </button>
   );
 }
@@ -530,8 +513,8 @@ export default function StationSetupScreen() {
   const totalSteps = STEPS.length;
 
   return (
-    <div style={S.wrap}>
-      <div style={S.card}>
+    <div className="sss-wrap">
+      <div className="sss-card">
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.75rem' }}>
@@ -574,14 +557,14 @@ export default function StationSetupScreen() {
               <div style={{ color: '#6b7280', fontSize: '0.84rem', lineHeight: 1.6 }}>Sign in with a <strong style={{ color: '#94a3b8' }}>manager or owner</strong> account to register this terminal. You only need to do this once.</div>
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={S.label}>Email</label>
-              <input type="email" required autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="manager@store.com" style={S.field} />
+              <label className="sss-label">Email</label>
+              <input type="email" required autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="manager@store.com" className="sss-field" />
             </div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={S.label}>Password</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={S.field} />
+              <label className="sss-label">Password</label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="sss-field" />
             </div>
-            <button type="submit" disabled={loading || !email || !password} style={{ ...S.btn(!loading && !!email && !!password), width: '100%' }}>
+            <button type="submit" disabled={loading || !email || !password} className={`sss-btn sss-btn--full ${!loading && !!email && !!password ? 'sss-btn--active' : 'sss-btn--disabled'}`}>
               {loading ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <>Continue <ChevronRight size={15} /></>}
             </button>
           </form>
@@ -612,7 +595,7 @@ export default function StationSetupScreen() {
                 );
               })}
             </div>
-            <button onClick={() => { setError(''); setStep(3); }} disabled={!storeId} style={{ ...S.btn(!!storeId), width: '100%' }}>
+            <button onClick={() => { setError(''); setStep(3); }} disabled={!storeId} className={`sss-btn sss-btn--full ${storeId ? 'sss-btn--active' : 'sss-btn--disabled'}`}>
               Continue <ChevronRight size={15} />
             </button>
           </div>
@@ -624,11 +607,11 @@ export default function StationSetupScreen() {
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#e8eaf0', marginBottom: 6 }}>Name This Register</div>
             <div style={{ color: '#6b7280', fontSize: '0.84rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>Give this terminal a name so cashiers know which register they're on.</div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={S.label}>Register Name</label>
-              <input type="text" required autoFocus maxLength={30} value={stationName} onChange={e => setStationName(e.target.value)} placeholder="Register 1" style={S.field} />
+              <label className="sss-label">Register Name</label>
+              <input type="text" required autoFocus maxLength={30} value={stationName} onChange={e => setStationName(e.target.value)} placeholder="Register 1" className="sss-field" />
               <div style={{ color: '#4b5563', fontSize: '0.71rem', marginTop: 5 }}>e.g. "Register 1", "Express Lane", "Self-Checkout"</div>
             </div>
-            <button type="submit" disabled={loading || !stationName.trim()} style={{ ...S.btn(!loading && !!stationName.trim()), width: '100%' }}>
+            <button type="submit" disabled={loading || !stationName.trim()} className={`sss-btn sss-btn--full ${!loading && !!stationName.trim() ? 'sss-btn--active' : 'sss-btn--disabled'}`}>
               {loading ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <>Register Terminal <ChevronRight size={15} /></>}
             </button>
           </form>
@@ -664,7 +647,7 @@ export default function StationSetupScreen() {
                         });
                       }
                     }}
-                    style={S.select}
+                    className="sss-select"
                   >
                     <option value="">— None / Skip —</option>
                     <optgroup label="SII (Seiko)">
@@ -718,7 +701,7 @@ export default function StationSetupScreen() {
                         value={hw.receiptPrinter.ip}
                         onChange={e => updHW('receiptPrinter', { ip: e.target.value })}
                         placeholder="192.168.1.100"
-                        style={S.field}
+                        className="sss-field"
                         autoFocus
                       />
                     </Field>
@@ -727,7 +710,7 @@ export default function StationSetupScreen() {
                         type="number"
                         value={hw.receiptPrinter.port || 9100}
                         onChange={e => updHW('receiptPrinter', { port: Number(e.target.value) })}
-                        style={S.field}
+                        className="sss-field"
                       />
                     </Field>
                   </div>
@@ -766,7 +749,7 @@ export default function StationSetupScreen() {
                       <button
                         onClick={() => detectQZPrinters(false)}
                         disabled={detectingPrinters}
-                        style={{ ...S.testBtn(qzStatus === 'running' ? 'ok' : null), whiteSpace: 'nowrap', flexShrink: 0 }}
+                        className={`sss-test-btn ${qzStatus === 'running' ? 'sss-test-btn--ok' : 'sss-test-btn--idle'}`}
                       >
                         {detectingPrinters
                           ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Detecting…</>
@@ -781,7 +764,7 @@ export default function StationSetupScreen() {
                         <select
                           value={hw.receiptPrinter.name}
                           onChange={e => updHW('receiptPrinter', { name: e.target.value })}
-                          style={S.select}
+                          className="sss-select"
                         >
                           <option value="">— Select a printer —</option>
                           {detectedPrinters.map(p => (
@@ -797,7 +780,7 @@ export default function StationSetupScreen() {
                         value={hw.receiptPrinter.name}
                         onChange={e => updHW('receiptPrinter', { name: e.target.value })}
                         placeholder="e.g. Epson TM-T20II Receipt"
-                        style={S.field}
+                        className="sss-field"
                       />
                       <div style={{ fontSize: '0.71rem', color: '#4b5563', marginTop: 4 }}>
                         The printer name must match exactly as shown in{' '}
@@ -811,7 +794,7 @@ export default function StationSetupScreen() {
                 {hw.receiptPrinter.type !== 'none' && hw.receiptPrinter.model && (
                   <>
                     <Field label="Paper Width">
-                      <select value={hw.receiptPrinter.width || '80mm'} onChange={e => updHW('receiptPrinter', { width: e.target.value })} style={S.select}>
+                      <select value={hw.receiptPrinter.width || '80mm'} onChange={e => updHW('receiptPrinter', { width: e.target.value })} className="sss-select">
                         {PAPER_WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
                       </select>
                     </Field>
@@ -830,7 +813,7 @@ export default function StationSetupScreen() {
             <HWSection icon={Package} title="Cash Drawer" status={hw.cashDrawer.type !== 'none' ? (testStatus.drawer || null) : null}>
               <div style={{ display: 'grid', gap: 10 }}>
                 <Field label="Connection Type">
-                  <select value={hw.cashDrawer.type} onChange={e => updHW('cashDrawer', { type: e.target.value })} style={S.select}>
+                  <select value={hw.cashDrawer.type} onChange={e => updHW('cashDrawer', { type: e.target.value })} className="sss-select">
                     <option value="none">None / Skip</option>
                     <option value="printer">Through Receipt Printer (RJ-11 port)</option>
                   </select>
@@ -861,7 +844,7 @@ export default function StationSetupScreen() {
                       setDetectedPorts([]);
                       setScaleTestWeight(null);
                     }}
-                    style={S.select}
+                    className="sss-select"
                   >
                     <option value="none">None / Skip</option>
                     <option value="datalogic">Datalogic Magellan 9800i (Scanner + Scale)</option>
@@ -911,7 +894,7 @@ export default function StationSetupScreen() {
                               updHW('scale', { portLabel: chosen.label, portSource: chosen.source, portName: chosen.name || '' });
                             }
                           }}
-                          style={{ ...S.select, flex: 1 }}
+                          className="sss-select" style={{ flex: 1 }}
                         >
                           <option value="">-- Select port --</option>
                           {detectedPorts.map(p => (
@@ -924,7 +907,7 @@ export default function StationSetupScreen() {
                         <button
                           onClick={detectScalePorts}
                           disabled={detectingPorts}
-                          style={S.testBtn(detectedPorts.length > 0 ? 'ok' : null)}
+                          className={`sss-test-btn ${detectedPorts.length > 0 ? 'sss-test-btn--ok' : 'sss-test-btn--idle'}`}
                           title="Auto-detect connected serial ports"
                         >
                           {detectingPorts
@@ -942,7 +925,7 @@ export default function StationSetupScreen() {
 
                     {/* Baud rate */}
                     <Field label="Baud Rate">
-                      <select value={hw.scale.baud} onChange={e => updHW('scale', { baud: Number(e.target.value) })} style={S.select}>
+                      <select value={hw.scale.baud} onChange={e => updHW('scale', { baud: Number(e.target.value) })} className="sss-select">
                         {BAUD_RATES.map(b => (
                           <option key={b} value={b}>{b}{b === 9600 ? ' (most common)' : ''}</option>
                         ))}
@@ -1001,7 +984,7 @@ export default function StationSetupScreen() {
                 {hw.paxTerminal.enabled && (
                   <>
                     <Field label="Terminal Model">
-                      <select value={hw.paxTerminal.model} onChange={e => updHW('paxTerminal', { model: e.target.value })} style={S.select}>
+                      <select value={hw.paxTerminal.model} onChange={e => updHW('paxTerminal', { model: e.target.value })} className="sss-select">
                         <option value="A30">PAX A30 (compact)</option>
                         <option value="A35">PAX A35 (countertop with customer screen)</option>
                         <option value="A80">PAX A80</option>
@@ -1014,7 +997,7 @@ export default function StationSetupScreen() {
                           value={hw.paxTerminal.ip}
                           onChange={e => updHW('paxTerminal', { ip: e.target.value })}
                           placeholder="192.168.1.50"
-                          style={S.field}
+                          className="sss-field"
                         />
                       </Field>
                       <Field label="Port">
@@ -1023,7 +1006,7 @@ export default function StationSetupScreen() {
                           value={hw.paxTerminal.port}
                           onChange={e => updHW('paxTerminal', { port: Number(e.target.value) })}
                           placeholder="10009"
-                          style={S.field}
+                          className="sss-field"
                         />
                       </Field>
                     </div>
@@ -1048,7 +1031,7 @@ export default function StationSetupScreen() {
             <HWSection icon={Tag} title="Label Printer (Optional)" status={hw.labelPrinter.type !== 'none' ? (testStatus.label || null) : null}>
               <div style={{ display: 'grid', gap: 10 }}>
                 <Field label="Label Printer Type">
-                  <select value={hw.labelPrinter.type} onChange={e => updHW('labelPrinter', { type: e.target.value })} style={S.select}>
+                  <select value={hw.labelPrinter.type} onChange={e => updHW('labelPrinter', { type: e.target.value })} className="sss-select">
                     <option value="none">None / Skip</option>
                     <option value="zebra_zpl">Zebra (ZPL) — USB via QZ Tray</option>
                     <option value="zebra_net">Zebra (ZPL) — Network TCP</option>
@@ -1060,20 +1043,20 @@ export default function StationSetupScreen() {
                   <>
                     <Field label="Printer Name">
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <select value={hw.labelPrinter.name} onChange={e => updHW('labelPrinter', { name: e.target.value })} style={{ ...S.select, flex: 1 }}>
+                        <select value={hw.labelPrinter.name} onChange={e => updHW('labelPrinter', { name: e.target.value })} className="sss-select" style={{ flex: 1 }}>
                           <option value="">-- Select printer --</option>
                           {detectedLabelPrinters.map(p => <option key={p} value={p}>{p}</option>)}
                           {hw.labelPrinter.name && !detectedLabelPrinters.includes(hw.labelPrinter.name) && (
                             <option value={hw.labelPrinter.name}>{hw.labelPrinter.name}</option>
                           )}
                         </select>
-                        <button onClick={() => detectQZPrinters(true)} disabled={detectingPrinters} style={S.testBtn(null)}>
+                        <button onClick={() => detectQZPrinters(true)} disabled={detectingPrinters} className="sss-test-btn sss-test-btn--idle">
                           {detectingPrinters ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />} Detect
                         </button>
                       </div>
                     </Field>
                     <Field label="Enter printer name manually">
-                      <input value={hw.labelPrinter.name} onChange={e => updHW('labelPrinter', { name: e.target.value })} placeholder="e.g. ZDesigner GX420d" style={S.field} />
+                      <input value={hw.labelPrinter.name} onChange={e => updHW('labelPrinter', { name: e.target.value })} placeholder="e.g. ZDesigner GX420d" className="sss-field" />
                     </Field>
                   </>
                 )}
@@ -1081,10 +1064,10 @@ export default function StationSetupScreen() {
                 {hw.labelPrinter.type === 'zebra_net' && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 10 }}>
                     <Field label="Printer IP Address">
-                      <input value={hw.labelPrinter.ip} onChange={e => updHW('labelPrinter', { ip: e.target.value })} placeholder="192.168.1.51" style={S.field} />
+                      <input value={hw.labelPrinter.ip} onChange={e => updHW('labelPrinter', { ip: e.target.value })} placeholder="192.168.1.51" className="sss-field" />
                     </Field>
                     <Field label="Port">
-                      <input type="number" value={hw.labelPrinter.port} onChange={e => updHW('labelPrinter', { port: Number(e.target.value) })} placeholder="9100" style={S.field} />
+                      <input type="number" value={hw.labelPrinter.port} onChange={e => updHW('labelPrinter', { port: Number(e.target.value) })} placeholder="9100" className="sss-field" />
                     </Field>
                   </div>
                 )}
@@ -1099,7 +1082,7 @@ export default function StationSetupScreen() {
 
             {/* Continue button */}
             <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
-              <button onClick={() => setStep(5)} style={{ ...S.btn(true, '#3d56b5'), flex: 1 }}>
+              <button onClick={() => setStep(5)} className="sss-btn sss-btn--active" style={{ flex: 1 }}>
                 <Zap size={15} /> Complete Setup
               </button>
             </div>
@@ -1144,7 +1127,7 @@ export default function StationSetupScreen() {
               ))}
             </div>
 
-            <button onClick={handleComplete} style={{ ...S.btn(true, '#16a34a'), width: '100%', fontSize: '1rem', padding: '1rem' }}>
+            <button onClick={handleComplete} className="sss-btn sss-btn--green sss-btn--full" style={{ fontSize: '1rem', padding: '1rem' }}>
               <Zap size={16} /> Open POS
             </button>
 
@@ -1156,11 +1139,7 @@ export default function StationSetupScreen() {
 
       </div>
 
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
-        select option { background: #1a1d27; color: #e8eaf0; }
-      `}</style>
+      {/* Styles moved to StationSetupScreen.css */}
     </div>
   );
 }

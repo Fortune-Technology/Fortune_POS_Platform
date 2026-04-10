@@ -8,6 +8,7 @@
  *   iconOnly    {boolean} render only the blue sprout icon square (200×200). Default false.
  */
 import React from 'react';
+import './StoreveuLogo.css';
 
 export default function StoreveuLogo({
   height      = 40,
@@ -25,7 +26,7 @@ export default function StoreveuLogo({
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        style={{ display: 'block', flexShrink: 0 }}
+        className="svl-svg"
       >
         <rect width="200" height="200" rx="46" fill="#3d56b5" />
         <line x1="100" y1="158" x2="100" y2="82"
@@ -60,7 +61,7 @@ export default function StoreveuLogo({
       viewBox={`0 0 ${vbW} ${vbH}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block', flexShrink: 0 }}
+      className="svl-svg"
     >
       <rect x="40" y="40" width="100" height="100" rx="24" fill={iconBg} />
       <line x1="90" y1="128" x2="90" y2="68"
@@ -85,7 +86,7 @@ export default function StoreveuLogo({
         fill={storeClr}
       >store</text>
       <text
-        x="394" y="118"
+        x="380" y="118"
         fontFamily="'DM Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif"
         fontWeight="400"
         fontStyle="italic"

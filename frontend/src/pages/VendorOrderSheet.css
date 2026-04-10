@@ -1,0 +1,183 @@
+/* VendorOrderSheet.css — prefix: vos- */
+/* NOTE: VendorOrderSheet already uses portal.css p- classes extensively.
+   This file handles remaining inline styles. */
+
+/* ── Factor badges ── */
+.vos-factor-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: help;
+}
+.vos-factor-badges {
+  display: inline-flex;
+  gap: 3px;
+}
+
+/* ── Urgency dot ── */
+.vos-urgency {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.vos-urgency-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ── Suggestions action bar ── */
+.vos-action-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.vos-export-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Vendor group header ── */
+.vos-vendor-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  flex-wrap: wrap;
+}
+.vos-vendor-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.vos-vendor-subtotal {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--success);
+  font-size: 0.9rem;
+}
+.vos-vendor-create-btn {
+  margin-left: 0.5rem;
+}
+
+/* ── PO Detail summary ── */
+.vos-po-summary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.vos-po-total {
+  font-weight: 700;
+}
+
+/* ── PO detail table scroll ── */
+.vos-po-items {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* ── PO actions ── */
+.vos-po-actions {
+  flex-wrap: wrap;
+}
+
+/* ── Orders tab ── */
+.vos-orders-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── History filters ── */
+.vos-history-filters {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Table items ── */
+.vos-table-items {
+  margin-top: 0.75rem;
+}
+.vos-td-product {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vos-td-upc {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.vos-td-onhand-zero {
+  color: var(--error);
+  font-weight: 600;
+}
+.vos-td-onhand {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.vos-td-order-qty {
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+.vos-td-cost {
+  font-weight: 600;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .vos-export-btns {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .vos-action-bar {
+    flex-direction: column;
+  }
+  .vos-export-btns {
+    justify-content: flex-start;
+  }
+  .vos-vendor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .vos-vendor-subtotal {
+    margin-left: 0;
+  }
+  .vos-po-summary {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .vos-history-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .vos-orders-actions {
+    flex-direction: column;
+  }
+}

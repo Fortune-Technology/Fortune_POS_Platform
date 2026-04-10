@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ShoppingCart, Package } from 'lucide-react';
 import { useCart } from '../../lib/cart';
 
 function fmt(n) { return `$${Number(n).toFixed(2)}`; }
@@ -21,7 +22,7 @@ export default function CartDrawer() {
         <div className="cd-items">
           {items.length === 0 ? (
             <div className="cd-empty">
-              <div className="cd-empty-icon">🛒</div>
+              <div className="cd-empty-icon"><ShoppingCart size={48} strokeWidth={1.5} /></div>
               <p>Your cart is empty</p>
             </div>
           ) : (
@@ -30,7 +31,7 @@ export default function CartDrawer() {
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} className="cd-item-img" />
                 ) : (
-                  <div className="cd-item-placeholder">📦</div>
+                  <div className="cd-item-placeholder"><Package size={40} strokeWidth={1.5} /></div>
                 )}
                 <div className="cd-item-info">
                   <div className="cd-item-name">{item.name}</div>

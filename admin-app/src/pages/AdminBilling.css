@@ -1,0 +1,688 @@
+/* AdminBilling.css — prefix: ab- */
+
+/* ── Badge Component ─────────────────────────────────────── */
+.ab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ab-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Toggle Component ────────────────────────────────────── */
+.ab-toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.2s;
+}
+.ab-toggle--on  { background: #3b82f6; }
+.ab-toggle--off { background: var(--border-color); }
+.ab-toggle-knob {
+  position: absolute;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.ab-toggle-knob--on  { left: 16px; }
+.ab-toggle-knob--off { left: 2px; }
+
+/* ── Shared form styles ──────────────────────────────────── */
+.ab-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.ab-textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 60px;
+}
+.ab-textarea--mono {
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+.ab-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.ab-label-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+.ab-tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0;
+}
+.ab-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+.ab-tab--active {
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom-color: #3b82f6;
+}
+
+/* ── Loading state ───────────────────────────────────────── */
+.ab-loading {
+  padding: 2rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Plans Tab ───────────────────────────────────────────── */
+.ab-plans-grid {
+  display: grid;
+  gap: 20px;
+}
+.ab-plans-grid--with-panel {
+  grid-template-columns: 1fr 380px;
+}
+.ab-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.ab-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ab-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ab-plan-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.ab-plan-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.ab-plan-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ab-plan-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.ab-private-badge {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--border-color);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.ab-plan-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.ab-plan-meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.ab-plan-price {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+.ab-plan-price-unit {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.ab-addon-tags {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ab-addon-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(59,130,246,.1);
+  border: 1px solid rgba(59,130,246,.2);
+  color: #3b82f6;
+}
+.ab-plan-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ab-btn-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.77rem;
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.ab-btn-delete {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.77rem;
+  font-weight: 600;
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.2);
+  color: #ef4444;
+  cursor: pointer;
+}
+.ab-btn-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(59,130,246,.1);
+  border: 1px solid rgba(59,130,246,.25);
+  color: #3b82f6;
+  cursor: pointer;
+}
+.ab-btn-writeoff {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(148,163,184,.1);
+  border: 1px solid rgba(148,163,184,.2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ab-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+/* ── Add-on form ─────────────────────────────────────────── */
+.ab-addon-section {
+  margin-top: 28px;
+}
+.ab-addon-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.ab-addon-form {
+  background: var(--bg-card);
+  border: 1px solid rgba(59,130,246,.25);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 12px;
+}
+.ab-addon-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ab-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Code badge in table ─────────────────────────────────── */
+.ab-code {
+  font-size: 0.77rem;
+  background: var(--border-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.ab-cell-bold {
+  font-weight: 600;
+}
+.ab-cell-money {
+  font-weight: 700;
+}
+
+/* ── Edit / Manage side panel ────────────────────────────── */
+.ab-side-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+.ab-side-panel--scroll {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.ab-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.ab-panel-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.ab-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+}
+.ab-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ab-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ab-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ab-toggle-label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+.ab-addon-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ab-addon-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.ab-addon-check-label input { accent-color: #3b82f6; }
+.ab-addon-check-price {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.ab-btn-full {
+  margin-top: 16px;
+  width: 100%;
+}
+
+/* ── Subscriptions Tab ───────────────────────────────────── */
+.ab-stat-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.ab-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 18px;
+  min-width: 90px;
+}
+.ab-stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ab-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ab-filter-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+.ab-subs-grid {
+  display: grid;
+  gap: 20px;
+}
+.ab-subs-grid--with-panel {
+  grid-template-columns: 1fr 380px;
+}
+.ab-table-wrap {
+  overflow-x: auto;
+}
+.ab-manage-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
+.ab-manage-label input { accent-color: #3b82f6; }
+.ab-manage-extra-price {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Invoices Tab ────────────────────────────────────────── */
+.ab-inv-filter-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ab-inv-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.ab-inv-number { font-family: monospace; font-size: 0.78rem; }
+.ab-inv-org    { font-size: 0.82rem; font-weight: 600; }
+.ab-inv-period { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+.ab-inv-base   { font-weight: 600; }
+.ab-inv-disc   { color: #22c55e; }
+.ab-inv-total  { font-weight: 800; }
+.ab-inv-attempt { text-align: center; font-size: 0.82rem; }
+.ab-inv-actions { display: flex; gap: 5px; }
+.ab-inv-paid   { color: #22c55e; font-size: 0.75rem; }
+
+/* ── Equipment Tab ───────────────────────────────────────── */
+.ab-equip-section {
+  margin-bottom: 28px;
+}
+.ab-equip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.ab-equip-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ab-equip-grid {
+  display: grid;
+  gap: 20px;
+}
+.ab-equip-grid--with-panel {
+  grid-template-columns: 1fr 340px;
+}
+.ab-order-num { font-family: monospace; font-size: 0.78rem; }
+.ab-order-name { font-weight: 600; font-size: 0.82rem; }
+.ab-order-email { font-size: 0.72rem; color: var(--text-muted); }
+.ab-order-items { font-size: 0.82rem; }
+.ab-order-total { font-weight: 700; }
+.ab-order-tracking { font-size: 0.75rem; color: var(--text-muted); }
+.ab-order-tracking-carrier { font-weight: 600; }
+.ab-order-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* ── Products section ────────────────────────────────────── */
+.ab-product-divider {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+.ab-product-toggle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ab-product-toggle-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.ab-product-form {
+  background: var(--bg-card);
+  border: 1px solid rgba(59,130,246,.25);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 14px;
+}
+.ab-product-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ab-product-desc-row {
+  margin-bottom: 10px;
+}
+.ab-product-check-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ab-product-check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.ab-product-check-label input { accent-color: #3b82f6; }
+.ab-product-name { font-weight: 600; }
+.ab-product-cat  { font-size: 0.78rem; text-transform: capitalize; }
+.ab-product-price { font-weight: 700; }
+.ab-product-compare { margin-left: 6px; font-size: 0.75rem; color: var(--text-muted); text-decoration: line-through; }
+.ab-product-stock--low { font-size: 0.82rem; color: #f97316; font-weight: 700; }
+.ab-product-stock--ok  { font-size: 0.82rem; color: var(--text-secondary); font-weight: 400; }
+
+/* ── Table common ────────────────────────────────────────── */
+.ab-cell-center  { text-align: center; }
+.ab-cell-muted   { color: var(--text-muted); }
+.ab-cell-sm      { font-size: 0.82rem; }
+.ab-cell-xs      { font-size: 0.78rem; }
+.ab-cell-nowrap  { white-space: nowrap; }
+.ab-cell-mono    { font-family: monospace; }
+.ab-cell-payment { font-size: 0.78rem; }
+.ab-td-refund    { font-weight: 700; color: #ef4444; }
+
+/* ── Pagination text ─────────────────────────────────────── */
+.ab-page-info {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ── Admin select overrides ──────────────────────────────── */
+.ab-select-inline {
+  width: auto;
+  margin-bottom: 0;
+}
+
+/* ── History tab badges ──────────────────────────────────── */
+.ab-history-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .ab-plans-grid--with-panel,
+  .ab-subs-grid--with-panel,
+  .ab-equip-grid--with-panel {
+    grid-template-columns: 1fr;
+  }
+  .ab-side-panel {
+    position: static;
+  }
+  .ab-tab-bar {
+    overflow-x: auto;
+  }
+  .ab-product-form-grid,
+  .ab-addon-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ab-tab-bar {
+    gap: 0;
+  }
+  .ab-tab {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+  }
+  .ab-plan-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ab-plan-card-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ab-plan-actions {
+    align-self: flex-end;
+  }
+  .ab-stat-row {
+    gap: 6px;
+  }
+  .ab-stat-card {
+    padding: 8px 12px;
+    min-width: 70px;
+  }
+  .ab-stat-value {
+    font-size: 1.1rem;
+  }
+  .ab-form-row-2 {
+    grid-template-columns: 1fr;
+  }
+  .ab-section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .ab-equip-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .ab-tab {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    gap: 4px;
+  }
+  .ab-side-panel {
+    padding: 1rem;
+  }
+  .ab-plan-card {
+    padding: 10px 12px;
+  }
+  .ab-stat-card {
+    flex: 1;
+    min-width: 0;
+  }
+  .ab-inv-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ab-inv-count {
+    margin-left: 0;
+  }
+}

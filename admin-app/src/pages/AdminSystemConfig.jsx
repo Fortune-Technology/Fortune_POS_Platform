@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Save, Trash2, Loader, Settings } from 'lucide-react';
 import { toast } from 'react-toastify';
-import AdminSidebar from '../components/AdminSidebar';
+
 import { getAdminSystemConfig, updateAdminSystemConfig } from '../services/api';
 import '../styles/admin.css';
+import './AdminSystemConfig.css';
 
 const AdminSystemConfig = () => {
   const [configs, setConfigs] = useState([]);
@@ -36,13 +37,14 @@ const AdminSystemConfig = () => {
   };
 
   return (
-    <div className="layout-container">
-      <AdminSidebar />
-      <main className="main-content admin-page">
+    <>
         <div className="admin-header">
           <div className="admin-header-left">
-            <h1 className="admin-header-icon"><Settings size={20} /> System Configuration</h1>
-            <p>Global key-value settings</p>
+            <div className="admin-header-icon"><Settings size={22} /></div>
+            <div>
+              <h1>System Configuration</h1>
+              <p>Global key-value settings</p>
+            </div>
           </div>
         </div>
 
@@ -80,8 +82,7 @@ const AdminSystemConfig = () => {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 };
 
@@ -96,7 +97,7 @@ const ConfigRow = ({ config, onSave }) => {
       <input value={value} onChange={e => setValue(e.target.value)} className="admin-config-input" />
       <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description" className="admin-config-desc" />
       <button onClick={() => onSave(config.key, value, desc || null)} disabled={!changed}
-        className="admin-btn-primary" style={{ opacity: changed ? 1 : 0.4, cursor: changed ? 'pointer' : 'not-allowed' }}>
+        className={`admin-btn-primary ${changed ? 'asc-save-enabled' : 'asc-save-disabled'}`}>
         <Save size={12} /> Save
       </button>
     </div>

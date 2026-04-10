@@ -1,0 +1,159 @@
+/* ══════════════════════════════════════════════════════════════
+   StoreManagement.css — Store management page styles
+   Prefix: sm-
+══════════════════════════════════════════════════════════════ */
+
+/* ── Store card ──────────────────────────────────────── */
+.sm-store-card {
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); padding: 1.25rem;
+  transition: all 0.15s; cursor: pointer;
+}
+.sm-store-card:hover { border-color: var(--accent-primary); background: var(--brand-05); }
+.sm-store-card--active { border-color: var(--accent-primary); box-shadow: 0 0 0 2px var(--brand-15); }
+
+.sm-store-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+
+.sm-store-icon {
+  width: 42px; height: 42px; border-radius: var(--radius-sm);
+  background: var(--brand-15); display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+
+.sm-store-name { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+.sm-store-addr { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+.sm-store-meta {
+  display: flex; gap: 1rem; font-size: 0.76rem; color: var(--text-muted);
+  flex-wrap: wrap; margin-top: 0.5rem;
+}
+
+.sm-store-meta-item { display: flex; align-items: center; gap: 4px; }
+
+/* ── Store grid ──────────────────────────────────────── */
+.sm-store-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Add store card ──────────────────────────────────── */
+.sm-add-card {
+  border: 2px dashed var(--border-color); border-radius: var(--radius-md);
+  padding: 2rem; text-align: center; cursor: pointer;
+  transition: all 0.15s; background: transparent;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 0.75rem;
+}
+.sm-add-card:hover { border-color: var(--accent-primary); background: var(--brand-05); }
+
+.sm-add-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--brand-08); display: flex; align-items: center;
+  justify-content: center;
+}
+.sm-add-label { font-weight: 600; font-size: 0.88rem; color: var(--text-secondary); }
+
+/* ── Modal ───────────────────────────────────────────── */
+.sm-modal-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,0.52); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+
+.sm-modal {
+  background: #fff; border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 16px); padding: 1.75rem;
+  width: 100%; max-width: 560px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.28);
+  color: var(--text-primary); max-height: 90vh; overflow-y: auto;
+}
+
+.sm-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.sm-modal-title { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.sm-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 4px; display: flex;
+}
+
+/* ── Form ────────────────────────────────────────────── */
+.sm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+.sm-form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 0.75rem; }
+.sm-form-group--full { grid-column: 1 / -1; }
+
+.sm-form-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+.sm-form-input {
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  color: var(--text-primary); font-size: 0.875rem; width: 100%;
+  box-sizing: border-box; outline: none;
+}
+.sm-form-input:focus {
+  border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--brand-10);
+}
+
+.sm-form-actions {
+  display: flex; gap: 0.6rem; justify-content: flex-end;
+  margin-top: 1rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ── POS credentials ─────────────────────────────────── */
+.sm-pos-section {
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); padding: 1rem; margin-top: 0.5rem;
+}
+
+.sm-pos-empty {
+  padding: 1.25rem; text-align: center; color: var(--text-muted);
+  font-size: 0.825rem; background: var(--bg-tertiary);
+  border-radius: var(--radius-md); border: 1px dashed var(--border-color);
+}
+
+.sm-pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+
+/* ── Pricing section ─────────────────────────────────── */
+.sm-pricing-section {
+  background: var(--brand-08); border: 1px solid var(--border-brand);
+  border-radius: var(--radius-sm); padding: 1rem; margin-top: 0.75rem;
+}
+.sm-pricing-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.sm-pricing-value { font-size: 1.1rem; font-weight: 800; color: var(--accent-primary); }
+.sm-pricing-breakdown {
+  font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;
+}
+
+/* ── Password wrap ───────────────────────────────────── */
+.sm-pw-wrap { position: relative; }
+.sm-pw-toggle {
+  position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .sm-store-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .sm-store-grid { grid-template-columns: 1fr; }
+  .sm-form-grid { grid-template-columns: 1fr; }
+  .sm-pos-grid { grid-template-columns: 1fr; }
+  .sm-modal { padding: 1.25rem; max-width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .sm-modal { padding: 1rem; }
+  .sm-store-card { padding: 1rem; }
+}

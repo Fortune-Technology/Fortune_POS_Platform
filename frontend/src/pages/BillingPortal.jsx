@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../components/Layout';
+import { CreditCard } from 'lucide-react';
 import api from '../services/api';
+import './BillingPortal.css';
 
 const STATUS_COLORS = {
   trial:     { bg: '#1a3a5c', text: '#60a5fa' },
@@ -13,11 +14,7 @@ const STATUS_COLORS = {
 function StatusBadge({ status }) {
   const c = STATUS_COLORS[status] || STATUS_COLORS.cancelled;
   return (
-    <span style={{
-      background: c.bg, color: c.text,
-      padding: '0.25rem 0.75rem', borderRadius: '999px',
-      fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-    }}>
+    <span className="bp-status-badge" style={{ background: c.bg, color: c.text }}>
       {status?.replace('_', ' ')}
     </span>
   );
@@ -39,59 +36,56 @@ export default function BillingPortal() {
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString() : '—';
 
   return (
-    <Layout>
-      <div style={{ padding: '1.5rem', maxWidth: '900px' }}>
-        <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.5rem', fontWeight: 700 }}>Billing & Subscription</h1>
-        <p style={{ margin: '0 0 2rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Manage your subscription plan and billing history.
-        </p>
+    <div className="p-page">
+      <div className="bp-container">
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <CreditCard size={22} />
+            </div>
+            <div>
+              <h1 className="p-title">Billing & Subscription</h1>
+              <p className="p-subtitle">Manage your subscription plan and billing history.</p>
+            </div>
+          </div>
+          <div className="p-header-actions"></div>
+        </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading…</div>
+          <div className="bp-loading">Loading…</div>
         ) : !sub ? (
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-            borderRadius: '10px', padding: '2rem', textAlign: 'center',
-          }}>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+          <div className="bp-no-sub">
+            <p>
               No active subscription found. Contact support to set up your plan.
             </p>
-            <a
-              href="mailto:billing@storveu.com"
-              style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}
-            >
-              billing@storveu.com
-            </a>
+            <a href="mailto:billing@storveu.com">billing@storveu.com</a>
           </div>
         ) : (
           <>
             {/* Subscription card */}
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              borderRadius: '10px', padding: '1.5rem', marginBottom: '1.5rem',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="bp-sub-card">
+              <div className="bp-sub-header">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                  <div className="bp-plan-header">
+                    <h2 className="bp-plan-name">
                       {sub.plan?.name || 'Custom Plan'}
                     </h2>
                     <StatusBadge status={sub.status} />
                   </div>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  <p className="bp-store-count">
                     {sub.storeCount} store{sub.storeCount !== 1 ? 's' : ''} · {sub.registerCount} register{sub.registerCount !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>
-                    {fmt(sub.plan?.basePrice)}<span style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--text-muted)' }}>/mo</span>
+                <div className="bp-price-wrap">
+                  <div className="bp-price">
+                    {fmt(sub.plan?.basePrice)}<span className="bp-price-period">/mo</span>
                   </div>
                 </div>
               </div>
 
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '1rem 0' }} />
+              <hr className="bp-divider" />
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+              <div className="bp-details-grid">
                 {[
                   { label: 'Status',          value: <StatusBadge status={sub.status} /> },
                   { label: 'Trial Ends',       value: fmtDate(sub.trialEndsAt) },
@@ -99,22 +93,15 @@ export default function BillingPortal() {
                   { label: 'Payment Method',   value: sub.paymentMasked ? `${(sub.paymentMethod || '').toUpperCase()} ···${sub.paymentMasked}` : 'Not set' },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
-                      {label}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{value}</div>
+                    <div className="bp-detail-label">{label}</div>
+                    <div className="bp-detail-value">{value}</div>
                   </div>
                 ))}
               </div>
 
               {sub.discountType && (
-                <div style={{
-                  marginTop: '1rem', padding: '0.75rem 1rem',
-                  background: 'rgba(52, 211, 153, 0.08)', borderRadius: '8px',
-                  border: '1px solid rgba(52, 211, 153, 0.2)',
-                  fontSize: '0.875rem', color: '#34d399',
-                }}>
-                  🎁 Discount applied:{' '}
+                <div className="bp-discount">
+                  Discount applied:{' '}
                   {sub.discountType === 'percent' ? `${sub.discountValue}% off` : `$${sub.discountValue} off`}
                   {sub.discountNote && ` — ${sub.discountNote}`}
                   {sub.discountExpiry && ` (until ${fmtDate(sub.discountExpiry)})`}
@@ -123,20 +110,13 @@ export default function BillingPortal() {
 
               {/* Extra add-ons */}
               {sub.extraAddons?.length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-                    Active Add-ons
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="bp-addons">
+                  <div className="bp-addons-label">Active Add-ons</div>
+                  <div className="bp-addon-list">
                     {sub.extraAddons.map(key => {
                       const addon = sub.plan?.addons?.find(a => a.key === key);
                       return (
-                        <span key={key} style={{
-                          background: 'rgba(96, 165, 250, 0.1)', color: '#60a5fa',
-                          padding: '0.2rem 0.65rem', borderRadius: '999px',
-                          fontSize: '0.75rem', fontWeight: 600,
-                          border: '1px solid rgba(96, 165, 250, 0.2)',
-                        }}>
+                        <span key={key} className="bp-addon-badge">
                           {addon?.label || key}
                         </span>
                       );
@@ -147,62 +127,55 @@ export default function BillingPortal() {
             </div>
 
             {/* Invoice history */}
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              borderRadius: '10px', overflow: 'hidden',
-            }}>
-              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Invoice History</h3>
+            <div className="bp-invoice-card">
+              <div className="bp-invoice-header">
+                <h3 className="bp-invoice-title">Invoice History</h3>
               </div>
               {invoices.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                  No invoices yet.
-                </div>
+                <div className="bp-invoice-empty">No invoices yet.</div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <div className="bp-invoice-scroll">
+                  <table className="bp-invoice-table">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <tr>
                         {['Invoice #', 'Period', 'Amount', 'Status', 'Date'].map(h => (
-                          <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                            {h}
-                          </th>
+                          <th key={h}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {invoices.map(inv => (
-                        <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>{inv.invoiceNumber}</td>
-                          <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                            {fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{fmt(inv.totalAmount)}</td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{
-                              padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
-                              background: inv.status === 'paid' ? '#14352a' : inv.status === 'failed' ? '#3d0000' : inv.status === 'written_off' ? '#1f1f1f' : '#1a2a1a',
-                              color:      inv.status === 'paid' ? '#34d399' : inv.status === 'failed' ? '#f87171' : inv.status === 'written_off' ? '#9ca3af' : '#a3e635',
-                            }}>
-                              {inv.status?.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDate(inv.createdAt)}</td>
-                        </tr>
-                      ))}
+                      {invoices.map(inv => {
+                        const invStatusBg = inv.status === 'paid' ? '#14352a' : inv.status === 'failed' ? '#3d0000' : inv.status === 'written_off' ? '#1f1f1f' : '#1a2a1a';
+                        const invStatusColor = inv.status === 'paid' ? '#34d399' : inv.status === 'failed' ? '#f87171' : inv.status === 'written_off' ? '#9ca3af' : '#a3e635';
+                        return (
+                          <tr key={inv.id}>
+                            <td className="bp-td-inv-num">{inv.invoiceNumber}</td>
+                            <td className="bp-td-period">
+                              {fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}
+                            </td>
+                            <td className="bp-td-amount">{fmt(inv.totalAmount)}</td>
+                            <td>
+                              <span className="bp-inv-status" style={{ background: invStatusBg, color: invStatusColor }}>
+                                {inv.status?.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="bp-td-date">{fmtDate(inv.createdAt)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
 
-            <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <p className="bp-footer">
               To update your payment method or plan, contact Storv support at{' '}
-              <a href="mailto:billing@storveu.com" style={{ color: 'var(--accent)' }}>billing@storveu.com</a>.
+              <a href="mailto:billing@storveu.com">billing@storveu.com</a>.
             </p>
           </>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

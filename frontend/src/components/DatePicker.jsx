@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import './DatePicker.css';
 
 const MONTHS = ['January','February','March','April','May','June',
                  'July','August','September','October','November','December'];
@@ -76,7 +77,7 @@ export default function DatePicker({ value, onChange, label, minDate, maxDate })
     <div ref={ref} className="dp-wrapper">
       {label && <span className="dp-label">{label}</span>}
       <button className="dp-trigger" onClick={() => setOpen(o => !o)}>
-        <Calendar size={14} style={{ opacity: 0.6 }} />
+        <Calendar size={14} className="dp-trigger-icon" />
         <span>{displayValue}</span>
       </button>
 

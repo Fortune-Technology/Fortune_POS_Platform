@@ -4,6 +4,7 @@ import MarketingFooter from '../../components/marketing/MarketingFooter';
 import { Send, CheckCircle2, Loader2, HelpCircle, Clock, Mail } from 'lucide-react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import './Support.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -56,17 +57,16 @@ const Support = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+    <div className="msup-page">
       <MarketingNavbar />
-      <style>{supportStyles}</style>
 
       {/* Hero */}
-      <section style={styles.hero}>
-        <div style={styles.heroInner}>
-          <h1 style={styles.heroTitle}>
-            Get <span style={{ color: '#3d56b5' }}>Help</span>
+      <section className="msup-hero">
+        <div className="msup-hero-inner">
+          <h1 className="msup-hero-title">
+            Get <span className="msup-hero-accent">Help</span>
           </h1>
-          <p style={styles.heroSubtitle}>
+          <p className="msup-hero-subtitle">
             Have a question or running into an issue? Submit a support ticket and our
             team will get back to you as soon as possible.
           </p>
@@ -74,118 +74,101 @@ const Support = () => {
       </section>
 
       {/* Form Section */}
-      <section style={styles.section}>
-        <div style={styles.container}>
+      <section className="msup-section">
+        <div className="msup-container">
           {submitted ? (
-            <div style={styles.successCard}>
+            <div className="msup-success-card">
               <CheckCircle2 size={56} color="#3d56b5" />
-              <h2 style={styles.successTitle}>Ticket Submitted</h2>
-              <p style={styles.successText}>
+              <h2 className="msup-success-title">Ticket Submitted</h2>
+              <p className="msup-success-text">
                 Thank you for reaching out. We have received your support request and
                 will get back to you within 24 hours.
               </p>
               <button
-                style={styles.newTicketBtn}
-                className="support-btn"
+                className="msup-new-ticket-btn"
                 onClick={() => setSubmitted(false)}
               >
                 Submit Another Ticket
               </button>
             </div>
           ) : (
-            <div style={styles.formCard}>
-              <div style={styles.infoBar}>
-                <div style={styles.infoItem}>
+            <div className="msup-form-card">
+              <div className="msup-info-bar">
+                <div className="msup-info-item">
                   <Clock size={18} color="#3d56b5" />
                   <span>We'll get back to you within 24 hours</span>
                 </div>
-                <div style={styles.infoItem}>
+                <div className="msup-info-item">
                   <Mail size={18} color="#3d56b5" />
                   <span>Or email us at support@storeveu.com</span>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} style={styles.form}>
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>Name</label>
+              <form onSubmit={handleSubmit} className="msup-form">
+                <div className="msup-field-group">
+                  <label className="msup-label">Name</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                    style={styles.input}
+                    className="msup-input"
                     placeholder="Your name"
                   />
                 </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>
-                    Email <span style={{ color: '#ef4444' }}>*</span>
+                <div className="msup-field-group">
+                  <label className="msup-label">
+                    Email <span className="msup-required">*</span>
                   </label>
                   <input
                     type="email"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    style={{
-                      ...styles.input,
-                      borderColor: errors.email ? '#ef4444' : '#d1d5db',
-                    }}
+                    className={`msup-input ${errors.email ? 'msup-input--error' : ''}`}
                     placeholder="you@example.com"
                   />
-                  {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+                  {errors.email && <span className="msup-error-text">{errors.email}</span>}
                 </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>
-                    Subject <span style={{ color: '#ef4444' }}>*</span>
+                <div className="msup-field-group">
+                  <label className="msup-label">
+                    Subject <span className="msup-required">*</span>
                   </label>
                   <input
                     type="text"
                     name="subject"
                     value={form.subject}
                     onChange={handleChange}
-                    style={{
-                      ...styles.input,
-                      borderColor: errors.subject ? '#ef4444' : '#d1d5db',
-                    }}
+                    className={`msup-input ${errors.subject ? 'msup-input--error' : ''}`}
                     placeholder="Brief description of your issue"
                   />
-                  {errors.subject && <span style={styles.errorText}>{errors.subject}</span>}
+                  {errors.subject && <span className="msup-error-text">{errors.subject}</span>}
                 </div>
 
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>
-                    Message <span style={{ color: '#ef4444' }}>*</span>
+                <div className="msup-field-group">
+                  <label className="msup-label">
+                    Message <span className="msup-required">*</span>
                   </label>
                   <textarea
                     name="message"
                     value={form.message}
                     onChange={handleChange}
-                    style={{
-                      ...styles.input,
-                      minHeight: 140,
-                      resize: 'vertical',
-                      borderColor: errors.message ? '#ef4444' : '#d1d5db',
-                    }}
+                    className={`msup-input msup-textarea ${errors.message ? 'msup-input--error' : ''}`}
                     placeholder="Describe your issue or question in detail..."
                   />
-                  {errors.message && <span style={styles.errorText}>{errors.message}</span>}
+                  {errors.message && <span className="msup-error-text">{errors.message}</span>}
                 </div>
 
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    ...styles.submitBtn,
-                    opacity: submitting ? 0.7 : 1,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                  }}
-                  className="support-btn"
+                  className={`msup-submit-btn ${submitting ? 'msup-submit-btn--submitting' : ''}`}
                 >
                   {submitting ? (
                     <>
-                      <Loader2 size={18} style={{ animation: 'supportSpin 0.8s linear infinite' }} />
+                      <Loader2 size={18} className="msup-spinner" />
                       Submitting...
                     </>
                   ) : (
@@ -205,152 +188,5 @@ const Support = () => {
     </div>
   );
 };
-
-const styles = {
-  hero: {
-    background: 'linear-gradient(135deg, #eef2ff 0%, #e8eaf6 50%, #f0f9ff 100%)',
-    padding: '120px 24px 80px',
-    textAlign: 'center',
-  },
-  heroInner: {
-    maxWidth: 600,
-    margin: '0 auto',
-  },
-  heroTitle: {
-    fontSize: '3rem',
-    fontWeight: 800,
-    color: '#111827',
-    marginBottom: 20,
-    lineHeight: 1.1,
-  },
-  heroSubtitle: {
-    fontSize: '1.2rem',
-    color: '#4b5563',
-    lineHeight: 1.7,
-  },
-  section: {
-    padding: '60px 24px 100px',
-  },
-  container: {
-    maxWidth: 600,
-    margin: '0 auto',
-  },
-  formCard: {
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 16,
-    padding: 32,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-  },
-  infoBar: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-    marginBottom: 28,
-    padding: '16px 20px',
-    background: '#f9fafb',
-    borderRadius: 10,
-  },
-  infoItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    fontSize: '0.9rem',
-    color: '#4b5563',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 20,
-  },
-  fieldGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  },
-  label: {
-    fontSize: '0.9rem',
-    fontWeight: 600,
-    color: '#374151',
-  },
-  input: {
-    padding: '11px 14px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: '0.95rem',
-    color: '#111827',
-    outline: 'none',
-    transition: 'border-color 0.2s',
-    fontFamily: 'inherit',
-  },
-  errorText: {
-    fontSize: '0.8rem',
-    color: '#ef4444',
-  },
-  submitBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: '13px 28px',
-    background: '#3d56b5',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    fontSize: '1rem',
-    fontWeight: 600,
-    marginTop: 4,
-    transition: 'background 0.2s',
-  },
-  successCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 16,
-    padding: '60px 32px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-  },
-  successTitle: {
-    fontSize: '1.6rem',
-    fontWeight: 700,
-    color: '#111827',
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  successText: {
-    fontSize: '1.05rem',
-    color: '#4b5563',
-    lineHeight: 1.7,
-    maxWidth: 420,
-    marginBottom: 28,
-  },
-  newTicketBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '12px 24px',
-    background: '#3d56b5',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-  },
-};
-
-const supportStyles = `
-  @keyframes supportSpin {
-    to { transform: rotate(360deg); }
-  }
-
-  .support-btn:hover {
-    background: #3452a0 !important;
-  }
-`;
 
 export default Support;

@@ -1,0 +1,28 @@
+/* AdminCareers.css — prefix: acr- */
+
+.acr-app-btn {
+  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+}
+.acr-modal-size {
+  max-width: 550px;
+}
+.acr-header-wrap {
+  flex-wrap: wrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .acr-modal-size {
+    max-width: 95vw;
+  }
+  .admin-card-list {
+    gap: 8px;
+  }
+}
+@media (max-width: 480px) {
+  .admin-card-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

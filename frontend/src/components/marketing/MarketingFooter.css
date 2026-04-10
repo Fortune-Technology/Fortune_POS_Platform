@@ -108,6 +108,11 @@
   color: var(--text-primary);
 }
 
+.mkt-footer-copyright {
+  text-align: center;
+  width: 100%;
+}
+
 @media (max-width: 991px) {
   .mkt-footer-grid { grid-template-columns: 1.5fr repeat(2, 1fr); gap: 3rem; }
 }

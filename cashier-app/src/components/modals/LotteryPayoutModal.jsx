@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useCartStore } from '../../stores/useCartStore.js';
+import './LotteryPayoutModal.css';
 
 const NUMPAD = ['7','8','9','4','5','6','1','2','3','.','0','⌫'];
 const PRESETS = [5, 10, 20, 50, 100, 200];
@@ -46,98 +47,79 @@ export default function LotteryPayoutModal({ open, onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
-      background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 440,
-        maxHeight: '92vh', overflowY: 'auto',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.25)', border: '1px solid #e5e7eb',
-      }}>
+    <div className="lpm-backdrop">
+      <div className="lpm-modal">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 12px', borderBottom: '1px solid #f3f4f6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💰</div>
+        <div className="lpm-header">
+          <div className="lpm-header-left">
+            <div className="lpm-header-icon">Payout</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>Lottery Payout</div>
-              <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>Cash paid to winning customer</div>
+              <div className="lpm-header-title">Lottery Payout</div>
+              <div className="lpm-header-sub">Cash paid to winning customer</div>
             </div>
           </div>
-          <button onClick={handleDone} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}><X size={20} /></button>
+          <button className="lpm-close-btn" onClick={handleDone}><X size={20} /></button>
         </div>
 
-        <div style={{ padding: '16px 20px 20px' }}>
+        <div className="lpm-body">
           {/* Amount display */}
-          <div style={{
-            background: '#fffbeb', borderRadius: 12, padding: '14px 18px',
-            marginBottom: 10, textAlign: 'right',
-            border: '1.5px solid #fde68a',
-          }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: 800, color: '#92400e', letterSpacing: '-0.03em' }}>${display}</span>
+          <div className="lpm-display">
+            <span className="lpm-display-value">${display}</span>
           </div>
 
           {/* Quick presets */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 10 }}>
+          <div className="lpm-presets">
             {PRESETS.map(p => (
-              <button key={p} onClick={() => setDisplay(String(p))}
-                style={{ padding: '7px 0', borderRadius: 8, border: '1.5px solid #fde68a', background: '#fffbeb', color: '#92400e', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+              <button key={p} className="lpm-preset-btn" onClick={() => setDisplay(String(p))}>
                 ${p}
               </button>
             ))}
           </div>
 
           {/* Numpad */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginBottom: 12 }}>
+          <div className="lpm-numpad">
             {NUMPAD.map(k => (
-              <button key={k} onClick={() => handleKey(k)} style={{
-                padding: '13px 0', borderRadius: 10, fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer',
-                border: '1.5px solid #e5e7eb',
-                background: k === '⌫' ? '#fff1f2' : '#f9fafb',
-                color: k === '⌫' ? '#ef4444' : '#111827',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = k === '⌫' ? '#ffe4e6' : '#f3f4f6'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = k === '⌫' ? '#fff1f2' : '#f9fafb'; }}
+              <button
+                key={k}
+                className={`lpm-numkey${k === '⌫' ? ' lpm-numkey--backspace' : ''}`}
+                onClick={() => handleKey(k)}
               >{k}</button>
             ))}
           </div>
 
           {/* Note */}
-          <input type="text" placeholder="Note — e.g. winning ticket #12345 (optional)"
-            value={note} onChange={e => setNote(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#111827', fontSize: '0.88rem', marginBottom: 12, boxSizing: 'border-box' }} />
+          <input
+            type="text"
+            className="lpm-note-input"
+            placeholder="Note — e.g. winning ticket #12345 (optional)"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+          />
 
           {/* Add button */}
-          <button onClick={handleAdd} disabled={amount <= 0}
-            style={{
-              width: '100%', padding: '13px', borderRadius: 12, marginBottom: 10,
-              border: 'none', fontSize: '0.95rem', fontWeight: 700, cursor: amount > 0 ? 'pointer' : 'not-allowed',
-              background: amount > 0 ? '#d97706' : '#f3f4f6',
-              color: amount > 0 ? '#fff' : '#9ca3af',
-            }}>
+          <button
+            className={`lpm-add-btn${amount > 0 ? ' lpm-add-btn--active' : ' lpm-add-btn--disabled'}`}
+            onClick={handleAdd}
+            disabled={amount <= 0}
+          >
             Add Payout — {`$${amount.toFixed(2)}`} to Cart
           </button>
 
           {/* Added preview */}
           {added.length > 0 && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Added to Cart</div>
+            <div className="lpm-added-list">
+              <div className="lpm-added-label">Added to Cart</div>
               {added.map((a, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#78350f', padding: '2px 0' }}>
-                  <span>💰 Payout{a.note ? ` — ${a.note}` : ''}</span>
-                  <span style={{ fontWeight: 700 }}>-${a.amount.toFixed(2)}</span>
+                <div key={i} className="lpm-added-row">
+                  <span>Payout{a.note ? ` — ${a.note}` : ''}</span>
+                  <span className="lpm-added-amount">-${a.amount.toFixed(2)}</span>
                 </div>
               ))}
             </div>
           )}
 
           {added.length > 0 && (
-            <button onClick={handleDone} style={{
-              width: '100%', padding: '13px', borderRadius: 12, marginTop: 10,
-              border: '2px solid #d97706', background: '#fff', color: '#d97706',
-              fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
-            }}>
+            <button className="lpm-done-btn" onClick={handleDone}>
               Done — {added.length} payout{added.length > 1 ? 's' : ''} in cart
             </button>
           )}

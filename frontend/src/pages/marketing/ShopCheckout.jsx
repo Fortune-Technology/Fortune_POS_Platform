@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import './ShopCheckout.css';
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const FLAT_SHIPPING = 25;
@@ -80,103 +81,81 @@ export default function ShopCheckout() {
     }
   };
 
-  const input = {
-    width: '100%', background: '#111827', border: '1px solid #374151',
-    color: '#e5e7eb', borderRadius: '8px', padding: '0.65rem 0.85rem',
-    fontSize: '0.875rem', boxSizing: 'border-box', outline: 'none',
-  };
-  const label = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', marginBottom: '0.35rem' };
-  const section = {
-    background: '#1a1d27', border: '1px solid #1f2937', borderRadius: '10px',
-    padding: '1.5rem', marginBottom: '1rem',
-  };
-
   if (cart.length === 0) return (
-    <div style={{ minHeight: '100vh', background: '#0f1117', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontFamily: 'system-ui, sans-serif', gap: '1rem' }}>
+    <div className="msc-empty">
       <p>Your cart is empty.</p>
-      <Link to="/shop" style={{ color: '#60a5fa', textDecoration: 'none' }}>Browse products</Link>
+      <Link to="/shop" className="msc-empty-link">Browse products</Link>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f1117', color: '#e5e7eb', fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ borderBottom: '1px solid #1f2937', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <Link to="/shop/cart" style={{ color: '#60a5fa', textDecoration: 'none', fontSize: '0.875rem' }}>← Back to Cart</Link>
-        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>Checkout</h1>
+    <div className="msc-page">
+      <header className="msc-header">
+        <Link to="/shop/cart" className="msc-back-link">← Back to Cart</Link>
+        <h1 className="msc-heading">Checkout</h1>
       </header>
 
-      <form
-        onSubmit={submit}
-        style={{
-          maxWidth: '960px', margin: '0 auto', padding: '2rem',
-          display: 'grid', gridTemplateColumns: '1fr 360px', gap: '2rem', alignItems: 'start',
-        }}
-      >
+      <form onSubmit={submit} className="msc-form">
         {/* Left column */}
         <div>
           {/* Contact */}
-          <div style={section}>
-            <h2 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700 }}>Contact Information</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={label}>Full Name *</label>
-                <input required style={input} value={form.name} onChange={set('name')} />
+          <div className="msc-section">
+            <h2 className="msc-section-title">Contact Information</h2>
+            <div className="msc-field-grid">
+              <div className="msc-field-full">
+                <label className="msc-label">Full Name *</label>
+                <input required className="msc-input" value={form.name} onChange={set('name')} />
               </div>
               <div>
-                <label style={label}>Email *</label>
-                <input required type="email" style={input} value={form.email} onChange={set('email')} />
+                <label className="msc-label">Email *</label>
+                <input required type="email" className="msc-input" value={form.email} onChange={set('email')} />
               </div>
               <div>
-                <label style={label}>Phone</label>
-                <input style={input} value={form.phone} onChange={set('phone')} />
+                <label className="msc-label">Phone</label>
+                <input className="msc-input" value={form.phone} onChange={set('phone')} />
               </div>
             </div>
           </div>
 
           {/* Shipping */}
-          <div style={section}>
-            <h2 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700 }}>Shipping Address</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={label}>Street Address *</label>
-                <input required style={input} value={form.street} onChange={set('street')} />
+          <div className="msc-section">
+            <h2 className="msc-section-title">Shipping Address</h2>
+            <div className="msc-field-grid">
+              <div className="msc-field-full">
+                <label className="msc-label">Street Address *</label>
+                <input required className="msc-input" value={form.street} onChange={set('street')} />
               </div>
               <div>
-                <label style={label}>City *</label>
-                <input required style={input} value={form.city} onChange={set('city')} />
+                <label className="msc-label">City *</label>
+                <input required className="msc-input" value={form.city} onChange={set('city')} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0.5rem' }}>
+              <div className="msc-state-zip">
                 <div>
-                  <label style={label}>State *</label>
-                  <input required maxLength={2} placeholder="ME" style={input} value={form.state} onChange={set('state')} />
+                  <label className="msc-label">State *</label>
+                  <input required maxLength={2} placeholder="ME" className="msc-input" value={form.state} onChange={set('state')} />
                 </div>
                 <div>
-                  <label style={label}>ZIP *</label>
-                  <input required style={input} value={form.zip} onChange={set('zip')} />
+                  <label className="msc-label">ZIP *</label>
+                  <input required className="msc-input" value={form.zip} onChange={set('zip')} />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Payment */}
-          <div style={section}>
-            <h2 style={{ margin: '0 0 0.35rem', fontSize: '1rem', fontWeight: 700 }}>Payment</h2>
-            <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#9ca3af' }}>
+          <div className="msc-section">
+            <h2 className="msc-section-title">Payment</h2>
+            <p className="msc-payment-note">
               Card details are securely tokenized by CardPointe — we never see your card number.
             </p>
 
             {token ? (
-              <div style={{
-                padding: '0.75rem 1rem', background: '#14352a',
-                border: '1px solid rgba(52,211,153,0.3)', borderRadius: '8px',
-                color: '#34d399', fontSize: '0.875rem', fontWeight: 600,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
+              <div className="msc-card-captured">
                 <span>✓ Card captured{masked ? ` — ···${masked.slice(-4)}` : ''}</span>
                 <button
                   type="button"
                   onClick={() => { setToken(''); setMasked(''); }}
-                  style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.75rem' }}
+                  className="msc-change-btn"
                 >
                   Change
                 </button>
@@ -184,68 +163,56 @@ export default function ShopCheckout() {
             ) : (
               <iframe
                 src={`${CARDSECURE_URL}?${IFRAME_PARAMS}`}
-                style={{ width: '100%', height: '230px', border: 'none', borderRadius: '8px' }}
+                className="msc-iframe"
                 title="Secure Card Entry"
               />
             )}
           </div>
 
-          {error && (
-            <div style={{
-              background: '#3d0000', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '8px', padding: '0.75rem 1rem',
-              color: '#f87171', fontSize: '0.875rem', marginBottom: '1rem',
-            }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="msc-error">{error}</div>}
 
           <button
             type="submit"
             disabled={submitting}
-            style={{
-              width: '100%', background: submitting ? '#374151' : '#1d4ed8', color: '#fff',
-              border: 'none', borderRadius: '8px', padding: '0.9rem',
-              fontWeight: 700, fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer',
-            }}
+            className={`msc-submit-btn ${submitting ? 'msc-submit-btn--disabled' : 'msc-submit-btn--active'}`}
           >
-            {submitting ? 'Processing…' : `Place Order — ${fmt(total)}`}
+            {submitting ? 'Processing...' : `Place Order — ${fmt(total)}`}
           </button>
         </div>
 
         {/* Right: Order summary (sticky) */}
-        <div style={{ background: '#1a1d27', border: '1px solid #1f2937', borderRadius: '10px', padding: '1.5rem', position: 'sticky', top: '2rem' }}>
-          <h2 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700 }}>Order Summary</h2>
+        <div className="msc-summary">
+          <h2 className="msc-summary-title">Order Summary</h2>
 
           {cart.map(item => (
-            <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-              <div style={{ flex: 1, minWidth: 0, marginRight: '0.5rem' }}>
-                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Qty: {item.qty}</div>
+            <div key={item.productId} className="msc-summary-item">
+              <div className="msc-summary-item-info">
+                <div className="msc-summary-item-name">{item.name}</div>
+                <div className="msc-summary-item-qty">Qty: {item.qty}</div>
               </div>
-              <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(item.price * item.qty)}</div>
+              <div className="msc-summary-item-total">{fmt(item.price * item.qty)}</div>
             </div>
           ))}
 
-          <hr style={{ border: 'none', borderTop: '1px solid #1f2937', margin: '1rem 0' }} />
+          <hr className="msc-divider" />
 
           {[
-            { label: 'Subtotal', value: fmt(subtotal) },
-            { label: 'Shipping', value: shipping === 0 ? 'FREE' : fmt(shipping) },
-          ].map(({ label: l, value: v }) => (
-            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
-              <span>{l}</span><span style={{ color: v === 'FREE' ? '#34d399' : '#9ca3af' }}>{v}</span>
+            { label: 'Subtotal', value: fmt(subtotal), free: false },
+            { label: 'Shipping', value: shipping === 0 ? 'FREE' : fmt(shipping), free: shipping === 0 },
+          ].map(({ label: l, value: v, free }) => (
+            <div key={l} className="msc-summary-row">
+              <span>{l}</span><span className={free ? 'msc-summary-free' : ''}>{v}</span>
             </div>
           ))}
 
-          <hr style={{ border: 'none', borderTop: '1px solid #1f2937', margin: '0.75rem 0' }} />
+          <hr className="msc-divider-sm" />
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.1rem' }}>
+          <div className="msc-total-row">
             <span>Total</span><span>{fmt(total)}</span>
           </div>
 
           {subtotal < FREE_SHIPPING_THRESHOLD && subtotal > 0 && (
-            <p style={{ margin: '0.75rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+            <p className="msc-shipping-hint">
               Add {fmt(FREE_SHIPPING_THRESHOLD - subtotal)} more for free shipping.
             </p>
           )}

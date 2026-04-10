@@ -5,10 +5,10 @@ import {
 } from 'recharts';
 import { TrendingUp, Package, Search, RefreshCw, Download, FileText } from 'lucide-react';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
-import Sidebar from '../components/Sidebar';
 import { getTopProducts, getProductsGrouped, getProductMovement } from '../services/api';
 import './analytics.css';
 import '../styles/portal.css';
+import './ProductAnalytics.css';
 
 /* ─── Helpers ─── */
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -23,16 +23,10 @@ const PAGE_SIZE = 20;
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)',
-      padding: '0.75rem 1rem',
-      boxShadow: 'var(--shadow-md)',
-    }}>
-      <p style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}>{label}</p>
+    <div className="pan-tooltip">
+      <p className="pan-tooltip-label">{label}</p>
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color, fontSize: '0.8rem', margin: '0.1rem 0' }}>
+        <p key={i} className="pan-tooltip-entry" style={{ color: p.color }}>
           {p.name}: {typeof p.value === 'number' ? fmt(p.value) : p.value}
         </p>
       ))}
@@ -159,19 +153,24 @@ export default function ProductAnalytics({ embedded }) {
     <>
 
         {/* ── Header ── */}
-        <div className="analytics-header">
-          <div>
-            <h1 className="analytics-title">Product Analytics</h1>
-            <p className="analytics-subtitle">Best sellers, product movement, and performance metrics</p>
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <TrendingUp size={22} />
+            </div>
+            <div>
+              <h1 className="p-title">Product Analytics</h1>
+              <p className="p-subtitle">Best sellers, product movement, and performance metrics</p>
+            </div>
           </div>
-          <div className="analytics-controls">
+          <div className="p-header-actions">
             <label>From</label>
             <input type="date" value={range.from}
               onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
             <label>To</label>
             <input type="date" value={range.to}
               onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
-            <button className="btn btn-secondary" onClick={fetchSellers} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button className="btn btn-secondary pan-btn-refresh" onClick={fetchSellers}>
               <RefreshCw size={15} /> Refresh
             </button>
             <button className="p-btn p-btn-ghost p-btn-sm" onClick={handleExportCSV}>
@@ -187,7 +186,7 @@ export default function ProductAnalytics({ embedded }) {
         {mainError && (
           <div className="analytics-error">
             <span>{mainError}</span>
-            <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}
+            <button className="btn btn-secondary pan-btn-retry"
               onClick={() => { fetchTop(); fetchSellers(); }}>
               Retry
             </button>
@@ -198,27 +197,20 @@ export default function ProductAnalytics({ embedded }) {
         <div className="analytics-grid-2">
 
           {/* Top Products */}
-          <div className="analytics-chart-card" style={{ marginBottom: 0 }}>
-            <div className="analytics-chart-title" style={{ justifyContent: 'space-between' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <TrendingUp size={18} style={{ color: 'var(--accent-primary)' }} />
+          <div className="analytics-chart-card pan-chart-card-flush">
+            <div className="analytics-chart-title pan-chart-title-between">
+              <span className="pan-chart-title-left">
+                <TrendingUp size={18} className="pan-icon-accent" />
                 Top Products
               </span>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div className="pan-top-date-row">
                 <input
                   type="date"
                   value={topDate}
                   onChange={(e) => setTopDate(e.target.value)}
-                  style={{
-                    padding: '0.35rem 0.6rem',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.8rem',
-                  }}
+                  className="pan-date-input"
                 />
-                <button className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={fetchTop}>
+                <button className="btn btn-secondary pan-btn-go" onClick={fetchTop}>
                   Go
                 </button>
               </div>
@@ -239,9 +231,9 @@ export default function ProductAnalytics({ embedded }) {
           </div>
 
           {/* Product Movement Search */}
-          <div className="analytics-chart-card" style={{ marginBottom: 0 }}>
+          <div className="analytics-chart-card pan-chart-card-flush">
             <div className="analytics-chart-title">
-              <Search size={18} style={{ color: '#8b5cf6' }} />
+              <Search size={18} className="pan-icon-purple" />
               Product Movement History
             </div>
             <div className="upc-search-row">
@@ -255,10 +247,10 @@ export default function ProductAnalytics({ embedded }) {
               <button className="btn btn-primary" onClick={() => setUpcSearch(upcInput)}>Search</button>
             </div>
             {movLoading && <div className="analytics-loading"><div className="analytics-spinner" /><p>Loading…</p></div>}
-            {movError && <div className="analytics-error" style={{ marginBottom: 0 }}><span>{movError}</span></div>}
+            {movError && <div className="analytics-error pan-error-flush"><span>{movError}</span></div>}
             {!movLoading && movChart.length > 0 && (
               <>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                <p className="pan-movement-meta">
                   UPC: {upcSearch} — {movRows.length} periods
                 </p>
                 <ResponsiveContainer width="100%" height={240}>
@@ -276,10 +268,10 @@ export default function ProductAnalytics({ embedded }) {
               </>
             )}
             {!movLoading && !movError && upcSearch && movChart.length === 0 && (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No movement data found for UPC: {upcSearch}</p>
+              <p className="pan-no-data">No movement data found for UPC: {upcSearch}</p>
             )}
             {!upcSearch && (
-              <div className="analytics-empty" style={{ padding: '2rem' }}>
+              <div className="analytics-empty pan-empty-pad">
                 Enter a UPC code above to view movement history
               </div>
             )}
@@ -287,12 +279,12 @@ export default function ProductAnalytics({ embedded }) {
         </div>
 
         {/* ── Best Sellers Table ── */}
-        <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Package size={18} style={{ color: 'var(--accent-primary)' }} />
+        <div className="glass-card pan-sellers-card">
+          <p className="pan-sellers-title">
+            <Package size={18} className="pan-icon-accent" />
             Best Sellers (by Net Sales)
           </p>
-          {sellersError && <div className="analytics-error" style={{ marginBottom: '1rem' }}><span>{sellersError}</span></div>}
+          {sellersError && <div className="analytics-error pan-sellers-error"><span>{sellersError}</span></div>}
           {sellersLoading ? (
             <div className="analytics-loading"><div className="analytics-spinner" /><p>Loading…</p></div>
           ) : (
@@ -320,19 +312,19 @@ export default function ProductAnalytics({ embedded }) {
                       const marginColor = margin >= 30 ? 'var(--success)' : margin >= 15 ? 'var(--warning)' : 'var(--error)';
                       return (
                         <tr key={i}>
-                          <td style={{ color: 'var(--text-muted)' }}>{sellersPage * PAGE_SIZE + i + 1}</td>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.Upc}</td>
-                          <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <td className="pan-td-muted">{sellersPage * PAGE_SIZE + i + 1}</td>
+                          <td className="pan-td-mono">{p.Upc}</td>
+                          <td className="pan-td-ellipsis">
                             {info.Description || '—'}
                           </td>
                           <td>{info.Department || '—'}</td>
-                          <td style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{fmt(p.NetSales)}</td>
+                          <td className="pan-td-accent">{fmt(p.NetSales)}</td>
                           <td>{fmt(p.GrossSales || p.NetSales)}</td>
                           <td>{p.QtySold?.toLocaleString() || '—'}</td>
                           <td>{fmt(p.TotalCost)}</td>
-                          <td style={{ color: 'var(--success)', fontWeight: 600 }}>{fmt(p.Profit)}</td>
+                          <td className="pan-td-success">{fmt(p.Profit)}</td>
                           <td>
-                            {margin && <span style={{ color: marginColor, fontWeight: 600 }}>{margin}%</span>}
+                            {margin && <span className="pan-td-margin" style={{ color: marginColor }}>{margin}%</span>}
                           </td>
                         </tr>
                       );
@@ -344,11 +336,11 @@ export default function ProductAnalytics({ embedded }) {
                 <span className="analytics-pagination-info">
                   Page {sellersPage + 1}{sellersTotal > 0 ? ` of ${Math.ceil(sellersTotal / PAGE_SIZE)}` : ''}
                 </span>
-                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}
+                <button className="btn btn-secondary pan-btn-page"
                   disabled={sellersPage === 0} onClick={() => setSellersPage((p) => p - 1)}>
                   ← Prev
                 </button>
-                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}
+                <button className="btn btn-secondary pan-btn-page"
                   disabled={sellers.length < PAGE_SIZE} onClick={() => setSellersPage((p) => p + 1)}>
                   Next →
                 </button>
@@ -362,12 +354,5 @@ export default function ProductAnalytics({ embedded }) {
 
   if (embedded) return <div className="p-tab-content">{content}</div>;
 
-  return (
-    <div className="layout-container">
-      <Sidebar />
-      <main className="main-content animate-fade-in">
-        {content}
-      </main>
-    </div>
-  );
+  return content;
 }

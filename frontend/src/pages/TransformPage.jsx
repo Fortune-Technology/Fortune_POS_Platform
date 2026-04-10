@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTransformStatus, getDownloadUrl } from '../services/api';
+import './TransformPage.css';
 
 const TransformPage = () => {
     const { transformId } = useParams();
@@ -22,11 +23,9 @@ const TransformPage = () => {
 
     useEffect(() => {
         if (!polling) return;
-
         const interval = setInterval(() => {
             loadStatus();
-        }, 2000); // Poll every 2 seconds
-
+        }, 2000);
         return () => clearInterval(interval);
     }, [polling, transformId]);
 
@@ -35,8 +34,6 @@ const TransformPage = () => {
             const data = await getTransformStatus(transformId);
             setStatus(data);
             setLoading(false);
-
-            // Stop polling if completed or failed
             if (data.status === 'completed' || data.status === 'failed') {
                 setPolling(false);
             }
@@ -91,23 +88,17 @@ const TransformPage = () => {
 
     const getStatusIcon = () => {
         switch (status.status) {
-            case 'processing':
-                return '⏳';
-            case 'completed':
-                return '✅';
-            case 'failed':
-                return '❌';
-            default:
-                return '📊';
+            case 'processing': return '⏳';
+            case 'completed':  return '✅';
+            case 'failed':     return '❌';
+            default:           return '📊';
         }
     };
 
     return (
         <div className="container section">
             <div className="text-center mb-xl">
-                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
-                    {getStatusIcon()}
-                </div>
+                <div className="tp-status-icon">{getStatusIcon()}</div>
                 <h1>Transformation {status.status === 'completed' ? 'Complete' : 'In Progress'}</h1>
                 {getStatusBadge()}
             </div>
@@ -121,35 +112,26 @@ const TransformPage = () => {
                 <div className="grid grid-2">
                     <div>
                         <p className="text-tertiary">Transform ID</p>
-                        <p style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-sm)' }}>
-                            {transformId}
-                        </p>
+                        <p className="tp-mono">{transformId}</p>
                     </div>
-
                     <div>
                         <p className="text-tertiary">Status</p>
                         <p>{status.status}</p>
                     </div>
-
                     <div>
                         <p className="text-tertiary">Rows Processed</p>
-                        <p className="text-primary" style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>
-                            {status.rowsProcessed.toLocaleString()}
-                        </p>
+                        <p className="text-primary tp-big-number">{status.rowsProcessed.toLocaleString()}</p>
                     </div>
-
                     <div>
                         <p className="text-tertiary">Warnings</p>
-                        <p className={status.warnings?.length > 0 ? 'text-warning' : 'text-success'} style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>
+                        <p className={`${status.warnings?.length > 0 ? 'text-warning' : 'text-success'} tp-big-number`}>
                             {status.warnings?.length || 0}
                         </p>
                     </div>
-
                     <div>
                         <p className="text-tertiary">Started At</p>
                         <p>{new Date(status.createdAt).toLocaleString()}</p>
                     </div>
-
                     {status.completedAt && (
                         <div>
                             <p className="text-tertiary">Completed At</p>
@@ -180,23 +162,12 @@ const TransformPage = () => {
             {status.warnings && status.warnings.length > 0 && (
                 <div className="card mb-xl">
                     <div className="card-header">
-                        <h4 className="card-title">
-                            Warnings ({status.warnings.length})
-                        </h4>
-                        <p className="card-subtitle">
-                            Review these warnings to ensure data quality
-                        </p>
+                        <h4 className="card-title">Warnings ({status.warnings.length})</h4>
+                        <p className="card-subtitle">Review these warnings to ensure data quality</p>
                     </div>
-
-                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    <div className="tp-warnings-scroll">
                         {status.warnings.slice(0, 50).map((warning, idx) => (
-                            <div
-                                key={idx}
-                                className="alert alert-warning"
-                                style={{ marginBottom: 'var(--space-sm)' }}
-                            >
-                                {warning}
-                            </div>
+                            <div key={idx} className="alert alert-warning tp-warning-item">{warning}</div>
                         ))}
                         {status.warnings.length > 50 && (
                             <p className="text-secondary text-center mt-md">
@@ -212,42 +183,24 @@ const TransformPage = () => {
                 {status.status === 'completed' ? (
                     <>
                         <h3>🎉 Your file is ready!</h3>
-                        <p className="text-secondary mb-lg">
-                            Download the transformed CSV file below
-                        </p>
-
-                        <div className="flex-center" style={{ gap: '1rem', flexWrap: 'wrap' }}>
-                            <button className="btn btn-primary btn-lg" onClick={handleDownload}>
-                                ⬇️ Download Transformed File
-                            </button>
-
-                            <button className="btn btn-secondary" onClick={() => navigate('/')}>
-                                Upload Another File
-                            </button>
-
-                            <button className="btn btn-secondary" onClick={() => navigate('/history')}>
-                                View History
-                            </button>
+                        <p className="text-secondary mb-lg">Download the transformed CSV file below</p>
+                        <div className="flex-center tp-actions-gap">
+                            <button className="btn btn-primary btn-lg" onClick={handleDownload}>⬇️ Download Transformed File</button>
+                            <button className="btn btn-secondary" onClick={() => navigate('/')}>Upload Another File</button>
+                            <button className="btn btn-secondary" onClick={() => navigate('/history')}>View History</button>
                         </div>
                     </>
                 ) : status.status === 'failed' ? (
                     <>
                         <h3>Transformation Failed</h3>
-                        <p className="text-secondary mb-lg">
-                            Please try again or contact support if the issue persists
-                        </p>
-
-                        <button className="btn btn-secondary" onClick={() => navigate('/')}>
-                            ← Back to Upload
-                        </button>
+                        <p className="text-secondary mb-lg">Please try again or contact support if the issue persists</p>
+                        <button className="btn btn-secondary" onClick={() => navigate('/')}>← Back to Upload</button>
                     </>
                 ) : (
                     <>
                         <h3>Processing Your File</h3>
-                        <p className="text-secondary">
-                            Please wait while we transform your data...
-                        </p>
-                        <div className="spinner spinner-lg" style={{ margin: '2rem auto' }}></div>
+                        <p className="text-secondary">Please wait while we transform your data...</p>
+                        <div className="spinner spinner-lg tp-spinner-center"></div>
                     </>
                 )}
             </div>

@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { SearchX, ShoppingCart as CartIcon } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
@@ -21,7 +22,7 @@ export default function ProductDetailPage({ store, storeSlug, product }) {
   const [added, setAdded] = useState(false);
 
   if (!product) {
-    return (<><Header /><div className="sf-empty"><div className="sf-empty-icon">🔍</div><h2>Product Not Found</h2></div><Footer /></>);
+    return (<><Header /><div className="sf-empty"><div className="sf-empty-icon"><SearchX size={48} strokeWidth={1.5} /></div><h2>Product Not Found</h2></div><Footer /></>);
   }
 
   const hasSale = product.salePrice && Number(product.salePrice) > 0;
@@ -45,7 +46,7 @@ export default function ProductDetailPage({ store, storeSlug, product }) {
         </div>
         <div className="sf-pdp">
           <div className="sf-pdp-image">
-            {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="sf-pdp-img" /> : <div className="sf-product-image-placeholder" style={{ borderRadius: 12, height: 420 }}><span className="sf-placeholder-initial" style={{ fontSize: 64 }}>{product.name?.charAt(0)?.toUpperCase()}</span></div>}
+            {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="sf-pdp-img" /> : <div className="sf-product-image-placeholder sf-pdp-placeholder"><span className="sf-placeholder-initial sf-pdp-placeholder-initial">{product.name?.charAt(0)?.toUpperCase()}</span></div>}
           </div>
           <div className="sf-pdp-info">
             {product.brand && <div className="sf-pdp-brand">{product.brand}</div>}

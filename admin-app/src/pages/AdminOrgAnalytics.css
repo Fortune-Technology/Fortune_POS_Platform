@@ -1,0 +1,20 @@
+/* AdminOrgAnalytics.css — prefix: aoa- */
+
+.aoa-sort-icon-dim {
+  opacity: 0.3;
+}
+.aoa-sort-icon-active {
+  opacity: 1;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-table-wrap {
+    overflow-x: auto;
+  }
+}
+@media (max-width: 480px) {
+  .admin-search {
+    width: 100%;
+  }
+}

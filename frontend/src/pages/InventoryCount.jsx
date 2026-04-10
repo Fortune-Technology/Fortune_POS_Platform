@@ -10,7 +10,6 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Sidebar from '../components/Sidebar';
 import {
   searchCatalogProducts,
   getStoreInventory,
@@ -21,18 +20,11 @@ import { toast } from 'react-toastify';
 import {
   Scan, Search, Package, Plus, Minus, CheckCircle,
   RefreshCw, X, ChevronDown, ChevronUp, BarChart2,
-  AlertCircle, Loader, History,
+  AlertCircle, Loader, History, ClipboardList,
 } from 'lucide-react';
+import './InventoryCount.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function normalizeUPC(raw) {
-  if (!raw) return '';
-  const digits = String(raw).replace(/\D/g, '');
-  if (!digits) return String(raw).trim();
-  if (digits.length > 14) return digits.slice(-14);
-  return digits.padStart(14, '0');
-}
-
 function fmt(n) {
   return n == null ? '—' : Number(n).toFixed(2);
 }
@@ -51,68 +43,58 @@ function ProductCard({ product, storeProduct, onAdjust, onSetCount, mode }) {
     setCustomAdj('');
   };
 
+  const customValid = customAdj && !isNaN(parseFloat(customAdj));
+
   return (
-    <div style={{
-      background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-      borderRadius: 12, padding: '1.25rem', marginBottom: '1rem',
-    }}>
+    <div className="ic-product-card">
       {/* Product info */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 3 }}>{product.name}</div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="ic-product-info">
+        <div className="ic-product-details">
+          <div className="ic-product-name">{product.name}</div>
+          <div className="ic-product-meta">
             {product.upc    && <span>UPC: {product.upc}</span>}
             {product.sku    && <span>SKU: {product.sku}</span>}
             {product.brand  && <span>{product.brand}</span>}
             {product.department?.name && (
-              <span style={{ color: 'var(--accent-primary)' }}>{product.department.name}</span>
+              <span className="ic-product-dept">{product.department.name}</span>
             )}
           </div>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{
-            fontSize: '1.75rem', fontWeight: 800, lineHeight: 1,
-            color: isNeg ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
-          }}>
+        <div className="ic-product-qty-wrap">
+          <div className={`ic-product-qty ${isNeg ? 'negative' : isLow ? 'low' : 'ok'}`}>
             {qty != null ? qty.toFixed(qty % 1 === 0 ? 0 : 2) : '?'}
           </div>
-          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div className="ic-product-qty-label">
             {qty == null ? 'Not tracked' : 'On Hand'}
           </div>
-          {isNeg && <div style={{ fontSize: '0.65rem', color: '#ef4444', fontWeight: 700 }}>⚠ Negative</div>}
-          {isLow && !isNeg && <div style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>⚠ Low stock</div>}
+          {isNeg && <div className="ic-product-warning negative">⚠ Negative</div>}
+          {isLow && !isNeg && <div className="ic-product-warning low">⚠ Low stock</div>}
         </div>
       </div>
 
       {/* Prices */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', fontSize: '0.82rem', flexWrap: 'wrap' }}>
+      <div className="ic-prices">
         {(storeProduct?.retailPrice ?? product.defaultRetailPrice) != null && (
-          <span><span style={{ color: 'var(--text-muted)' }}>Retail: </span><strong>${fmt(storeProduct?.retailPrice ?? product.defaultRetailPrice)}</strong></span>
+          <span><span className="ic-price-label">Retail: </span><strong>${fmt(storeProduct?.retailPrice ?? product.defaultRetailPrice)}</strong></span>
         )}
         {(storeProduct?.costPrice ?? product.defaultCostPrice) != null && (
-          <span><span style={{ color: 'var(--text-muted)' }}>Cost: </span><strong>${fmt(storeProduct?.costPrice ?? product.defaultCostPrice)}</strong></span>
+          <span><span className="ic-price-label">Cost: </span><strong>${fmt(storeProduct?.costPrice ?? product.defaultCostPrice)}</strong></span>
         )}
         {product.casePacks && (
-          <span><span style={{ color: 'var(--text-muted)' }}>Case: </span><strong>{product.casePacks} units</strong></span>
+          <span><span className="ic-price-label">Case: </span><strong>{product.casePacks} units</strong></span>
         )}
       </div>
 
       {/* Count controls */}
       {mode === 'adjust' ? (
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button
-            onClick={() => onAdjust(-1)}
-            style={{ width: 44, height: 44, borderRadius: 8, border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)',
-              color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div className="ic-adjust-row">
+          <button onClick={() => onAdjust(-1)} className="ic-adjust-btn-minus">
             <Minus size={20} />
           </button>
-          <div style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <div className="ic-adjust-hint">
             Tap − or + to adjust by 1 case, or use quick buttons:
           </div>
-          <button
-            onClick={() => onAdjust(1)}
-            style={{ width: 44, height: 44, borderRadius: 8, border: '1px solid #10b981', background: 'rgba(16,185,129,0.1)',
-              color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={() => onAdjust(1)} className="ic-adjust-btn-plus">
             <Plus size={20} />
           </button>
         </div>
@@ -121,18 +103,14 @@ function ProductCard({ product, storeProduct, onAdjust, onSetCount, mode }) {
       )}
 
       {/* Quick adjust buttons */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+      <div className="ic-quick-btns">
         {mode === 'adjust' && [1, 2, 3, 6, 12, 24].map(n => (
-          <button key={n} onClick={() => onAdjust(n)}
-            style={{ padding: '5px 14px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-              background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8' }}>
+          <button key={n} onClick={() => onAdjust(n)} className="ic-quick-plus">
             +{n}
           </button>
         ))}
         {mode === 'adjust' && [-1, -6, -12].map(n => (
-          <button key={n} onClick={() => onAdjust(n)}
-            style={{ padding: '5px 14px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
+          <button key={n} onClick={() => onAdjust(n)} className="ic-quick-minus">
             {n}
           </button>
         ))}
@@ -140,7 +118,7 @@ function ProductCard({ product, storeProduct, onAdjust, onSetCount, mode }) {
 
       {/* Custom amount input */}
       {mode === 'adjust' && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', alignItems: 'center' }}>
+        <div className="ic-custom-row">
           <input
             type="number"
             inputMode="decimal"
@@ -150,22 +128,11 @@ function ProductCard({ product, storeProduct, onAdjust, onSetCount, mode }) {
             onKeyDown={e => e.key === 'Enter' && applyCustom()}
             onWheel={e => e.target.blur()}
             placeholder="Custom ± amount  (e.g. +47 or -3)"
-            style={{
-              flex: 1, padding: '9px 12px', borderRadius: 8,
-              border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-              fontSize: '0.88rem', color: 'var(--text-primary)', outline: 'none',
-              colorScheme: 'dark',
-            }}
+            className="ic-custom-input"
           />
           <button
             onClick={applyCustom}
-            style={{
-              padding: '9px 18px', borderRadius: 8, border: 'none',
-              background: customAdj && !isNaN(parseFloat(customAdj)) ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-              color: customAdj && !isNaN(parseFloat(customAdj)) ? '#fff' : 'var(--text-muted)',
-              fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0,
-              transition: 'all 0.15s',
-            }}
+            className={`ic-custom-apply ${customValid ? 'ready' : 'disabled'}`}
           >
             Apply
           </button>
@@ -189,11 +156,9 @@ function CountInput({ onSet, currentQty }) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-      <div style={{ flex: 1 }}>
-        <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-          Set Count (absolute)
-        </label>
+    <div className="ic-count-row">
+      <div className="ic-count-field">
+        <label className="ic-count-label">Set Count (absolute)</label>
         <input
           ref={ref}
           type="number"
@@ -205,18 +170,10 @@ function CountInput({ onSet, currentQty }) {
           onKeyDown={e => e.key === 'Enter' && handle()}
           onWheel={e => e.target.blur()}
           placeholder={currentQty != null ? `Current: ${currentQty}` : 'Enter count'}
-          style={{
-            width: '100%', padding: '10px 12px', borderRadius: 8,
-            border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-            fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)',
-            outline: 'none', boxSizing: 'border-box',
-          }}
+          className="ic-count-input"
         />
       </div>
-      <button
-        onClick={handle}
-        style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--accent-primary)',
-          color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', flexShrink: 0, marginTop: 22 }}>
+      <button onClick={handle} className="ic-count-submit">
         <CheckCircle size={18} />
       </button>
     </div>
@@ -227,17 +184,17 @@ function CountInput({ onSet, currentQty }) {
 function RecentHistory({ history }) {
   if (!history.length) return null;
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+    <div className="ic-recent">
+      <div className="ic-recent-label">
         <History size={12} /> Recent adjustments
       </div>
       {history.slice(0, 5).map((h, i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: 6, background: 'var(--bg-tertiary)', marginBottom: 4, fontSize: '0.8rem' }}>
-          <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.productName}</span>
-          <span style={{ color: h.adjustment > 0 ? '#10b981' : '#ef4444', fontWeight: 700, marginLeft: 8, flexShrink: 0 }}>
+        <div key={i} className="ic-recent-row">
+          <span className="ic-recent-name">{h.productName}</span>
+          <span className={`ic-recent-adj ${h.adjustment > 0 ? 'positive' : 'negative'}`}>
             {h.adjustment > 0 ? '+' : ''}{h.adjustment} {h.mode === 'count' ? '(set)' : ''}
           </span>
-          <span style={{ color: 'var(--text-muted)', marginLeft: 8, flexShrink: 0, fontSize: '0.72rem' }}>
+          <span className="ic-recent-qty">
             {h.newQty?.toFixed ? h.newQty.toFixed(0) : h.newQty} on hand
           </span>
         </div>
@@ -267,14 +224,10 @@ const InventoryCount = () => {
     if (!term) { setResults([]); return; }
     setIsSearching(true);
     try {
-      // Pass the raw term directly — the backend's UPC variant matcher handles
-      // 12/13/14-digit normalization. Pre-padding to 14 digits here was causing
-      // "00082928223365" to miss products stored as "082928223365".
       const result = await searchCatalogProducts(term);
       const products = Array.isArray(result) ? result : (result?.data || []);
       setResults(products);
 
-      // If exactly 1 result (e.g. barcode scan), auto-select it
       if (products.length === 1) {
         await selectProduct(products[0]);
         setQuery('');
@@ -295,7 +248,6 @@ const InventoryCount = () => {
     searchTimer.current = setTimeout(() => search(v), 350);
   };
 
-  // On Enter key — immediate search (for barcode scanners which end with \n)
   const handleQueryKeyDown = (e) => {
     if (e.key === 'Enter') {
       clearTimeout(searchTimer.current);
@@ -338,7 +290,7 @@ const InventoryCount = () => {
         ...s,
         storeProduct: { ...(s.storeProduct || {}), quantityOnHand: newQty },
       }));
-      toast.success(`✅ ${selected.product.name}: ${delta > 0 ? '+' : ''}${delta} → ${Number(newQty).toFixed(0)} on hand`);
+      toast.success(`${selected.product.name}: ${delta > 0 ? '+' : ''}${delta} → ${Number(newQty).toFixed(0)} on hand`);
     } catch (err) {
       toast.error('Adjustment failed: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -368,7 +320,7 @@ const InventoryCount = () => {
         ...s,
         storeProduct: { ...(s.storeProduct || {}), quantityOnHand: finalQty },
       }));
-      toast.success(`✅ ${selected.product.name}: count set to ${Number(finalQty).toFixed(0)}`);
+      toast.success(`${selected.product.name}: count set to ${Number(finalQty).toFixed(0)}`);
     } catch (err) {
       toast.error('Count update failed: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -377,42 +329,35 @@ const InventoryCount = () => {
   };
 
   return (
-    <div className="layout-container">
-      <Sidebar />
-      <main className="main-content" style={{ maxWidth: 640, margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div className="p-page ic-main">
 
         {/* ── Header ── */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.3rem' }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BarChart2 size={20} color="var(--accent-primary)" />
+        <div className="p-header">
+          <div className="p-header-left">
+            <div className="p-header-icon">
+              <ClipboardList size={22} />
             </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Inventory Count</h1>
+            <div>
+              <h1 className="p-title">Inventory Count</h1>
+              <p className="p-subtitle">Scan barcodes or search to quickly update stock levels</p>
+            </div>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: 52 }}>
-            Scan barcodes or search to quickly update stock levels
-          </p>
+          <div className="p-header-actions"></div>
         </div>
 
         {/* ── Mode toggle ── */}
-        <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-secondary)', borderRadius: 10, padding: 4, marginBottom: '1.25rem', border: '1px solid var(--border-color)' }}>
+        <div className="ic-mode-toggle">
           {[['adjust', '± Adjust', 'Add or subtract from current'], ['count', '# Set Count', 'Enter absolute on-hand count']].map(([key, label, desc]) => (
-            <button key={key} onClick={() => setMode(key)} style={{
-              flex: 1, padding: '10px', borderRadius: 7, border: 'none', cursor: 'pointer',
-              textAlign: 'center',
-              background: mode === key ? 'var(--accent-primary)' : 'transparent',
-              color: mode === key ? '#fff' : 'var(--text-muted)',
-              transition: 'all 0.15s',
-            }}>
-              <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{label}</div>
-              <div style={{ fontSize: '0.65rem', opacity: 0.75, marginTop: 1 }}>{desc}</div>
+            <button key={key} onClick={() => setMode(key)} className={`ic-mode-btn ${mode === key ? 'active' : ''}`}>
+              <div className="ic-mode-label">{label}</div>
+              <div className="ic-mode-desc">{desc}</div>
             </button>
           ))}
         </div>
 
         {/* ── Scan / Search input ── */}
-        <div style={{ position: 'relative', marginBottom: '1rem' }}>
-          <Scan size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+        <div className="ic-scan-wrap">
+          <Scan size={18} className="ic-scan-icon" />
           <input
             ref={scanInputRef}
             type="text"
@@ -421,16 +366,10 @@ const InventoryCount = () => {
             onChange={handleQueryChange}
             onKeyDown={handleQueryKeyDown}
             placeholder="Scan barcode or type product name / UPC…"
-            style={{
-              width: '100%', padding: '14px 14px 14px 42px', borderRadius: 10,
-              border: '2px solid var(--accent-primary)',
-              background: 'var(--bg-secondary)', fontSize: '1rem',
-              color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
-            }}
+            className="ic-scan-input"
           />
           {query && (
-            <button onClick={() => { setQuery(''); setResults([]); scanInputRef.current?.focus(); }}
-              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <button onClick={() => { setQuery(''); setResults([]); scanInputRef.current?.focus(); }} className="ic-scan-clear">
               <X size={16} />
             </button>
           )}
@@ -438,21 +377,17 @@ const InventoryCount = () => {
 
         {/* ── Search results ── */}
         {isSearching && (
-          <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-            <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+          <div className="ic-loading">
+            <Loader size={22} className="p-spin" />
           </div>
         )}
         {!isSearching && results.length > 0 && (
-          <div style={{ marginBottom: '1rem', border: '1px solid var(--border-color)', borderRadius: 10, overflow: 'hidden' }}>
-            {results.slice(0, 10).map((p, i) => (
+          <div className="ic-results">
+            {results.slice(0, 10).map((p) => (
               <div key={p.id} onClick={() => { selectProduct(p); setQuery(''); setResults([]); }}
-                style={{ padding: '0.875rem 1rem', cursor: 'pointer', borderBottom: i < results.length - 1 ? '1px solid var(--border-color)' : 'none',
-                  background: 'var(--bg-secondary)', transition: 'background 0.1s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-              >
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', marginTop: 2 }}>
+                className="ic-result-item">
+                <div className="ic-result-name">{p.name}</div>
+                <div className="ic-result-meta">
                   {p.upc && <span>UPC: {p.upc}</span>}
                   {p.sku && <span>SKU: {p.sku}</span>}
                   {p.department?.name && <span>{p.department.name}</span>}
@@ -462,8 +397,8 @@ const InventoryCount = () => {
           </div>
         )}
         {!isSearching && query && results.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            <AlertCircle size={20} style={{ marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
+          <div className="ic-no-results">
+            <AlertCircle size={20} className="ic-empty-icon" />
             No products found for &quot;{query}&quot;
           </div>
         )}
@@ -471,11 +406,9 @@ const InventoryCount = () => {
         {/* ── Selected product ── */}
         {selected && !isSaving && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                Selected Product
-              </span>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
+            <div className="ic-selected-header">
+              <span className="ic-selected-label">Selected Product</span>
+              <button onClick={() => setSelected(null)} className="ic-close-btn">
                 <X size={16} />
               </button>
             </div>
@@ -489,16 +422,16 @@ const InventoryCount = () => {
           </>
         )}
         {selected && isSaving && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
-            <p style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>Updating inventory…</p>
+          <div className="ic-saving">
+            <Loader size={24} className="p-spin" />
+            <p>Updating inventory…</p>
           </div>
         )}
 
         {/* ── History ── */}
         {history.length > 0 && (
-          <div style={{ marginTop: '1.5rem' }}>
-            <button onClick={() => setShowHistory(h => !h)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem', padding: 0 }}>
+          <div className="ic-history-section">
+            <button onClick={() => setShowHistory(h => !h)} className="ic-history-toggle">
               <History size={13} /> Recent ({history.length})
               {showHistory ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
@@ -508,16 +441,15 @@ const InventoryCount = () => {
 
         {/* ── Empty state ── */}
         {!selected && !query && history.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
-            <Scan size={48} style={{ opacity: 0.15, marginBottom: '1rem', display: 'block', margin: '0 auto 1rem' }} />
-            <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem' }}>Ready to scan</p>
-            <p style={{ fontSize: '0.85rem', maxWidth: 280, margin: '0 auto' }}>
+          <div className="ic-empty">
+            <Scan size={48} className="ic-empty-icon" />
+            <p className="ic-empty-title">Ready to scan</p>
+            <p className="ic-empty-desc">
               Point a barcode scanner at a product or type a name to look it up and update inventory.
             </p>
           </div>
         )}
-      </main>
-    </div>
+      </div>
   );
 };
 

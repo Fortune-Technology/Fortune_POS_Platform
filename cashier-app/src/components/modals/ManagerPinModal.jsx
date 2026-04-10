@@ -9,6 +9,7 @@ import { Delete, Shield } from 'lucide-react';
 import { useManagerStore } from '../../stores/useManagerStore.js';
 import { useStationStore } from '../../stores/useStationStore.js';
 import api from '../../api/client.js';
+import './ManagerPinModal.css';
 
 const MANAGER_ROLES = ['manager', 'owner', 'admin', 'superadmin'];
 
@@ -85,72 +86,40 @@ export default function ManagerPinModal() {
   const dots = Array.from({ length: 6 }, (_, i) => i < pin.length);
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: 'var(--bg-panel)', borderRadius: 20,
-        border: '1px solid var(--border-light)',
-        padding: '2rem', width: 320, textAlign: 'center',
-        boxShadow: '0 32px 80px rgba(0,0,0,.6)',
-      }}>
+    <div className="mpm-backdrop">
+      <div className="mpm-modal">
 
-        <div style={{
-          width: 48, height: 48, borderRadius: 14, margin: '0 auto 1rem',
-          background: 'rgba(122,193,67,.12)', border: '1px solid rgba(122,193,67,.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div className="mpm-shield">
           <Shield size={22} color="var(--green)" />
         </div>
 
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: 4 }}>
-          MANAGER REQUIRED
-        </div>
-        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
-          {pendingAction.label}
-        </div>
+        <div className="mpm-label">MANAGER REQUIRED</div>
+        <div className="mpm-action-label">{pendingAction.label}</div>
 
         {/* PIN dots */}
-        <div style={{
-          display: 'flex', gap: 12, justifyContent: 'center', marginBottom: '0.75rem',
-          animation: shake ? 'shake .5s ease' : 'none',
-        }}>
+        <div className={`mpm-dots${shake ? ' mpm-dots--shake' : ''}`}>
           {dots.map((filled, i) => (
-            <div key={i} style={{
-              width: 14, height: 14, borderRadius: '50%',
-              background: filled ? 'var(--green)' : 'transparent',
-              border: `2px solid ${filled ? 'var(--green)' : 'rgba(255,255,255,.2)'}`,
-              transition: 'background .1s',
-            }} />
+            <div key={i} className={`mpm-dot${filled ? ' mpm-dot--filled' : ''}`} />
           ))}
         </div>
 
-        {error && (
-          <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginBottom: '0.75rem', fontWeight: 600 }}>
-            {error}
-          </div>
+        {error ? (
+          <div className="mpm-error">{error}</div>
+        ) : (
+          <div className="mpm-error-spacer" />
         )}
-        {!error && <div style={{ height: 22 }} />}
 
         {/* Numpad */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: '1rem' }}>
+        <div className="mpm-numpad">
           {PAD.flat().map((key, i) => {
             const empty = key === '';
             const isDel = key === '⌫';
             return (
-              <button key={i}
+              <button
+                key={i}
+                className={`mpm-key${empty ? ' mpm-key--empty' : ''}${isDel ? ' mpm-key--delete' : ''}`}
                 onClick={() => { if (empty) return; isDel ? delDigit() : addDigit(key); }}
                 disabled={empty || busy}
-                style={{
-                  height: 56, borderRadius: 12,
-                  background: empty ? 'transparent' : isDel ? 'var(--red-dim)' : 'var(--bg-card)',
-                  border: empty ? 'none' : `1px solid ${isDel ? 'rgba(224,63,63,.2)' : 'var(--border-light)'}`,
-                  color: isDel ? 'var(--red)' : 'var(--text-primary)',
-                  fontSize: '1.2rem', fontWeight: 700, cursor: empty ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
               >
                 {isDel ? <Delete size={18} /> : key}
               </button>
@@ -159,26 +128,14 @@ export default function ManagerPinModal() {
         </div>
 
         <button
+          className={`mpm-confirm-btn${pin.length >= 4 ? ' mpm-confirm-btn--active' : ' mpm-confirm-btn--disabled'}`}
           onClick={() => submit(pin)}
           disabled={pin.length < 4 || busy}
-          style={{
-            width: '100%', height: 48, borderRadius: 12,
-            background: pin.length >= 4 ? 'var(--green)' : 'var(--bg-input)',
-            color: pin.length >= 4 ? '#0f1117' : 'var(--text-muted)',
-            border: 'none', fontWeight: 800, fontSize: '0.95rem', cursor: pin.length >= 4 ? 'pointer' : 'not-allowed',
-            marginBottom: '0.75rem',
-          }}
         >
-          {busy ? 'Verifying…' : 'Confirm'}
+          {busy ? 'Verifying...' : 'Confirm'}
         </button>
 
-        <button
-          onClick={cancelPending}
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline',
-          }}
-        >
+        <button className="mpm-cancel-btn" onClick={cancelPending}>
           Cancel
         </button>
       </div>

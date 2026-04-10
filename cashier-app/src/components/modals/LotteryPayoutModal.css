@@ -1,0 +1,192 @@
+/* LotteryPayoutModal.css — Lottery payout entry */
+/* Prefix: lpm- */
+
+.lpm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lpm-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e5e7eb;
+}
+
+.lpm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.lpm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lpm-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fffbeb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.lpm-header-title { font-weight: 700; font-size: 1rem; color: #111827; }
+.lpm-header-sub { font-size: 0.72rem; color: #6b7280; }
+
+.lpm-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+}
+
+.lpm-body { padding: 16px 20px 20px; }
+
+.lpm-display {
+  background: #fffbeb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  text-align: right;
+  border: 1.5px solid #fde68a;
+}
+
+.lpm-display-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #92400e;
+  letter-spacing: -0.03em;
+}
+
+.lpm-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.lpm-preset-btn {
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1.5px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.lpm-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.lpm-numkey {
+  padding: 13px 0;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  transition: background 0.08s;
+}
+
+.lpm-numkey:hover { background: #f3f4f6; }
+.lpm-numkey--backspace { background: #fff1f2; color: #ef4444; }
+.lpm-numkey--backspace:hover { background: #ffe4e6; }
+
+.lpm-note-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 0.88rem;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+
+.lpm-add-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: background 0.12s;
+}
+
+.lpm-add-btn--active { background: #d97706; color: #fff; cursor: pointer; }
+.lpm-add-btn--disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+
+.lpm-added-list {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.lpm-added-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #92400e;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.lpm-added-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #78350f;
+  padding: 2px 0;
+}
+
+.lpm-added-amount { font-weight: 700; }
+
+.lpm-done-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  margin-top: 10px;
+  border: 2px solid #d97706;
+  background: #fff;
+  color: #d97706;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .lpm-modal { max-width: 100%; border-radius: 16px; }
+  .lpm-presets { grid-template-columns: repeat(3, 1fr); }
+}

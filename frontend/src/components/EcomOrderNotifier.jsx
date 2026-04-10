@@ -1,18 +1,15 @@
 /**
  * Global ecom order notifier — polls for new orders every 15 seconds
  * regardless of which portal page is active. Shows toast + plays sound.
- *
- * Sound strategy: pre-load the audio element on first user click (to satisfy
- * browser autoplay policy), then play it on new orders.
  */
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import './EcomOrderNotifier.css';
 
 const POLL_INTERVAL = 15000;
 
-// Pre-loaded audio element (survives re-renders)
 let _audio = null;
 let _audioUnlocked = false;
 
@@ -25,11 +22,9 @@ function ensureAudio() {
   return _audio;
 }
 
-// Unlock audio on first user interaction (click/touch anywhere on page)
 function unlockAudio() {
   if (_audioUnlocked) return;
   const audio = ensureAudio();
-  // Play a silent blip to unlock the audio context
   audio.volume = 0;
   audio.play().then(() => {
     audio.pause();
@@ -39,7 +34,6 @@ function unlockAudio() {
   }).catch(() => {});
 }
 
-// Attach unlock listener once
 if (typeof window !== 'undefined') {
   document.addEventListener('click', unlockAudio, { once: true });
   document.addEventListener('touchstart', unlockAudio, { once: true });
@@ -96,7 +90,6 @@ export default function EcomOrderNotifier() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Pre-load the audio file
     ensureAudio();
 
     const check = async () => {
@@ -113,9 +106,9 @@ export default function EcomOrderNotifier() {
           const diff = count - lastCountRef.current;
           playNotifSound();
           toast.info(
-            <div onClick={() => navigate('/portal/ecom/orders')} style={{ cursor: 'pointer' }}>
+            <div onClick={() => navigate('/portal/ecom/orders')} className="eon-toast">
               <strong>New Order Received!</strong>
-              <div style={{ fontSize: 12, marginTop: 2, opacity: 0.8 }}>
+              <div className="eon-toast-detail">
                 {diff} new order{diff > 1 ? 's' : ''} — click to view
               </div>
             </div>,

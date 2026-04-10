@@ -1,0 +1,178 @@
+/* HoldRecallModal.css — Hold & Recall transactions */
+/* Prefix: hrm- */
+
+.hrm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.hrm-modal {
+  background: var(--bg-panel);
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.hrm-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hrm-header-info { flex: 1; }
+.hrm-header-title { font-weight: 800; color: var(--text-primary); }
+.hrm-header-sub { font-size: 0.72rem; color: var(--text-muted); }
+
+.hrm-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Hold section */
+.hrm-hold-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hrm-hold-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hrm-hold-label-icon { flex-shrink: 0; }
+
+.hrm-hold-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.hrm-hold-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 10px;
+  color: var(--blue);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Held list */
+.hrm-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.hrm-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.hrm-empty {
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.hrm-empty-icon { margin-bottom: 12px; }
+.hrm-empty-text { font-size: 0.85rem; }
+
+.hrm-held-row {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hrm-held-info { flex: 1; min-width: 0; }
+.hrm-held-name { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
+.hrm-held-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.hrm-held-total { font-weight: 800; color: var(--green); font-size: 0.95rem; }
+
+.hrm-held-actions { display: flex; gap: 6px; }
+
+.hrm-btn-recall {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(122, 193, 67, 0.12);
+  border: 1px solid rgba(122, 193, 67, 0.3);
+  color: var(--green);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hrm-btn-delete {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--red-dim);
+  border: 1px solid rgba(224, 63, 63, 0.3);
+  color: var(--red);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Confirm recall */
+.hrm-confirm-actions { display: flex; gap: 6px; }
+
+.hrm-btn-confirm-recall {
+  padding: 0.45rem 10px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #0f1117;
+  border: none;
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.hrm-btn-confirm-cancel {
+  padding: 0.45rem 10px;
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .hrm-modal { max-width: 100%; border-radius: 16px; }
+}

@@ -1,0 +1,631 @@
+/* POSScreen.css — prefix: pos- */
+
+@keyframes flashGreen {
+  0%   { background: var(--bg-base); }
+  30%  { background: rgba(122, 193, 67, 0.06); }
+  100% { background: var(--bg-base); }
+}
+
+@keyframes flashRed {
+  0%   { background: var(--bg-base); }
+  30%  { background: rgba(224, 63, 63, 0.06); }
+  100% { background: var(--bg-base); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.pos-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  overflow: hidden;
+}
+
+/* ── Midnight warning ── */
+.pos-midnight-warn {
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  padding: 0.45rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Scan error toast ── */
+.pos-scan-error {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #7f1d1d;
+  color: #fff;
+  padding: 0.55rem 1rem 0.55rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: slideDown 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pos-scan-error-upc {
+  font-family: monospace;
+}
+
+.pos-scan-error-add {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Content row ── */
+.pos-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left pane ── */
+.pos-left-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-left-pane--flash-hit  { animation: flashGreen 0.32s ease forwards; }
+.pos-left-pane--flash-miss { animation: flashRed 0.32s ease forwards; }
+
+/* ── Search bar ── */
+.pos-search-wrap {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.pos-search-inner {
+  position: relative;
+}
+
+.pos-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.pos-search-input {
+  width: 100%;
+  padding-left: 2.25rem;
+  height: 40px;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+}
+
+.pos-search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* ── Search dropdown ── */
+.pos-search-dropdown {
+  position: absolute;
+  z-index: 50;
+  left: 0.875rem;
+  right: 0.875rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-md);
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pos-search-result {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.pos-search-result-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pos-search-result-upc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.pos-search-result-price {
+  font-weight: 700;
+  color: var(--green);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* ── Quick-access tab bar ── */
+.pos-quick-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
+.pos-quick-tab {
+  flex: 1;
+  height: 34px;
+  background: none;
+  border: none;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pos-quick-tab--active {
+  border-bottom: 2px solid var(--green);
+  color: var(--green);
+}
+
+.pos-quick-tab--inactive {
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+}
+
+/* ── Category panel wrapper ── */
+.pos-cat-wrap {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Selected-item strip ── */
+.pos-item-strip {
+  flex-shrink: 0;
+  padding: 0.55rem 0.875rem;
+  border-top: 1px solid var(--border);
+  background: rgba(122, 193, 67, 0.04);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pos-item-strip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-item-strip-meta {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.pos-strip-btn {
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pos-strip-btn--qty {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.pos-strip-btn--price {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.pos-strip-btn--price-active {
+  background: rgba(99, 179, 237, 0.12);
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  color: var(--blue);
+}
+
+.pos-strip-btn--discount {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.pos-strip-btn--discount-active {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--amber);
+}
+
+.pos-strip-btn--void {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(224, 63, 63, 0.3);
+  font-weight: 700;
+}
+
+.pos-strip-btn--close {
+  padding: 0.3rem;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: none;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Right pane ── */
+.pos-right-pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+}
+
+/* ── Customer bar ── */
+.pos-customer-bar {
+  flex-shrink: 0;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.pos-customer-bar--attached {
+  background: rgba(122, 193, 67, 0.04);
+}
+
+.pos-customer-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-customer-pts {
+  font-size: 0.65rem;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.pos-customer-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.pos-customer-add {
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 0;
+}
+
+/* ── Cart header ── */
+.pos-cart-header {
+  flex-shrink: 0;
+  padding: 0.55rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pos-cart-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.pos-cart-count {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pos-cart-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+}
+
+/* ── Cart list ── */
+.pos-cart-list {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  overflow-y: auto;
+}
+
+.pos-cart-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  opacity: 0.35;
+}
+
+.pos-cart-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+}
+
+.pos-cart-empty-text {
+  font-size: 0.85rem;
+}
+
+/* ── Order discount badge ── */
+.pos-discount-badge {
+  margin: 0 0.75rem 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pos-discount-badge--amber {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.pos-discount-badge--green {
+  background: rgba(122, 193, 67, 0.07);
+  border: 1px solid rgba(122, 193, 67, 0.25);
+}
+
+.pos-discount-text {
+  flex: 1;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pos-discount-text--amber { color: var(--amber); }
+.pos-discount-text--green { color: var(--green); }
+
+.pos-discount-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Quick cash ── */
+.pos-quick-cash {
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+
+.pos-quick-cash-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.07em;
+  margin-bottom: 5px;
+}
+
+.pos-quick-cash-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.pos-quick-cash-btn {
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pos-quick-cash-btn--exact {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.pos-quick-cash-btn--exact-sub {
+  font-size: 0.5rem;
+  opacity: 0.6;
+  font-weight: 600;
+}
+
+.pos-quick-cash-btn--highlight {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--amber);
+}
+
+.pos-quick-cash-btn--normal {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* ── Quick tender buttons ── */
+.pos-tender-grid {
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.pos-tender-buttons {
+  display: grid;
+  gap: 8px;
+}
+
+.pos-tender-buttons--2 { grid-template-columns: 1fr 1fr; }
+.pos-tender-buttons--3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.pos-tender-btn {
+  height: 56px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background 0.1s, border-color 0.1s;
+  border: 1px solid;
+}
+
+.pos-tender-btn--card {
+  background: rgba(99, 179, 237, 0.12);
+  border-color: rgba(99, 179, 237, 0.3);
+  color: var(--blue);
+}
+
+.pos-tender-btn--card:hover {
+  background: rgba(99, 179, 237, 0.2);
+  border-color: rgba(99, 179, 237, 0.5);
+}
+
+.pos-tender-btn--card-disabled {
+  background: var(--bg-input);
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pos-tender-btn--cash {
+  background: rgba(122, 193, 67, 0.12);
+  border-color: rgba(122, 193, 67, 0.3);
+  color: var(--green);
+}
+
+.pos-tender-btn--cash:hover {
+  background: rgba(122, 193, 67, 0.2);
+  border-color: rgba(122, 193, 67, 0.5);
+}
+
+.pos-tender-btn--ebt {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: #34d399;
+}
+
+.pos-tender-btn--ebt:hover {
+  background: rgba(52, 211, 153, 0.18);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+/* ── No items placeholder ── */
+.pos-no-items {
+  padding: 0.75rem;
+}
+
+.pos-no-items-inner {
+  height: 56px;
+  border-radius: var(--r-lg);
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Flex shrink 0 section */
+.pos-totals-section {
+  flex-shrink: 0;
+}
+
+/* Counter mode section */
+.pos-counter-section {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .pos-search-input {
+    height: 36px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .pos-item-strip {
+    flex-wrap: wrap;
+  }
+
+  .pos-tender-btn {
+    height: 48px;
+    font-size: 0.72rem;
+  }
+}

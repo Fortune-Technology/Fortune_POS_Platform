@@ -1,0 +1,92 @@
+/* Dashboard.css — prefix: dsh- */
+
+.dsh-header {
+  margin-bottom: 2.5rem;
+}
+.dsh-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.dsh-subtitle {
+  color: var(--text-secondary);
+}
+
+/* ── Stat Cards ── */
+.dsh-stats-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+.dsh-stat-card {
+  padding: 1.5rem;
+  flex: 1;
+  min-width: 240px;
+}
+.dsh-stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dsh-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+.dsh-stat-value {
+  font-size: 1.75rem;
+  color: var(--text-primary);
+}
+.dsh-stat-icon {
+  padding: 0.75rem;
+  border-radius: 12px;
+}
+.dsh-stat-trend {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  color: var(--success);
+  font-size: 0.875rem;
+}
+.dsh-trend-icon {
+  margin-right: 0.25rem;
+}
+
+/* ── Chart Grid ── */
+.dsh-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+.dsh-chart-card {
+  height: 400px;
+}
+.dsh-chart-title {
+  margin-bottom: 1.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .dsh-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .dsh-stats-row {
+    flex-direction: column;
+  }
+  .dsh-stat-card {
+    min-width: unset;
+  }
+}
+@media (max-width: 480px) {
+  .dsh-title {
+    font-size: 1.5rem;
+  }
+  .dsh-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .dsh-chart-card {
+    height: 300px;
+  }
+}

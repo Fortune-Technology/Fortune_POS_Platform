@@ -11,12 +11,12 @@ export default function ContactMapForm({ content, store, storeSlug }) {
     <div className="sf-container">
       <section className="tpl-map-area">
         <div className="tpl-map-placeholder">
-          <MapPin size={48} strokeWidth={1.5} style={{ marginBottom: 8, opacity: 0.5 }} />
-          <p style={{ fontWeight: 600 }}>{info.address || 'Our Location'}</p>
-          <p style={{ fontSize: 13, color: 'var(--sf-text-muted)', marginTop: 4 }}>Map integration coming soon</p>
+          <MapPin size={48} strokeWidth={1.5} className="tpl-map-icon-faded" />
+          <p className="tpl-map-label">{info.address || 'Our Location'}</p>
+          <p className="tpl-map-sublabel">Map integration coming soon</p>
         </div>
       </section>
-      <section className="tpl-contact-split" style={{ paddingTop: 32 }}>
+      <section className="tpl-contact-split tpl-contact-split--tight">
         <div className="tpl-contact-info">
           <h2 className="tpl-contact-heading">Visit Us</h2>
           <div className="tpl-contact-details">
