@@ -3,6 +3,8 @@
  * Alternating text-left/image-right and image-left/text-right sections.
  */
 
+import { Target, Handshake, Heart } from 'lucide-react';
+
 const ECOM_URL = process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005';
 
 export default function AboutMultiSection({ content, store }) {
@@ -39,7 +41,7 @@ export default function AboutMultiSection({ content, store }) {
               <p className="tpl-about-body">{mission.text || ''}</p>
             </div>
             <div className="tpl-about-image tpl-about-image--narrow">
-              <div className="tpl-about-icon-block">🎯</div>
+              <div className="tpl-about-icon-block"><Target size={32} /></div>
             </div>
           </div>
         </section>
@@ -60,9 +62,9 @@ export default function AboutMultiSection({ content, store }) {
 
       <section className="tpl-values">
         <div className="tpl-values-grid">
-          <div className="tpl-value-card"><div className="tpl-value-icon">🎯</div><h4>Quality First</h4><p>We source only the best.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">🤝</div><h4>Community</h4><p>More than a store — your neighbors.</p></div>
-          <div className="tpl-value-card"><div className="tpl-value-icon">💚</div><h4>Sustainability</h4><p>Reducing waste, supporting local.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Target size={28} /></div><h4>Quality First</h4><p>We source only the best.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Handshake size={28} /></div><h4>Community</h4><p>More than a store — your neighbors.</p></div>
+          <div className="tpl-value-card"><div className="tpl-value-icon"><Heart size={28} /></div><h4>Sustainability</h4><p>Reducing waste, supporting local.</p></div>
         </div>
       </section>
     </div>

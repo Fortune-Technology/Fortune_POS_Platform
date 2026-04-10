@@ -150,13 +150,28 @@
 
 /* ── Department Grid ─────────────────────────────────────────────────────── */
 
-.tpl-dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.tpl-dept-grid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 12px;
+  scrollbar-width: none;
+}
+.tpl-dept-grid::-webkit-scrollbar { display: none; }
 .tpl-dept-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 24px 12px;
+  padding: 18px 10px;
+  width: 120px;
+  min-width: 120px;
+  height: 100px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
   background: #fff;
   border: 1px solid var(--sf-border);
   border-radius: 12px;
@@ -165,9 +180,19 @@
 }
 .tpl-dept-card:hover { border-color: var(--sf-primary); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
 .tpl-dept-icon { font-size: 32px; }
-.tpl-dept-lucide { color: var(--sf-primary); opacity: 0.8; }
+.tpl-dept-lucide { color: var(--sf-primary); opacity: 0.8; flex-shrink: 0; }
 .tpl-trust-lucide { color: var(--sf-primary); margin-bottom: 10px; display: block; }
-.tpl-dept-name { font-size: 13px; font-weight: 600; color: var(--sf-text); }
+.tpl-dept-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sf-text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
 
 /* ── Trust Section ───────────────────────────────────────────────────────── */
 
@@ -570,8 +595,7 @@
   .tpl-hero--split { padding: 32px 0; }
   .tpl-hero--typo { padding: 48px 0 24px; }
   .tpl-typo-title { font-size: 32px; }
-  .tpl-dept-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .tpl-dept-card { padding: 14px 8px; }
+  .tpl-dept-card { padding: 14px 10px; min-width: 100px; }
   .tpl-trust-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .tpl-trust-item { padding: 16px 8px; }
   .tpl-about-heading { font-size: 24px; }

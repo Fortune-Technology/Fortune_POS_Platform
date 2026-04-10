@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { SearchX, ShoppingCart as CartIcon } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
@@ -21,7 +22,7 @@ export default function ProductDetailPage({ store, storeSlug, product }) {
   const [added, setAdded] = useState(false);
 
   if (!product) {
-    return (<><Header /><div className="sf-empty"><div className="sf-empty-icon">🔍</div><h2>Product Not Found</h2></div><Footer /></>);
+    return (<><Header /><div className="sf-empty"><div className="sf-empty-icon"><SearchX size={48} strokeWidth={1.5} /></div><h2>Product Not Found</h2></div><Footer /></>);
   }
 
   const hasSale = product.salePrice && Number(product.salePrice) > 0;

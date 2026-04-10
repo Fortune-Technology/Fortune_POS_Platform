@@ -64,7 +64,7 @@ const MarketingFooter = () => {
           {/* Logo and About Col — match navbar logo size */}
           <div className="mkt-footer-brand">
             <Link to="/" className="mkt-footer-logo">
-              <StoreveuLogo height={38} darkMode={false} />
+              <StoreveuLogo height={64} darkMode={false} />
             </Link>
             <p className="mkt-footer-desc">
               The smartest POS solution for modern retailers. Powered by AI to simplify your inventory, billing, and growth.

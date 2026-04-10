@@ -448,6 +448,8 @@ button {
 }
 
 .sf-product-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--sf-border);
   border-radius: var(--sf-radius);
   overflow: hidden;
@@ -496,6 +498,9 @@ button {
 
 .sf-product-info {
   padding: 14px 16px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .sf-product-brand {
@@ -504,6 +509,9 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sf-product-name {
@@ -544,7 +552,7 @@ button {
 
 .sf-add-to-cart {
   width: 100%;
-  margin-top: 10px;
+  margin-top: auto;
   padding: 9px 12px;
   background: var(--sf-primary);
   color: #fff;
@@ -606,9 +614,12 @@ button {
 .sf-dept-list {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 0 12px;
+  scrollbar-width: none;
 }
+.sf-dept-list::-webkit-scrollbar { display: none; }
 
 .sf-dept-badge {
   padding: 7px 16px;
@@ -620,6 +631,8 @@ button {
   cursor: pointer;
   transition: all var(--sf-transition);
   background: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sf-dept-badge:hover {
@@ -631,6 +644,12 @@ button {
   background: var(--sf-primary);
   color: #fff;
   border-color: var(--sf-primary);
+}
+
+.sf-dept-badge--active:hover {
+  background: var(--sf-primary-dark);
+  color: #fff;
+  border-color: var(--sf-primary-dark);
 }
 
 .sf-breadcrumb {
@@ -2578,6 +2597,7 @@ button {
 
   .sf-dept-list {
     gap: 6px;
+    padding: 6px 0 10px;
   }
 
   .sf-dept-badge {

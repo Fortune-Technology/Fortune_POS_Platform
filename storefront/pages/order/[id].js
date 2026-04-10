@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { CheckCircle, Store, Truck } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
@@ -62,7 +63,7 @@ export default function OrderConfirmationPage() {
           <div className="sf-loading">Loading order details...</div>
         ) : (
           <div className="oc-wrapper">
-            <div className="oc-icon">✅</div>
+            <div className="oc-icon"><CheckCircle size={48} strokeWidth={1.5} /></div>
             <h1 className="oc-title">Order Confirmed!</h1>
             <p className="oc-subtitle">Thank you for your order.</p>
 
@@ -79,7 +80,7 @@ export default function OrderConfirmationPage() {
                 {order.fulfillmentType && (
                   <div className="oc-row">
                     <span className="oc-label">Fulfillment</span>
-                    <span className="oc-value">{order.fulfillmentType === 'pickup' ? '🏪 Pickup' : '🚗 Delivery'}</span>
+                    <span className="oc-value">{order.fulfillmentType === 'pickup' ? <><Store size={14} /> Pickup</> : <><Truck size={14} /> Delivery</>}</span>
                   </div>
                 )}
                 {order.grandTotal && (

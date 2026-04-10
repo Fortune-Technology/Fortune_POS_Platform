@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
+import { ShoppingCart as CartEmptyIcon, Store, Truck, CreditCard, Lock, Banknote } from 'lucide-react';
 import Script from 'next/script';
 import { useRouter } from 'next/router';
 import Header from '../components/layout/Header';
@@ -172,7 +173,7 @@ export default function CheckoutPage() {
         <CartDrawer />
         <main className="sf-container">
           <div className="sf-empty ck-empty">
-            <div className="sf-empty-icon">🛒</div>
+            <div className="sf-empty-icon"><CartEmptyIcon size={48} strokeWidth={1.5} /></div>
             <p>Your cart is empty — add some products first.</p>
           </div>
         </main>
@@ -222,10 +223,10 @@ export default function CheckoutPage() {
               <h2 className="ck-section-title">Fulfillment</h2>
               <div className="ck-toggle-row">
                 <button type="button" className={`ck-toggle-btn ${form.fulfillmentType === 'pickup' ? 'ck-toggle-btn--active' : ''}`} onClick={() => setForm(f => ({ ...f, fulfillmentType: 'pickup' }))}>
-                  🏪 Pickup
+                  <Store size={16} /> Pickup
                 </button>
                 <button type="button" className={`ck-toggle-btn ${form.fulfillmentType === 'delivery' ? 'ck-toggle-btn--active' : ''}`} onClick={() => setForm(f => ({ ...f, fulfillmentType: 'delivery' }))}>
-                  🚗 Delivery
+                  <Truck size={16} /> Delivery
                 </button>
               </div>
 
@@ -254,10 +255,10 @@ export default function CheckoutPage() {
 
               <div className="ck-toggle-row">
                 <button type="button" className={`ck-toggle-btn ${payMethod === 'card' ? 'ck-toggle-btn--active' : ''}`} onClick={() => setPayMethod('card')}>
-                  💳 Pay by Card
+                  <CreditCard size={16} /> Pay by Card
                 </button>
                 <button type="button" className={`ck-toggle-btn ${payMethod === 'cash_on_pickup' ? 'ck-toggle-btn--active' : ''}`} onClick={() => setPayMethod('cash_on_pickup')}>
-                  🏪 Pay on Pickup
+                  <Store size={16} /> Pay on Pickup
                 </button>
               </div>
 
@@ -312,14 +313,14 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="ck-pci-notice">
-                    🔒 Your card number is entered in a secure, PCI-compliant iframe hosted by CardPointe. We never see your raw card number.
+                    <Lock size={14} /> Your card number is entered in a secure, PCI-compliant iframe hosted by CardPointe. We never see your raw card number.
                   </div>
                 </div>
               )}
 
               {payMethod === 'cash_on_pickup' && (
                 <div className="ck-cash-notice">
-                  💵 You'll pay in cash when you pick up your order.
+                  <Banknote size={16} /> You'll pay in cash when you pick up your order.
                 </div>
               )}
             </section>
@@ -379,7 +380,7 @@ export default function CheckoutPage() {
 
             {payMethod === 'card' && (
               <div className="ck-secured-by">
-                🔒 Secured by CardPointe
+                <Lock size={14} /> Secured by CardPointe
               </div>
             )}
           </div>

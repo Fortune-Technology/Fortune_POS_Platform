@@ -4,6 +4,7 @@
 
 import Head from 'next/head';
 import Link from 'next/link';
+import { ShoppingCart as CartEmptyIcon, Package, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import CartDrawer from '../components/cart/CartDrawer';
@@ -28,7 +29,7 @@ export default function CartPage() {
 
         {items.length === 0 ? (
           <div className="sf-empty">
-            <div className="sf-empty-icon">🛒</div>
+            <div className="sf-empty-icon"><CartEmptyIcon size={48} strokeWidth={1.5} /></div>
             <p>Your cart is empty</p>
             <Link href={`/products?store=${storeSlug}`} className="sc-continue-btn">
               Continue Shopping
@@ -42,7 +43,7 @@ export default function CartPage() {
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt={item.name} className="sc-item-img" />
                   ) : (
-                    <div className="sc-item-placeholder">📦</div>
+                    <div className="sc-item-placeholder"><Package size={40} strokeWidth={1.5} /></div>
                   )}
                   <div className="sc-item-info">
                     <Link href={`/products/${item.slug}?store=${storeSlug}`} className="sc-item-name">
@@ -56,7 +57,7 @@ export default function CartPage() {
                     <button className="cd-qty-btn" onClick={() => updateQty(item.productId, item.qty + 1)}>+</button>
                   </div>
                   <div className="sc-item-total">{fmt(item.price * item.qty)}</div>
-                  <button className="sc-item-remove" onClick={() => removeItem(item.productId)}>✕</button>
+                  <button className="sc-item-remove" onClick={() => removeItem(item.productId)}><X size={16} /></button>
                 </div>
               ))}
             </div>
