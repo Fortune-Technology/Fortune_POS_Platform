@@ -66,6 +66,7 @@ const menuGroups = [
       { name: 'Promotions', icon: <Tag size={13} />, path: '/portal/promotions' },
       { name: 'Bulk Import', icon: <Upload size={13} />, path: '/portal/import' },
       { name: 'Inventory Count', icon: <BarChart2 size={13} />, path: '/portal/inventory-count' },
+      { name: 'Label Queue', icon: <Tag size={13} />, path: '/portal/label-queue' },
     ],
   },
   {

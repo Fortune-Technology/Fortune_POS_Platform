@@ -59,6 +59,7 @@ import Vendors        from './pages/Vendors';
 import VendorDetail   from './pages/VendorDetail';
 import Promotions        from './pages/Promotions';
 import BulkImport from './pages/BulkImport';
+import LabelQueue from './pages/LabelQueue';
 import EcommIntegration  from './pages/EcommIntegration';
 import EcomSetup         from './pages/EcomSetup';
 // EcomPages functionality moved into EcomSetup > Pages tab
@@ -266,6 +267,7 @@ function App() {
         <Route path="/portal/vendors/:id"      element={<ProtectedRoute><VendorDetail /></ProtectedRoute>} />
         <Route path="/portal/promotions"       element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
         <Route path="/portal/import" element={<ProtectedRoute><BulkImport /></ProtectedRoute>} />
+        <Route path="/portal/label-queue" element={<ProtectedRoute><LabelQueue /></ProtectedRoute>} />
 
         {/* ── Billing ─────────────────────────────────────────────────── */}
         <Route path="/portal/billing" element={<ProtectedRoute><BillingPortal /></ProtectedRoute>} />

@@ -14,7 +14,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Tag, Printer, Save, Plus, Trash2, Eye, Search, Download,
   Type, Barcode, DollarSign, Package, MapPin, Layers, Hash,
-  ChevronDown, X, Loader, Settings, Copy, RotateCcw,
+  ChevronDown, X, Loader, Settings, Copy, RotateCcw, Star,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
@@ -108,6 +108,67 @@ const DEFAULT_TEMPLATES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
+// UNIT SYSTEM — px, pt, or dots with DPI conversion
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DPI_OPTIONS = [203, 300, 600];
+
+// Convert user units to ZPL dots
+function toDots(value, unit, dpi) {
+  switch (unit) {
+    case 'pt':   return Math.round(value * (dpi / 72));     // 1pt = dpi/72 dots
+    case 'px':   return Math.round(value * (dpi / 96));     // 1px = dpi/96 dots
+    case 'dots': return Math.round(value);
+    case 'mm':   return Math.round(value * (dpi / 25.4));
+    default:     return Math.round(value * (dpi / 72));     // default to pt
+  }
+}
+
+// Convert dots back to user units (for display)
+function fromDots(dots, unit, dpi) {
+  switch (unit) {
+    case 'pt':   return Math.round(dots / (dpi / 72) * 10) / 10;
+    case 'px':   return Math.round(dots / (dpi / 96) * 10) / 10;
+    case 'dots': return Math.round(dots);
+    case 'mm':   return Math.round(dots / (dpi / 25.4) * 10) / 10;
+    default:     return Math.round(dots / (dpi / 72) * 10) / 10;
+  }
+}
+
+const UNIT_OPTIONS = [
+  { id: 'pt',   label: 'pt (points)',   desc: '1pt = 1/72 inch' },
+  { id: 'px',   label: 'px (pixels)',   desc: '1px = 1/96 inch' },
+  { id: 'mm',   label: 'mm',            desc: 'millimeters' },
+  { id: 'dots', label: 'dots (raw)',    desc: `Direct printer dots` },
+];
+
+// Font sizes in points → converted to dots for ZPL
+const FONT_SIZE_OPTIONS = [
+  { id: '6pt',   label: '6 pt',   ptValue: 6 },
+  { id: '8pt',   label: '8 pt',   ptValue: 8 },
+  { id: '10pt',  label: '10 pt',  ptValue: 10 },
+  { id: '12pt',  label: '12 pt',  ptValue: 12 },
+  { id: '14pt',  label: '14 pt',  ptValue: 14 },
+  { id: '18pt',  label: '18 pt',  ptValue: 18 },
+  { id: '24pt',  label: '24 pt',  ptValue: 24 },
+  { id: '32pt',  label: '32 pt',  ptValue: 32 },
+  { id: '48pt',  label: '48 pt',  ptValue: 48 },
+];
+
+// Legacy named sizes → pt values (for backwards compat with existing templates)
+const LEGACY_FONT_MAP = { tiny: '6pt', small: '8pt', medium: '12pt', large: '18pt', xlarge: '32pt' };
+
+function getFontDots(fontSize, dpi) {
+  // Handle both new pt-based and legacy named sizes
+  const mapped = LEGACY_FONT_MAP[fontSize] || fontSize;
+  const opt = FONT_SIZE_OPTIONS.find(f => f.id === mapped);
+  const ptVal = opt ? opt.ptValue : 12;
+  const h = toDots(ptVal, 'pt', dpi);
+  const w = Math.round(h * 0.65);
+  return { h, w };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ZPL GENERATION
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -121,7 +182,8 @@ const FONT_SIZES = {
 
 function generateZPL(template, productData, labelSize) {
   const size = LABEL_SIZES.find(s => s.id === (template.labelSize || labelSize)) || LABEL_SIZES[1];
-  const dpi = size.dpi;
+  const dpi = template.dpi || size.dpi || 203;
+  const unit = template.unit || 'pt';
   const widthDots = Math.round(size.w * dpi);
   const heightDots = Math.round(size.h * dpi);
 
@@ -134,9 +196,9 @@ function generateZPL(template, productData, labelSize) {
     const def = FIELD_DEFS.find(f => f.id === field.fieldId);
     if (!def) continue;
 
-    const xDots = Math.round((field.x || 0) * (dpi / 72));  // convert from 72dpi design space
-    const yDots = Math.round((field.y || 0) * (dpi / 72));
-    const fs = FONT_SIZES[field.fontSize || 'medium'];
+    const xDots = toDots(field.x || 0, unit, dpi);
+    const yDots = toDots(field.y || 0, unit, dpi);
+    const fs = getFontDots(field.fontSize || '12pt', dpi);
     const value = resolveVariable(def, productData);
 
     if (def.type === 'barcode' && productData.upc) {
@@ -147,9 +209,8 @@ function generateZPL(template, productData, labelSize) {
       zpl += `^FD${productData.upc}^FS\n`;
     } else {
       // Text field
-      const weight = field.bold ? 'B' : 'N';
       zpl += `^FO${xDots},${yDots}\n`;
-      zpl += `^A${fs.zplFont},${fs.h},${fs.w}\n`;
+      zpl += `^A0,${fs.h},${fs.w}\n`;
       if (field.bold) zpl += `^FB${widthDots - xDots},1,0,L\n`;
       zpl += `^FD${value}^FS\n`;
     }
@@ -180,6 +241,13 @@ function resolveVariable(fieldDef, data) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PREVIEW_FONT_SIZES = { tiny: 8, small: 10, medium: 13, large: 18, xlarge: 26 };
+// Map new pt-based font sizes to screen px for preview
+function previewFontSize(fontSize) {
+  if (PREVIEW_FONT_SIZES[fontSize]) return PREVIEW_FONT_SIZES[fontSize];
+  const opt = FONT_SIZE_OPTIONS.find(f => f.id === fontSize);
+  // pt → screen: roughly 1pt ≈ 1px at screen resolution
+  return opt ? Math.round(opt.ptValue * 0.9) : 13;
+}
 
 function LabelPreview({ template, sampleData, labelSize }) {
   const size = LABEL_SIZES.find(s => s.id === (template?.labelSize || labelSize)) || LABEL_SIZES[1];
@@ -196,7 +264,7 @@ function LabelPreview({ template, sampleData, labelSize }) {
         const def = FIELD_DEFS.find(f => f.id === field.fieldId);
         if (!def) return null;
         const value = resolveVariable(def, sampleData);
-        const fs = PREVIEW_FONT_SIZES[field.fontSize || 'medium'];
+        const fs = previewFontSize(field.fontSize || 'medium');
 
         if (def.type === 'barcode') {
           return (
@@ -256,6 +324,9 @@ export default function LabelDesign({ embedded }) {
   });
   const [activeTemplateId, setActiveTemplateId] = useState(templates[0]?.id || 'standard-shelf');
   const [editingTemplate, setEditingTemplate] = useState(null); // cloned copy being edited
+  const [defaultTemplateId, setDefaultTemplateId] = useState(() => {
+    return localStorage.getItem('storv_default_label_template') || templates[0]?.id || 'standard-shelf';
+  });
 
   // ── Product search + batch print ───────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,18 +348,27 @@ export default function LabelDesign({ embedded }) {
     departmentName: 'Dairy', aisle: 'Aisle 3',
   };
 
-  // ── Save templates to localStorage ─────────────────────────────────
+  // ── Save templates + default to localStorage ────────────────────────
   useEffect(() => {
     localStorage.setItem('storv_label_templates', JSON.stringify(templates));
   }, [templates]);
+
+  useEffect(() => {
+    localStorage.setItem('storv_default_label_template', defaultTemplateId);
+  }, [defaultTemplateId]);
+
+  const setAsDefault = (id) => {
+    setDefaultTemplateId(id);
+    toast.success('Default template set');
+  };
 
   // ── Product search ─────────────────────────────────────────────────
   const handleSearch = useCallback(async (q) => {
     if (!q || q.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const r = await api.get('/catalog/products', { params: { search: q, limit: 20, includeStore: true } });
-      setSearchResults(r.data?.products || r.data || []);
+      const r = await api.get('/catalog/products/search', { params: { q, limit: 20 } });
+      setSearchResults(r.data?.data || r.data?.products || []);
     } catch { setSearchResults([]); }
     finally { setSearching(false); }
   }, []);
@@ -423,47 +503,86 @@ export default function LabelDesign({ embedded }) {
           <div className="p-card">
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Templates</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {templates.map(t => (
-                <div key={t.id}
-                  onClick={() => { setActiveTemplateId(t.id); setEditingTemplate(null); }}
-                  style={{
-                    padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                    background: activeTemplateId === t.id ? 'var(--brand-10)' : 'transparent',
-                    border: `1px solid ${activeTemplateId === t.id ? 'var(--border-brand)' : 'transparent'}`,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                  <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{t.name}</div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                      {LABEL_SIZES.find(s => s.id === t.labelSize)?.name || t.labelSize} — {t.fields?.length || 0} fields
+              {templates.map(t => {
+                const isDefault = defaultTemplateId === t.id;
+                return (
+                  <div key={t.id}
+                    onClick={() => { setActiveTemplateId(t.id); setEditingTemplate(null); }}
+                    style={{
+                      padding: '0.5rem 0.65rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      background: activeTemplateId === t.id ? 'var(--brand-10)' : 'transparent',
+                      border: `1px solid ${activeTemplateId === t.id ? 'var(--border-brand)' : 'transparent'}`,
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAsDefault(t.id); }}
+                        title={isDefault ? 'Default template' : 'Set as default'}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                        <Star size={13} fill={isDefault ? '#f59e0b' : 'none'} color={isDefault ? '#f59e0b' : 'var(--text-muted)'} />
+                      </button>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {t.name} {isDefault && <span style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700 }}>DEFAULT</span>}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          {LABEL_SIZES.find(s => s.id === t.labelSize)?.name || t.labelSize} — {t.fields?.length || 0} fields
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      {templates.length > 1 && (
+                        <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {templates.length > 1 && (
-                    <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {/* Label size selector (only when editing) */}
           {editingTemplate && (
             <div className="p-card">
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Label Size</div>
-              <select className="p-select" value={editingTemplate.labelSize}
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Template Settings</div>
+
+              <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3, display: 'block' }}>Name</label>
+              <input className="p-input" style={{ marginBottom: 8 }} value={editingTemplate.name}
+                onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })} />
+
+              <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3, display: 'block' }}>Label Size</label>
+              <select className="p-select" style={{ marginBottom: 8 }} value={editingTemplate.labelSize}
                 onChange={e => setEditingTemplate({ ...editingTemplate, labelSize: e.target.value })}>
                 {LABEL_SIZES.map(s => (
                   <option key={s.id} value={s.id}>{s.name} — {s.desc}</option>
                 ))}
               </select>
 
-              <div style={{ marginTop: 10 }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Template Name</label>
-                <input className="p-input" style={{ marginTop: 4 }} value={editingTemplate.name}
-                  onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3, display: 'block' }}>Printer DPI</label>
+                  <select className="p-select" value={editingTemplate.dpi || 203}
+                    onChange={e => setEditingTemplate({ ...editingTemplate, dpi: parseInt(e.target.value) })}>
+                    {DPI_OPTIONS.map(d => (
+                      <option key={d} value={d}>{d} DPI</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3, display: 'block' }}>Position Units</label>
+                  <select className="p-select" value={editingTemplate.unit || 'pt'}
+                    onChange={e => setEditingTemplate({ ...editingTemplate, unit: e.target.value })}>
+                    {UNIT_OPTIONS.map(u => (
+                      <option key={u.id} value={u.id}>{u.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: 6, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                {UNIT_OPTIONS.find(u => u.id === (editingTemplate.unit || 'pt'))?.desc} at {editingTemplate.dpi || 203} DPI
               </div>
             </div>
           )}
@@ -528,16 +647,20 @@ export default function LabelDesign({ embedded }) {
                       background: 'var(--bg-secondary)', fontSize: '0.8rem',
                     }}>
                       <Icon size={13} color="var(--accent-primary)" />
-                      <span style={{ fontWeight: 600, minWidth: 90 }}>{def.label}</span>
-                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>X</label>
-                      <input type="number" value={field.x} onChange={e => updateField(idx, 'x', Number(e.target.value))}
-                        style={{ width: 50, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.78rem', textAlign: 'center' }} />
-                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Y</label>
-                      <input type="number" value={field.y} onChange={e => updateField(idx, 'y', Number(e.target.value))}
-                        style={{ width: 50, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.78rem', textAlign: 'center' }} />
-                      <select value={field.fontSize || 'medium'} onChange={e => updateField(idx, 'fontSize', e.target.value)}
-                        style={{ padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
-                        {Object.keys(FONT_SIZES).map(s => <option key={s} value={s}>{s}</option>)}
+                      <span style={{ fontWeight: 600, minWidth: 80, fontSize: '0.75rem' }}>{def.label}</span>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>X</label>
+                      <input type="number" step={editingTemplate.unit === 'dots' ? 1 : 0.5} value={field.x}
+                        onChange={e => updateField(idx, 'x', Number(e.target.value))}
+                        style={{ width: 52, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.75rem', textAlign: 'center' }} />
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Y</label>
+                      <input type="number" step={editingTemplate.unit === 'dots' ? 1 : 0.5} value={field.y}
+                        onChange={e => updateField(idx, 'y', Number(e.target.value))}
+                        style={{ width: 52, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.75rem', textAlign: 'center' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', minWidth: 16 }}>{editingTemplate.unit || 'pt'}</span>
+                      <select value={LEGACY_FONT_MAP[field.fontSize] || field.fontSize || '12pt'}
+                        onChange={e => updateField(idx, 'fontSize', e.target.value)}
+                        style={{ padding: '3px 4px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: '0.72rem', minWidth: 60 }}>
+                        {FONT_SIZE_OPTIONS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                       </select>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: '0.72rem' }}>
                         <input type="checkbox" checked={field.bold} onChange={e => updateField(idx, 'bold', e.target.checked)}
@@ -652,4 +775,21 @@ export default function LabelDesign({ embedded }) {
       <main className="main-content">{content}</main>
     </div>
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Named exports for use by LabelQueue and other pages
+// ═══════════════════════════════════════════════════════════════════════════
+
+export { generateZPL, resolveVariable, LABEL_SIZES, FIELD_DEFS, DEFAULT_TEMPLATES };
+
+/**
+ * Get the default template from localStorage.
+ * Used by LabelQueue to auto-print without template selection.
+ */
+export function getDefaultTemplate() {
+  const defaultId = localStorage.getItem('storv_default_label_template') || 'standard-shelf';
+  const saved = localStorage.getItem('storv_label_templates');
+  const templates = saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
+  return templates.find(t => t.id === defaultId) || templates[0] || DEFAULT_TEMPLATES[0];
 }
