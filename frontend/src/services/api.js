@@ -157,6 +157,12 @@ export const addToLabelQueue    = (data)   => api.post('/label-queue/add', data)
 export const printLabelQueue    = (data)   => api.post('/label-queue/print', data).then(r => r.data);
 export const dismissLabelQueue  = (data)   => api.post('/label-queue/dismiss', data).then(r => r.data);
 
+// ── Reports Hub ─────────────────────────────────────────────────────────────
+export const getReportSummary   = (params) => api.get('/reports/hub/summary', { params }).then(r => r.data);
+export const getReportTax       = (params) => api.get('/reports/hub/tax', { params }).then(r => r.data);
+export const getReportInventory = (params) => api.get('/reports/hub/inventory', { params }).then(r => r.data);
+export const getReportCompare   = (params) => api.get('/reports/hub/compare', { params }).then(r => r.data);
+
 // Weather
 export const getWeatherRange = (params) => api.get('/weather/range', { params }).then(r => r.data);
 export const getCurrentWeather = () => api.get('/weather/current').then(r => r.data);

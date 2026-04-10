@@ -69,6 +69,7 @@ import EcomDomain        from './pages/EcomDomain';
 import EcomAnalytics     from './pages/EcomAnalytics';
 import EcomCustomers     from './pages/EcomCustomers';
 import Lottery from './pages/Lottery';
+import ReportsHub from './pages/ReportsHub';
 import LoyaltyProgram from './pages/LoyaltyProgram';
 import SupportTickets from './pages/SupportTickets';
 
@@ -242,6 +243,7 @@ function App() {
 
           {/* ── Lottery ───────────────────────────────────────────────── */}
           <Route path="/portal/lottery"          element={<Lottery />} />
+          <Route path="/portal/reports"          element={<ReportsHub />} />
           <Route path="/portal/support-tickets"  element={<SupportTickets />} />
 
           {/* ── Online Store (E-commerce) ──────────────────────────── */}
