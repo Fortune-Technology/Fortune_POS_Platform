@@ -150,6 +150,13 @@ export const receivePurchaseOrder   = (id, d)  => api.post(`/vendor-orders/purch
 export const deletePurchaseOrder    = (id)     => api.delete(`/vendor-orders/purchase-orders/${id}`).then(r => r.data);
 export const getPurchaseOrderPDF    = (id)     => api.get(`/vendor-orders/purchase-orders/${id}/pdf`, { responseType: 'blob' });
 
+// ── Label Queue ──────────────────────────────────────────────────────────────
+export const getLabelQueue      = (params) => api.get('/label-queue', { params }).then(r => r.data);
+export const getLabelQueueCount = ()       => api.get('/label-queue/count').then(r => r.data);
+export const addToLabelQueue    = (data)   => api.post('/label-queue/add', data).then(r => r.data);
+export const printLabelQueue    = (data)   => api.post('/label-queue/print', data).then(r => r.data);
+export const dismissLabelQueue  = (data)   => api.post('/label-queue/dismiss', data).then(r => r.data);
+
 // Weather
 export const getWeatherRange = (params) => api.get('/weather/range', { params }).then(r => r.data);
 export const getCurrentWeather = () => api.get('/weather/current').then(r => r.data);

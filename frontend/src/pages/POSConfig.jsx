@@ -1,6 +1,6 @@
 /**
  * POSConfig — Tabbed hub for POS configuration pages
- * Tabs: Layout & Settings, Receipt Settings, Quick Keys
+ * Tabs: Layout & Settings, Receipt Settings, Quick Keys, Label Design
  */
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -8,12 +8,14 @@ import { Monitor, FileText, LayoutGrid } from 'lucide-react';
 import POSSettings from './POSSettings';
 import ReceiptSettings from './ReceiptSettings';
 import QuickAccess from './QuickAccess';
+import LabelDesign from './LabelDesign';
 import '../styles/portal.css';
 
 const TABS = [
   { key: 'layout',     label: 'Layout & Settings', icon: <Monitor size={14} /> },
   { key: 'receipts',   label: 'Receipt Settings',  icon: <FileText size={14} /> },
   { key: 'quick-keys', label: 'Quick Keys',        icon: <LayoutGrid size={14} /> },
+  { key: 'labels',     label: 'Label Design',      icon: <Tag size={14} /> },
 ];
 
 export default function POSConfig() {

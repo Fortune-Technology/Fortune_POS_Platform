@@ -16,6 +16,7 @@
 
 import prisma from '../config/postgres.js';
 import { normalizeUPC, upcVariants } from '../utils/upc.js';
+import { queueLabelForPriceChange, queueLabelForNewProduct, queueLabelForSale } from '../services/labelQueueService.js';
 
 // E-commerce sync — optional. If Redis / @storv/queue is not installed, all emit
 // functions are silent no-ops. POS operations are never blocked.
@@ -774,6 +775,10 @@ export const createMasterProduct = async (req, res) => {
       ecomTags: product.ecomTags, size: product.size, weight: product.weight,
       departmentName: product.department?.name,
     });
+
+    // Queue label for new product
+    try { await queueLabelForNewProduct(orgId, product.id, product.defaultRetailPrice); } catch {}
+
     res.status(201).json({ success: true, data: product });
   } catch (err) {
     if (err.code === 'P2002') {
@@ -834,6 +839,9 @@ export const updateMasterProduct = async (req, res) => {
     if (body.caseDeposit   !== undefined) updates.caseDeposit   = body.caseDeposit   != null ? parseFloat(body.caseDeposit)   : null;
     if (body.itemCode      !== undefined) updates.itemCode       = body.itemCode || null;
 
+    // Fetch old price before update (for label queue)
+    const existing = await prisma.masterProduct.findUnique({ where: { id: parseInt(id) }, select: { defaultRetailPrice: true } });
+
     const product = await prisma.masterProduct.update({
       where: { id, orgId },
       data: updates,
@@ -842,6 +850,13 @@ export const updateMasterProduct = async (req, res) => {
         vendor:     { select: { id: true, name: true } },
       },
     });
+
+    // Queue label if retail price changed
+    try {
+      if (body.defaultRetailPrice !== undefined && existing?.defaultRetailPrice != null) {
+        await queueLabelForPriceChange(orgId, null, parseInt(id), existing.defaultRetailPrice, body.defaultRetailPrice);
+      }
+    } catch {}
 
     emitProductSync(orgId, product.id, 'update', {
       name: product.name, description: product.description, brand: product.brand,
@@ -892,6 +907,14 @@ export const bulkUpdateMasterProducts = async (req, res) => {
       return res.status(400).json({ success: false, error: 'updates array is required' });
     }
 
+    // Fetch old prices before bulk update (for label queue)
+    const oldProducts = await prisma.masterProduct.findMany({
+      where: { id: { in: updates.map(u => u.id) }, orgId },
+      select: { id: true, defaultRetailPrice: true },
+    });
+    const oldPriceMap = {};
+    for (const p of oldProducts) oldPriceMap[p.id] = p.defaultRetailPrice;
+
     const results = await prisma.$transaction(
       updates.map(({ id, ...data }) =>
         prisma.masterProduct.update({
@@ -905,6 +928,15 @@ export const bulkUpdateMasterProducts = async (req, res) => {
         })
       )
     );
+
+    // Queue labels for any price changes
+    try {
+      for (const u of updates) {
+        if (u.defaultRetailPrice !== undefined && oldPriceMap[u.id] != null) {
+          await queueLabelForPriceChange(orgId, null, u.id, oldPriceMap[u.id], u.defaultRetailPrice);
+        }
+      }
+    } catch {}
 
     res.json({ success: true, updated: results.length });
   } catch (err) {
@@ -974,6 +1006,12 @@ export const upsertStoreProduct = async (req, res) => {
     if (!storeId)        return res.status(400).json({ success: false, error: 'storeId is required' });
     if (!masterProductId) return res.status(400).json({ success: false, error: 'masterProductId is required' });
 
+    // Fetch existing store product for label queue comparison
+    const existingSP = await prisma.storeProduct.findFirst({
+      where: { masterProductId: parseInt(masterProductId), storeId },
+      select: { retailPrice: true, salePrice: true },
+    });
+
     const data = {
       orgId,
       ...(retailPrice       != null && { retailPrice:       parseFloat(retailPrice) }),
@@ -1009,6 +1047,22 @@ export const upsertStoreProduct = async (req, res) => {
       quantityOnHand: storeProduct.quantityOnHand, inStock: storeProduct.inStock,
       retailPrice: storeProduct.retailPrice, salePrice: storeProduct.salePrice,
     });
+
+    // Queue labels for store-level price/sale changes
+    try {
+      const pid = parseInt(masterProductId);
+      const body = req.body;
+      if (body.retailPrice !== undefined && existingSP?.retailPrice != null && parseFloat(body.retailPrice) !== parseFloat(existingSP.retailPrice)) {
+        await queueLabelForPriceChange(orgId, storeId, pid, existingSP.retailPrice, body.retailPrice);
+      }
+      if (body.salePrice && (!existingSP?.salePrice || parseFloat(existingSP.salePrice) === 0)) {
+        await queueLabelForSale(orgId, storeId, pid, body.retailPrice || existingSP?.retailPrice, body.salePrice, false);
+      }
+      if (!body.salePrice && existingSP?.salePrice && parseFloat(existingSP.salePrice) > 0) {
+        await queueLabelForSale(orgId, storeId, pid, body.retailPrice || existingSP?.retailPrice, existingSP.salePrice, true);
+      }
+    } catch {}
+
     res.json({ success: true, data: storeProduct });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

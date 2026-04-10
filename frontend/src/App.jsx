@@ -59,6 +59,7 @@ import Vendors        from './pages/Vendors';
 import VendorDetail   from './pages/VendorDetail';
 import Promotions        from './pages/Promotions';
 import BulkImport from './pages/BulkImport';
+import LabelQueue from './pages/LabelQueue';
 import EcommIntegration  from './pages/EcommIntegration';
 import EcomSetup         from './pages/EcomSetup';
 // EcomPages functionality moved into EcomSetup > Pages tab
