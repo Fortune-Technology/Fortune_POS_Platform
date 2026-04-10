@@ -1,20 +1,22 @@
 /**
  * POSConfig — Tabbed hub for POS configuration pages
- * Tabs: Layout & Settings, Receipt Settings, Quick Keys
+ * Tabs: Layout & Settings, Receipt Settings, Quick Keys, Label Design
  */
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Monitor, FileText, LayoutGrid } from 'lucide-react';
+import { Monitor, FileText, LayoutGrid, Tag } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import POSSettings from './POSSettings';
 import ReceiptSettings from './ReceiptSettings';
 import QuickAccess from './QuickAccess';
+import LabelDesign from './LabelDesign';
 import '../styles/portal.css';
 
 const TABS = [
   { key: 'layout',     label: 'Layout & Settings', icon: <Monitor size={14} /> },
   { key: 'receipts',   label: 'Receipt Settings',  icon: <FileText size={14} /> },
   { key: 'quick-keys', label: 'Quick Keys',        icon: <LayoutGrid size={14} /> },
+  { key: 'labels',     label: 'Label Design',      icon: <Tag size={14} /> },
 ];
 
 export default function POSConfig() {
@@ -32,7 +34,7 @@ export default function POSConfig() {
               <div className="p-header-icon"><Monitor size={22} /></div>
               <div>
                 <h1 className="p-title">POS Configuration</h1>
-                <p className="p-subtitle">Manage your point of sale layout, receipts, and quick-access keys</p>
+                <p className="p-subtitle">Manage your point of sale layout, receipts, quick-access keys, and shelf label design</p>
               </div>
             </div>
           </div>
@@ -48,6 +50,7 @@ export default function POSConfig() {
           {tab === 'layout'     && <POSSettings embedded />}
           {tab === 'receipts'   && <ReceiptSettings embedded />}
           {tab === 'quick-keys' && <QuickAccess embedded />}
+          {tab === 'labels'     && <LabelDesign embedded />}
         </div>
       </main>
     </div>

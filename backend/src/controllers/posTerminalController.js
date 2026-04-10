@@ -428,6 +428,30 @@ export const printNetworkReceipt = async (req, res) => {
   }
 };
 
+// ── POST /api/pos-terminal/print-label ─────────────────────────────────────
+// Sends ZPL (plain text) to a Zebra label printer over TCP.
+// Body: { ip: string, port: number (default 9100), zpl: string }
+export const printNetworkLabel = async (req, res) => {
+  const { ip, port = 9100, zpl } = req.body;
+  if (!ip || !zpl) return res.status(400).json({ error: 'ip and zpl are required' });
+  try {
+    const net = await import('net');
+    const buf = Buffer.from(zpl, 'utf8');
+    await new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      const timeout = setTimeout(() => { socket.destroy(); reject(new Error('Label printer timeout')); }, 8000);
+      socket.connect(Number(port), ip, () => {
+        socket.write(buf, () => { socket.end(); clearTimeout(timeout); resolve(); });
+      });
+      socket.on('error', (err) => { clearTimeout(timeout); reject(err); });
+    });
+    res.json({ ok: true, message: `ZPL sent to ${ip}:${port}` });
+  } catch (err) {
+    if (err.code === 'ECONNREFUSED') return res.status(503).json({ error: `Label printer refused at ${ip}:${port}` });
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // ── GET /api/pos-terminal/branding ────────────────────────────────────────
 export const getPosBranding = async (req, res) => {
   try {

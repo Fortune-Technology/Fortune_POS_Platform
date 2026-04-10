@@ -24,6 +24,7 @@ import {
   getPOSConfig,
   savePOSConfig,
   printNetworkReceipt,
+  printNetworkLabel,
   logPosEvent,
   listPosEvents,
 } from '../controllers/posTerminalController.js';
@@ -79,6 +80,9 @@ router.put('/config',  ...guard, savePOSConfig);
 
 // Network printer proxy — forwards base64 ESC/POS data to TCP socket
 router.post('/print-network', ...guard, printNetworkReceipt);
+
+// Zebra label printer — sends ZPL (plain text) to network label printer
+router.post('/print-label', ...guard, printNetworkLabel);
 
 // Station management
 router.post('/station-register', ...guard, registerStation);

@@ -320,6 +320,7 @@ model MasterProduct {
   upcs                ProductUpc[]
   packSizes           ProductPackSize[]
   purchaseOrderItems  PurchaseOrderItem[]
+  labelQueueItems     LabelQueue[]
 
   @@index([orgId, upc])
   @@index([orgId, deleted, active])
@@ -1991,5 +1992,29 @@ model PurchaseOrderItem {
   createdAt       DateTime @default(now())
 
   @@map("purchase_order_items")
+}
+
+// ─────────────────────────────────────────────────
+// LABEL QUEUE — Auto-detected + manual label print queue
+// ─────────────────────────────────────────────────
+model LabelQueue {
+  id              Int       @id @default(autoincrement())
+  orgId           String
+  storeId         String?   // null = org-wide master product change
+  masterProductId Int
+  reason          String    // "price_change"|"new_product"|"sale_started"|"sale_ended"|"manual"
+  oldPrice        Decimal?  @db.Decimal(10, 4)
+  newPrice        Decimal?  @db.Decimal(10, 4)
+  status          String    @default("pending")  // "pending"|"printed"|"dismissed"
+  addedAt         DateTime  @default(now())
+  printedAt       DateTime?
+  printedBy       String?   // User.id who printed
+
+  product         MasterProduct @relation(fields: [masterProductId], references: [id])
+
+  @@unique([orgId, storeId, masterProductId, status])
+  @@index([orgId, storeId, status])
+  @@index([orgId, status, reason])
+  @@map("label_queue")
 }
 
