@@ -40,6 +40,7 @@ import { spawnRecurringTasks } from './controllers/taskController.js';
 import labelQueueRoutes  from './routes/labelQueueRoutes.js';
 import integrationRoutes from './routes/integrationRoutes.js';
 import webhookRoutes     from './routes/webhookRoutes.js';
+import storefrontAuthRoutes from './routes/storefrontAuthRoutes.js';
 import { startTokenRefreshScheduler } from './utils/posScheduler.js';
 import { startBillingScheduler } from './services/billingScheduler.js';
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
@@ -105,6 +106,7 @@ app.use('/api/label-queue',    labelQueueRoutes);
 app.use('/api/public',         publicRoutes);
 app.use('/api/tickets',        ticketRoutes);
 app.use('/api/integrations',   integrationRoutes);
+app.use('/api/storefront',     storefrontAuthRoutes);
 app.use('/webhook',            webhookRoutes);      // PUBLIC — no auth middleware
 app.use('/api',                apiRoutes);
 
