@@ -272,7 +272,7 @@ jobs:
       - name: Download installer from GitHub Release
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           DOWNLOADS_DIR="/var/www/Storv_POS_All/frontend/dist/downloads"
@@ -281,16 +281,21 @@ jobs:
           # Remove old installer(s)
           rm -f "$DOWNLOADS_DIR"/*.exe
 
-          # Download the latest .exe from the GitHub Release
-          cd "$DOWNLOADS_DIR"
-          gh release download latest-desktop -p "*.exe" --clobber \
-            -R "$GITHUB_REPOSITORY"
+          # Get the .exe download URL from the latest-desktop release via API
+          REPO="${{ github.repository }}"
+          API_URL="https://api.github.com/repos/${REPO}/releases/tags/latest-desktop"
+          EXE_URL=$(curl -sf -H "Authorization: token ${GITHUB_TOKEN}" "$API_URL" \
+            | grep -oP '"browser_download_url":\s*"\K[^"]+\.exe')
 
-          # Rename to a consistent filename for the website download link
-          for f in *.exe; do
-            if [ "$f" != "StoreVeu-POS-Setup.exe" ]; then
-              mv "$f" StoreVeu-POS-Setup.exe
-            fi
-          done
+          if [ -z "$EXE_URL" ]; then
+            echo "⚠ No .exe found in latest-desktop release — skipping"
+            exit 0
+          fi
 
-          echo "✅ Installer published: $(ls -lh StoreVeu-POS-Setup.exe)"
+          echo "Downloading: $EXE_URL"
+          curl -fSL -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Accept: application/octet-stream" \
+            -o "$DOWNLOADS_DIR/StoreVeu-POS-Setup.exe" \
+            "$EXE_URL"
+
+          echo "✅ Installer published: $(ls -lh $DOWNLOADS_DIR/StoreVeu-POS-Setup.exe)"
