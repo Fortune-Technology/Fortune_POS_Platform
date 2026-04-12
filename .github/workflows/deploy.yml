@@ -115,7 +115,7 @@ jobs:
             APP_DIR="/var/www/Storv_POS_All/$app"
 
             # Nuke anything left over from previous failed deploys
-            sudo rm -rf "$APP_DIR/dist_old"
+            rm -rf "$APP_DIR/dist_old" 2>/dev/null || true
 
             # Move current dist out of the way (rename only works if target doesn't exist)
             if [ -d "$APP_DIR/dist" ]; then
@@ -130,9 +130,9 @@ jobs:
           sudo systemctl reload nginx
           sleep 5
 
-          # Now safe to delete old builds
+          # Now safe to delete old builds (Nginx has released file handles)
           for app in frontend cashier-app admin-app; do
-            sudo rm -rf "/var/www/Storv_POS_All/$app/dist_old" || true
+            rm -rf "/var/www/Storv_POS_All/$app/dist_old" 2>/dev/null || true
           done
 
       # ── Storefront (Next.js) ───────────────────────────────────────────
