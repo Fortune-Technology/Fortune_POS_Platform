@@ -1724,6 +1724,25 @@ export default function ProductForm() {
                         onChange={e => setStoreQty(q => ({ ...q, [activeStore.id]: e.target.value }))} />
                       <span className="pf-qty-unit">units</span>
                     </div>
+                    {isEdit && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: '0.4rem' }}>
+                        {[
+                          { label: '-1', val: -1, color: '#ef4444' },
+                          { label: '-5', val: -5, color: '#ef4444' },
+                          { label: '+1', val: 1, color: '#22c55e' },
+                          { label: '+5', val: 5, color: '#22c55e' },
+                        ].map(btn => (
+                          <button key={btn.label} type="button" onClick={() => {
+                            const cur = parseInt(storeQty[activeStore.id] || '0');
+                            setStoreQty(q => ({ ...q, [activeStore.id]: String(cur + btn.val) }));
+                          }} style={{
+                            padding: '2px 8px', borderRadius: 4, border: `1px solid ${btn.color}30`,
+                            background: `${btn.color}10`, color: btn.color, fontSize: '0.68rem',
+                            fontWeight: 700, cursor: 'pointer',
+                          }}>{btn.label}</button>
+                        ))}
+                      </div>
+                    )}
                     <p style={{ fontSize:'0.68rem', color:'var(--text-muted)', margin:'0.4rem 0 0', lineHeight:1.4 }}>
                       Updates on save. Switch store to edit other locations.
                     </p>
