@@ -4,7 +4,8 @@
       "Bash(npx prisma:*)",
       "Bash(find \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\cashier-app\\\\src\" -name \"*.jsx\" -exec grep -l \"style=\" {} \\\\;)",
       "Bash(find \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\cashier-app\\\\src\" -name \"*.css\" -exec grep -l \"@media\" {} \\\\;)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(findstr /s /n \"type=\\\\\"password\\\\\"\" \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\frontend\\\\src\\\\*.jsx\" \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\admin-app\\\\src\\\\*.jsx\" \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\storefront\\\\*.js\" \"D:\\\\The Fortune Tech Projects\\\\Fortune_POS_Platform\\\\cashier-app\\\\src\\\\*.jsx\")"
     ]
   }
 }

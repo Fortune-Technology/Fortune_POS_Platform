@@ -18,7 +18,7 @@ import {
   Search, User, Users, Phone, Mail, Award, CreditCard, DollarSign,
   RefreshCw, ChevronLeft, ChevronRight, X, Plus, Edit2, Trash2,
   AlertCircle, Check, AlertTriangle,
-  UserCheck,
+  UserCheck, Eye, EyeOff,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -49,6 +49,7 @@ const EMPTY_FORM = {
 
 /* ── CustomerForm modal (create + edit) ───────────────────────────────────── */
 function CustomerForm({ initial: init, onSave, onClose, saving }) {
+  const [showPw, setShowPw] = useState(false);
   const [form, setForm] = useState(() => init ? {
     firstName:            init.firstName        ?? '',
     lastName:             init.lastName         ?? '',
@@ -124,7 +125,10 @@ function CustomerForm({ initial: init, onSave, onClose, saving }) {
           {/* E-Commerce Password */}
           <div className="cust-form-row">
             <label className="cust-label">{init ? 'New Password (leave blank to keep)' : 'E-Commerce Password'}
-              <input className="cust-input" value={form.password} onChange={e => set('password', e.target.value)} type="password" placeholder={init ? '••••••••' : 'Min 6 characters'} autoComplete="new-password" minLength={6} />
+              <div className="cust-pw-wrap">
+                <input className="cust-input" value={form.password} onChange={e => set('password', e.target.value)} type={showPw ? 'text' : 'password'} placeholder={init ? '••••••••' : 'Min 6 characters'} autoComplete="new-password" minLength={6} />
+                <button type="button" className="cust-pw-eye" onClick={() => setShowPw(v => !v)}>{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+              </div>
             </label>
           </div>
 
