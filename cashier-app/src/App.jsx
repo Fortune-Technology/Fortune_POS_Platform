@@ -62,6 +62,18 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
+  // ── Listen for session expiry from API interceptor ───────────────────
+  // Instead of hard-reloading, the API interceptor dispatches a custom event
+  // and we gracefully call logout() to return to the PIN screen.
+  useEffect(() => {
+    const handleExpired = () => {
+      console.warn('[App] Session expired — returning to PIN login');
+      logout();
+    };
+    window.addEventListener('pos-session-expired', handleExpired);
+    return () => window.removeEventListener('pos-session-expired', handleExpired);
+  }, [logout]);
+
   // ── Stale session check on boot ───────────────────────────────────────
   // If the cached cashier session is from a previous day, clear it immediately.
   // This handles the case where the browser was closed overnight without logout.

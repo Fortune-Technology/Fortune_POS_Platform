@@ -288,6 +288,9 @@ export const createCatalogProduct   = (data)   => api.post('/catalog/products', 
 export const updateCatalogProduct   = (id, d)  => api.put(`/catalog/products/${id}`, d).then(r => r.data);
 export const deleteCatalogProduct   = (id)     => api.delete(`/catalog/products/${id}`).then(r => r.data);
 export const bulkUpdateCatalogProducts = (updates) => api.post('/catalog/products/bulk-update', { updates }).then(r => r.data);
+export const bulkDeleteCatalogProducts = (ids, permanent = false) => api.post('/catalog/products/bulk-delete', { ids, permanent }).then(r => r.data);
+export const bulkSetDepartment         = (ids, departmentId)      => api.post('/catalog/products/bulk-department', { ids, departmentId }).then(r => r.data);
+export const bulkToggleActive          = (ids, active)            => api.post('/catalog/products/bulk-active', { ids, active }).then(r => r.data);
 
 // ── Catalog — Store Products ──────────────────────────────────────────────
 export const getStoreInventory      = (params) => api.get('/catalog/store-products', { params }).then(r => r.data);

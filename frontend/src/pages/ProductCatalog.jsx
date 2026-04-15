@@ -11,11 +11,16 @@ import {
   deleteCatalogProduct,
   getCatalogDepartments,
   getCatalogPromotions,
+  bulkDeleteCatalogProducts,
+  bulkSetDepartment,
+  bulkToggleActive,
+  bulkUpdateCatalogProducts,
 } from '../services/api';
 import { toast } from 'react-toastify';
 import {
   Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight,
-  Package, Loader, RefreshCw, Copy,
+  Package, Loader, RefreshCw, Copy, CheckSquare, Square,
+  XCircle, Tag, ToggleLeft, DollarSign, Layers,
 } from 'lucide-react';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 import { SetupGuide } from '../components/SetupGuide';
@@ -70,8 +75,77 @@ export default function ProductCatalog() {
   const [q,           setQ]           = useState('');
   const [filters,     setFilters]     = useState({ departmentId:'', taxClass:'', active:'true' });
   const [page,        setPage]        = useState(1);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkAction,  setBulkAction]  = useState(null); // 'delete' | 'department' | 'active' | 'price' | null
+  const [bulkDeptId,  setBulkDeptId]  = useState('');
+  const [bulkPrice,   setBulkPrice]   = useState('');
+  const [bulkActive,  setBulkActive]  = useState(true);
+  const [bulkSaving,  setBulkSaving]  = useState(false);
 
   const debounceRef = useRef(null);
+
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    setBulkSaving(true);
+    try {
+      await bulkDeleteCatalogProducts([...selectedIds]);
+      toast.success(`${selectedIds.size} product(s) deleted`);
+      clearSelection(); setBulkAction(null);
+      loadProducts(q, page, filters);
+    } catch (e) { toast.error(e.response?.data?.error || 'Bulk delete failed'); }
+    finally { setBulkSaving(false); }
+  };
+
+  const handleBulkDepartment = async () => {
+    if (!bulkDeptId) { toast.error('Select a department'); return; }
+    setBulkSaving(true);
+    try {
+      await bulkSetDepartment([...selectedIds], parseInt(bulkDeptId));
+      toast.success(`${selectedIds.size} product(s) updated`);
+      clearSelection(); setBulkAction(null);
+      loadProducts(q, page, filters);
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); }
+    finally { setBulkSaving(false); }
+  };
+
+  const handleBulkActive = async (active) => {
+    setBulkSaving(true);
+    try {
+      await bulkToggleActive([...selectedIds], active);
+      toast.success(`${selectedIds.size} product(s) set to ${active ? 'active' : 'inactive'}`);
+      clearSelection(); setBulkAction(null);
+      loadProducts(q, page, filters);
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); }
+    finally { setBulkSaving(false); }
+  };
+
+  const handleBulkPrice = async () => {
+    const price = parseFloat(bulkPrice);
+    if (isNaN(price)) { toast.error('Enter a valid price'); return; }
+    setBulkSaving(true);
+    try {
+      await bulkUpdateCatalogProducts([...selectedIds].map(id => ({ id, defaultRetailPrice: price })));
+      toast.success(`${selectedIds.size} product(s) price updated to $${price.toFixed(2)}`);
+      clearSelection(); setBulkAction(null); setBulkPrice('');
+      loadProducts(q, page, filters);
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); }
+    finally { setBulkSaving(false); }
+  };
 
   const loadSupport = useCallback(async () => {
     try {
@@ -185,6 +259,103 @@ export default function ProductCatalog() {
           </select>
         </div>
 
+        {/* ── Bulk Action Bar ── */}
+        {selectedIds.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 1rem',
+            background: 'rgba(61,86,181,0.08)', border: '1px solid rgba(61,86,181,0.2)',
+            borderRadius: 8, marginBottom: '0.75rem',
+          }}>
+            <CheckSquare size={15} color="var(--accent-primary)" />
+            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--accent-primary)' }}>
+              {selectedIds.size} selected
+            </span>
+            <div style={{ flex: 1 }} />
+            <button className="p-btn p-btn-danger p-btn-xs" onClick={() => setBulkAction('delete')}>
+              <Trash2 size={11} /> Delete
+            </button>
+            <button className="p-btn p-btn-secondary p-btn-xs" onClick={() => setBulkAction('department')}>
+              <Layers size={11} /> Set Dept
+            </button>
+            <button className="p-btn p-btn-secondary p-btn-xs" onClick={() => setBulkAction('price')}>
+              <DollarSign size={11} /> Set Price
+            </button>
+            <button className="p-btn p-btn-secondary p-btn-xs" onClick={() => handleBulkActive(true)}>
+              <ToggleLeft size={11} /> Activate
+            </button>
+            <button className="p-btn p-btn-ghost p-btn-xs" onClick={() => handleBulkActive(false)}>
+              Deactivate
+            </button>
+            <button className="p-btn p-btn-ghost p-btn-xs" onClick={clearSelection} style={{ marginLeft: 8 }}>
+              <XCircle size={11} /> Clear
+            </button>
+          </div>
+        )}
+
+        {/* ── Bulk Action Modals ── */}
+        {bulkAction === 'delete' && (
+          <div style={{
+            padding: '1rem', marginBottom: '0.75rem', borderRadius: 8,
+            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+          }}>
+            <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
+              Delete {selectedIds.size} product(s)?
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+              This will soft-delete (mark as inactive + deleted). Products can be recovered by re-importing.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="p-btn p-btn-ghost p-btn-sm" onClick={() => setBulkAction(null)}>Cancel</button>
+              <button className="p-btn p-btn-danger p-btn-sm" onClick={handleBulkDelete} disabled={bulkSaving}>
+                {bulkSaving ? <Loader size={12} className="p-spin" /> : <Trash2 size={12} />} Delete {selectedIds.size} Products
+              </button>
+            </div>
+          </div>
+        )}
+
+        {bulkAction === 'department' && (
+          <div style={{
+            padding: '1rem', marginBottom: '0.75rem', borderRadius: 8,
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>
+              Set department for {selectedIds.size} product(s)
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select className="p-input" style={{ width: 250 }} value={bulkDeptId} onChange={e => setBulkDeptId(e.target.value)}>
+                <option value="">— Select department —</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <button className="p-btn p-btn-ghost p-btn-sm" onClick={() => setBulkAction(null)}>Cancel</button>
+              <button className="p-btn p-btn-primary p-btn-sm" onClick={handleBulkDepartment} disabled={bulkSaving || !bulkDeptId}>
+                {bulkSaving ? <Loader size={12} className="p-spin" /> : <Layers size={12} />} Apply
+              </button>
+            </div>
+          </div>
+        )}
+
+        {bulkAction === 'price' && (
+          <div style={{
+            padding: '1rem', marginBottom: '0.75rem', borderRadius: 8,
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>
+              Set retail price for {selectedIds.size} product(s)
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: 700 }}>$</span>
+                <input className="p-input" type="number" step="0.01" min="0" value={bulkPrice} onChange={e => setBulkPrice(e.target.value)}
+                  placeholder="0.00" style={{ width: 140, paddingLeft: 24 }} />
+              </div>
+              <button className="p-btn p-btn-ghost p-btn-sm" onClick={() => setBulkAction(null)}>Cancel</button>
+              <button className="p-btn p-btn-primary p-btn-sm" onClick={handleBulkPrice} disabled={bulkSaving || !bulkPrice}>
+                {bulkSaving ? <Loader size={12} className="p-spin" /> : <DollarSign size={12} />} Apply
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Table ── */}
         <div className="pc-table-wrap">
           {loading ? (
@@ -206,6 +377,11 @@ export default function ProductCatalog() {
             <table className="pc-table">
               <thead>
                 <tr>
+                  <th style={{ width: 32, padding: '0.35rem 0.5rem' }}>
+                    <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: selectedIds.size === products.length && products.length > 0 ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                      {selectedIds.size === products.length && products.length > 0 ? <CheckSquare size={15} /> : <Square size={15} />}
+                    </button>
+                  </th>
                   {['Product','Pack','Cost','Retail','Margin','Department','Tax','Flags',''].map(h => (
                     <th key={h}>{h}</th>
                   ))}
@@ -215,8 +391,16 @@ export default function ProductCatalog() {
                 {products.map(p => {
                   const dept    = departments.find(d => d.id === p.departmentId);
                   const promos  = activePromos(p.id);
+                  const isSelected = selectedIds.has(p.id);
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} style={isSelected ? { background: 'rgba(61,86,181,0.06)' } : undefined}>
+
+                      {/* Checkbox */}
+                      <td style={{ width: 32, padding: '0.35rem 0.5rem' }}>
+                        <button onClick={() => toggleSelect(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                          {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
+                        </button>
+                      </td>
 
                       {/* Name + brand + UPC */}
                       <td className="pc-td-name"

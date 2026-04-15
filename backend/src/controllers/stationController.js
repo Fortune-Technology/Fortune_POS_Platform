@@ -9,7 +9,7 @@ import prisma  from '../config/postgres.js';
 import { nanoid } from 'nanoid';
 
 const generateCashierToken = (id, extra = {}) =>
-  jwt.sign({ id, ...extra }, process.env.JWT_SECRET, { expiresIn: '12h' });
+  jwt.sign({ id, ...extra }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
 // ── POST /api/pos-terminal/station-register ───────────────────────────────
 // Requires: Bearer token (manager / owner / admin)

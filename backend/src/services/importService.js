@@ -30,9 +30,9 @@ const ALIASES = {
   // Product display — 'description' maps to name (product name), NOT long description
   name:               ['name','title','description','productname','itemdesc','itemdescription','proddesc','itemname','prodname','producttitle'],
   brand:              ['brand','brandname','mfrname'],
-  size:               ['size','itemsize','packsize','unitsize','productsize'],
+  size:               ['size','itemsize','unitsize','productsize'],
   sizeUnit:           ['sizeunit','unit','uom','unitofmeasure','itemuom','item_uom'],
-  pack:               ['pack','casepack','casepacks','casesizecf','units','unitspercase'],
+  pack:               ['pack','casepack','casepacks','casesizecf','units','unitspercase','packsize'],
   casePacks:          ['casepacks','innerpack','packspercase'],
   sellUnitSize:       ['sellunitsize','unitsperpack','countperpack'],
 
@@ -368,13 +368,22 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
   const vendorStrategy = opts.unknownVendorStrategy || 'skip';
 
   let upc       = get('upc');
-  const name    = get('name');
+  let name      = get('name');
 
   // Clean UPC — strip leading underscores/spaces, remove non-numeric chars (keep digits only for standard barcodes)
   if (upc) {
     upc = upc.replace(/^[_\s]+/, ''); // strip leading _ or spaces
     // If it looks like a numeric barcode, strip any remaining non-digits
     if (/^\d/.test(upc)) upc = upc.replace(/[^0-9]/g, '');
+  }
+
+  // Fallback: if no product name, use UPC or SKU as name (common in liquor/beer store exports)
+  if (!name && upc) {
+    name = upc;
+    warnings.push({ field: 'name', message: `No product name — using UPC "${upc}" as name` });
+  } else if (!name && get('sku')) {
+    name = get('sku');
+    warnings.push({ field: 'name', message: `No product name — using SKU as name` });
   }
 
   if (!name)               errors.push({ field: 'name',  message: 'Product name is required' });
@@ -402,10 +411,38 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
   if (deptRes.warn)   warnings.push({ field: 'departmentId', message: deptRes.warn });
   if (vendorRes.warn) warnings.push({ field: 'vendorId',     message: vendorRes.warn });
 
-  // Tax class
-  const taxClass = get('taxClass');
-  if (taxClass && !VALID_TAX_CLASSES.includes(taxClass.toLowerCase())) {
-    warnings.push({ field: 'taxClass', message: `Unknown tax class "${taxClass}" — will be ignored. Valid: ${VALID_TAX_CLASSES.join(', ')}` });
+  // Tax class — accept enum names, OR infer from percentage rates / department
+  let taxClass = get('taxClass');
+  if (taxClass) {
+    const tcLower = taxClass.toLowerCase().trim();
+    if (VALID_TAX_CLASSES.includes(tcLower)) {
+      taxClass = tcLower;
+    } else {
+      // Try to parse as a percentage rate and infer class
+      const pct = parseFloat(tcLower.replace(/[%$,\s]/g, ''));
+      if (!isNaN(pct)) {
+        // Map rate to class: 0% = non_taxable, any positive rate = standard
+        if (pct === 0) taxClass = 'non_taxable';
+        else taxClass = 'standard';
+      } else {
+        // Try common text variants
+        const TAX_TEXT_MAP = {
+          'none': 'none', 'no': 'non_taxable', 'notaxable': 'non_taxable', 'nontaxable': 'non_taxable',
+          'yes': 'standard', 'taxable': 'standard', 'general': 'standard', 'default': 'standard',
+          'beer': 'alcohol', 'wine': 'alcohol', 'liquor': 'alcohol', 'spirits': 'alcohol', 'alc': 'alcohol',
+          'cig': 'tobacco', 'cigarette': 'tobacco', 'tob': 'tobacco',
+          'hot': 'hot_food', 'hotfood': 'hot_food', 'prepared': 'hot_food', 'deli': 'hot_food',
+          'food': 'grocery', 'groc': 'grocery',
+        };
+        const mapped = TAX_TEXT_MAP[tcLower.replace(/[\s_\-]/g, '')];
+        if (mapped) {
+          taxClass = mapped;
+        } else {
+          taxClass = 'standard'; // default to standard if we can't parse
+          warnings.push({ field: 'taxClass', message: `Tax "${get('taxClass')}" treated as "standard"` });
+        }
+      }
+    }
   }
 
   // Age
@@ -447,7 +484,7 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
       defaultCostPrice:   cost,
       defaultRetailPrice: retail,
       defaultCasePrice:   caseP,
-      taxClass:           (taxClass && VALID_TAX_CLASSES.includes(taxClass.toLowerCase())) ? taxClass.toLowerCase() : null,
+      taxClass:           taxClass || null,
       ageRequired:        (age === 18 || age === 21) ? age : null,
       ebtEligible:        parseBool(get('ebtEligible')),
       discountEligible:   parseBool(get('discountEligible'), true),

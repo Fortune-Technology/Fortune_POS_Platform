@@ -36,14 +36,27 @@ api.interceptors.request.use(cfg => {
 // ── Auto-logout on 401 (expired/invalid token) ──────────────────────────────
 // If any API call returns 401, the token is expired — clear the cashier
 // session so the app falls back to the PIN login screen.
+// Debounced: only triggers once even if multiple API calls fail simultaneously.
+let _401pending = false;
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      console.warn('[API] 401 received — clearing cashier session (token expired)');
-      localStorage.removeItem('pos_user');
-      // Force re-render by reloading (Zustand won't react to direct localStorage changes)
-      window.location.reload();
+    if (error.response?.status === 401 && !_401pending) {
+      _401pending = true;
+      console.warn('[API] 401 received — session expired');
+
+      // Debounce: wait 500ms to avoid multiple reloads from concurrent API calls
+      setTimeout(() => {
+        // Only logout if there's actually a stored session (avoid loop on login page)
+        const hasSession = !!localStorage.getItem('pos_user');
+        if (hasSession) {
+          localStorage.removeItem('pos_user');
+          // Dispatch event so React components can react without hard reload
+          window.dispatchEvent(new Event('pos-session-expired'));
+        }
+        _401pending = false;
+      }, 500);
     }
     return Promise.reject(error);
   }
