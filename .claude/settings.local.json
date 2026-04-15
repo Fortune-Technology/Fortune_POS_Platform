@@ -28,7 +28,8 @@
       "Bash(mkdir -p prisma/migrations/0_init)",
       "Bash(xargs grep:*)",
       "Bash(xargs ls:*)",
-      "Bash(grep -c \"@media\" '/d/The Fortune Tech Projects/Fortune_POS_Platform/storefront/styles/'*)"
+      "Bash(grep -c \"@media\" '/d/The Fortune Tech Projects/Fortune_POS_Platform/storefront/styles/'*)",
+      "Bash(grep -l \"editorType\" \"D:/The Fortune Tech Projects/Fortune_POS_Platform/ecom-backend/prisma/migrations/0_init/\"*.sql)"
     ]
   }
 }
