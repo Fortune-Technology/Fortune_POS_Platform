@@ -153,6 +153,11 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           cd /var/www/Storv_POS_All/storefront
+          # Nuke any previous .next that may be owned by root from an earlier
+          # manual fix-up. Next.js' internal build cleanup fails with
+          # "Permission denied" otherwise, aborting the whole deploy.
+          rm -rf .next 2>/dev/null || rm -rf .next
+          chown -R "$USER":"$USER" . 2>/dev/null || true
           rm -f package-lock.json
           # Wipe stale .next — prevents chunk-hash mismatches between a prior
           # build's artifacts and the new build (caused blank-page 404s locally).
