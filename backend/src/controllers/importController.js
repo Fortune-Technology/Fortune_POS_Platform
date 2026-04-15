@@ -137,7 +137,11 @@ export const commitImport = [
       if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
       const type    = req.body.type;
-      const storeId = req.body.storeId || null;
+      // Resolve target store for StoreProduct stock writes.
+      // Priority: explicit body `storeId` → `X-Store-Id` header (active store) → first active store of the org.
+      // Without this fallback, `In Stock` values in the CSV are silently dropped
+      // because the frontend doesn't send a storeId when scope='active'.
+      let storeId = req.body.storeId || req.headers['x-store-id'] || null;
       const opts = {
         duplicateStrategy:     req.body.duplicateStrategy     || 'overwrite',
         unknownDeptStrategy:   req.body.unknownDeptStrategy   || 'skip',
@@ -151,6 +155,17 @@ export const commitImport = [
       const orgId  = getOrgId(req);
       const userId = getUserId(req);
       if (!orgId) return res.status(401).json({ error: 'Cannot determine org' });
+
+      // If still no storeId and this is a product import, fall back to the first
+      // active store in the org so quantityOnHand is written somewhere meaningful.
+      if (!storeId && type === 'products') {
+        const firstStore = await prisma.store.findFirst({
+          where: { orgId, active: true },
+          select: { id: true },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (firstStore) storeId = firstStore.id;
+      }
 
       // 1 — Parse
       const { headers, rows } = parseFile(req.file.buffer, req.file.mimetype, req.file.originalname);
