@@ -45,6 +45,9 @@ import {
   updateMasterProduct,
   deleteMasterProduct,
   bulkUpdateMasterProducts,
+  bulkDeleteMasterProducts,
+  bulkSetDepartment,
+  bulkToggleActive,
   // Product UPCs
   getProductUpcs,
   addProductUpc,
@@ -128,7 +131,10 @@ router.put('/rebates/:id', authorize('superadmin', 'admin', 'owner'), updateReba
 // Search first (must be before /:id)
 router.get('/products/search', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), searchMasterProducts);
 router.get('/products/bulk', authorize('superadmin', 'admin', 'owner', 'manager'), getMasterProducts);
-router.post('/products/bulk-update', authorize('superadmin', 'admin', 'owner', 'manager'), bulkUpdateMasterProducts);
+router.post('/products/bulk-update',     authorize('superadmin', 'admin', 'owner', 'manager'), bulkUpdateMasterProducts);
+router.post('/products/bulk-delete',     authorize('superadmin', 'admin', 'owner'),           bulkDeleteMasterProducts);
+router.post('/products/bulk-department', authorize('superadmin', 'admin', 'owner', 'manager'), bulkSetDepartment);
+router.post('/products/bulk-active',     authorize('superadmin', 'admin', 'owner', 'manager'), bulkToggleActive);
 
 router.get('/products', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getMasterProducts);
 router.post('/products', authorize('superadmin', 'admin', 'owner', 'manager'), createMasterProduct);

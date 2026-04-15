@@ -944,6 +944,75 @@ export const bulkUpdateMasterProducts = async (req, res) => {
   }
 };
 
+// ── Bulk delete (soft — sets active=false and deleted=true) ───────────────────
+export const bulkDeleteMasterProducts = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { ids, permanent = false } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids array is required' });
+    }
+
+    if (permanent) {
+      // Hard delete — removes from database completely
+      // First delete related records
+      await prisma.storeProduct.deleteMany({ where: { masterProductId: { in: ids.map(id => parseInt(id)) } } });
+      await prisma.productUpc.deleteMany({ where: { masterProductId: { in: ids.map(id => parseInt(id)) } } });
+      await prisma.productPackSize.deleteMany({ where: { masterProductId: { in: ids.map(id => parseInt(id)) } } });
+      const result = await prisma.masterProduct.deleteMany({
+        where: { id: { in: ids.map(id => parseInt(id)) }, orgId },
+      });
+      res.json({ success: true, deleted: result.count, type: 'permanent' });
+    } else {
+      // Soft delete — mark as deleted + inactive
+      const result = await prisma.masterProduct.updateMany({
+        where: { id: { in: ids.map(id => parseInt(id)) }, orgId },
+        data: { deleted: true, active: false },
+      });
+      res.json({ success: true, deleted: result.count, type: 'soft' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ── Bulk set department ───────────────────────────────────────────────────────
+export const bulkSetDepartment = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { ids, departmentId } = req.body;
+    if (!Array.isArray(ids) || !departmentId) {
+      return res.status(400).json({ success: false, error: 'ids and departmentId required' });
+    }
+    const result = await prisma.masterProduct.updateMany({
+      where: { id: { in: ids.map(id => parseInt(id)) }, orgId },
+      data: { departmentId: parseInt(departmentId) },
+    });
+    res.json({ success: true, updated: result.count });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ── Bulk toggle active ───────────────────────────────────────────────────────
+export const bulkToggleActive = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { ids, active } = req.body;
+    if (!Array.isArray(ids) || active == null) {
+      return res.status(400).json({ success: false, error: 'ids and active required' });
+    }
+    const result = await prisma.masterProduct.updateMany({
+      where: { id: { in: ids.map(id => parseInt(id)) }, orgId },
+      data: { active: Boolean(active) },
+    });
+    res.json({ success: true, updated: result.count });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // ═══════════════════════════════════════════════════════
 // STORE PRODUCTS
 // ═══════════════════════════════════════════════════════

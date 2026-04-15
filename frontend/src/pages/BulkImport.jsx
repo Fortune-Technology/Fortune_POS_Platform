@@ -783,7 +783,10 @@ export default function BulkImport() {
       if (currentMapping && Object.keys(currentMapping).length) fd.append('mapping', JSON.stringify(currentMapping));
       const data = await previewImport(fd);
       setPreview(data);
-      const applied = data.appliedMapping || data.detectedMapping || {};
+      // If user provided a manual mapping, preserve their choices over auto-detected
+      const applied = currentMapping && Object.keys(currentMapping).length
+        ? { ...(data.appliedMapping || data.detectedMapping || {}), ...currentMapping }
+        : (data.appliedMapping || data.detectedMapping || {});
       setMapping(applied);
       const headers = [...new Set([...Object.values(applied), ...(data.unmappedHeaders || [])])];
       setAllHeaders(headers);
