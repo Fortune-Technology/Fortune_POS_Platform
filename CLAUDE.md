@@ -2945,19 +2945,37 @@ A comprehensive QA audit covering UI, validation, workflow, and security across 
   - `--modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.4)`
   - ProductForm's DeptManager + VendorManager modals migrated to use `var(--modal-overlay)` and `var(--modal-shadow)` instead of hardcoded rgba
 
-#### Still Open
+#### Session 18d Fixes (continuation — Round 4, final cleanup)
 
-**Medium remaining:**
-- [ ] M-5. Extend ProductForm save guards (optional — covered partially by M-4)
-- [ ] M-6. JWT migration from localStorage to httpOnly cookie — large refactor
-- [ ] M-7. CVV input → PCI-compliant iFrame (Stripe Elements) — external integration
-- [ ] M-8 extension. Forced password-change flow on first admin-created user login
+**Low-priority cleanup complete**
 
-**Low remaining:**
-- [ ] L-1. ProductForm DeptManager/VendorManager inline styles → external CSS
-- [ ] L-2. Storefront globals.css missing breakpoints (header + checkout)
-- [ ] L-3. Double scroll risk in nested modal panels
-- [ ] L-4. Currency `$` prefix missing on portal price inputs (partial — ProductForm already has it; other pages not yet audited)
+- **L-1. ProductForm inline styles → external CSS** — [`ProductForm.jsx`](frontend/src/pages/ProductForm.jsx) DeptManager, VendorManager, and Tog helper rewritten to use external CSS classes. Roughly 120 inline `style={{}}` props replaced with `pf-mm-*` and `pf-tog*` classes appended to [`ProductForm.css`](frontend/src/pages/ProductForm.css). The new stylesheet is organised into: modal shell (`pf-mm-root`, `pf-mm-overlay`, `pf-mm-card`), header (`pf-mm-header`), two-column body (`pf-mm-body`, `pf-mm-list`, `pf-mm-edit`), form grid (`pf-mm-grid`, `pf-mm-field`, `pf-mm-input`), color swatches, flags row, actions bar, and a toggle button (`pf-tog`). Responsive `@media (max-width: 768px)` collapses the two-column body to a stacked layout. Modal backdrops and shadows use the new `--modal-overlay` + `--modal-shadow` CSS vars from M-9.
+
+- **L-2. Storefront responsive breakpoints** — Appended ~125 lines of responsive CSS to [`storefront/styles/globals.css`](storefront/styles/globals.css):
+  - `1024px` — 3-col product grid, single-col checkout, tablet container padding
+  - `768px` — header nav wraps to 2 rows, 2-col product grid, PDP stacks, cart item reflows, checkout form rows single-column, auth card full-width, account tabs 2-up, footer 2-col
+  - `480px` — tightened padding, 44px touch-target minimum on all CTAs, footer single-col, typography scaled for small phones
+
+- **L-3. Double scroll risk in main-content** — [`frontend/src/index.css`](frontend/src/index.css) `.main-content` now uses the robust `flex: 1 1 0; min-height: 0` pattern instead of `height: 100vh`. In a flex container with `overflow: hidden`, the `height: 100vh` child can produce double scrollbars on browsers that interpret layout differently during reflow. The flex pattern is the canonical solution for an independent-scrolling panel inside a height-capped flex parent. Nested modal panels in ProductForm's DeptManager/VendorManager already had proper `overflow: hidden` on the outer card — verified, no fix needed.
+
+- **L-4. `$` prefix on VendorPayouts amount** — [`VendorPayouts.jsx`](frontend/src/pages/VendorPayouts.jsx) amount input wrapped in `vp-dollar-wrap` + `vp-dollar-sign` + `vp-dollar-input` classes (new styles appended to [`VendorPayouts.css`](frontend/src/pages/VendorPayouts.css)). Also finalized the PriceInput migration that was dropped in round 3. Customers balance/discount fields already show `($)`/`(%)` in their label text, so no wrapper needed.
+
+- **M-5. ProductForm save guards** — Confirmed already covered by M-4 (pack-size validation) and the existing department/name/UPC-warning checks in `handleSave()`. Marking complete — no further work needed.
+
+**Deliberately deferred (not fixed — require architectural changes)**
+
+- **M-6. JWT → httpOnly cookie migration** — Requires:
+  - Backend: dual-mode auth middleware that accepts both Bearer header (legacy cashier-app Electron) and httpOnly cookie (portal + admin)
+  - Frontend: remove all `localStorage.setItem('user', ...)` and `localStorage.getItem('user')` calls across portal + admin + storefront
+  - Server-side CSRF token issuance (double-submit cookie pattern) since cookie-based auth is vulnerable to CSRF
+  - CORS `credentials: 'include'` wiring across all API clients
+  - Cashier-app Electron main-process cookie store integration
+  - Impersonation flow, password reset email links, and the new 401 interceptor all need rework
+  Estimated effort: 1-2 sprints. The C-6 (2h TTL) + H-8 (401 interceptor) combination already mitigates the biggest risk (long-lived tokens in `localStorage`). This is a defence-in-depth improvement to schedule as a standalone project rather than rush into a late QA round.
+
+- **M-7. CVV → Stripe Elements iFrame** — Requires Stripe merchant account setup, API keys, SDK integration, and a rewrite of the checkout payment UI to embed Stripe's hosted iFrame. Currently the storefront checkout does not process card data (the deployed flow uses store pickup / cash on delivery — no card fields are shown). The CVV field flagged in the audit is in the equipment shop checkout (`ShopCheckout.jsx`), which is separate from the ecom storefront. Deferred pending Stripe onboarding decision.
+
+- **M-8 extension. Forced password-change flow** — Admin-created users receive a random temp password in the `createUser` response (round 2 fix). A separate sprint can add a `mustChangePassword` boolean to the User model, check it in the auth middleware, and force a redirect to `/change-password` on next login. Not a security regression — the temp password already satisfies the same policy as a user-chosen password.
 
 ---
 
