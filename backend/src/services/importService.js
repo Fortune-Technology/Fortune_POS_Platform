@@ -30,16 +30,23 @@ const ALIASES = {
   // Product display — 'description' maps to name (product name), NOT long description
   name:               ['name','title','description','productname','itemdesc','itemdescription','proddesc','itemname','prodname','producttitle'],
   brand:              ['brand','brandname','mfrname'],
-  size:               ['size','itemsize','unitsize','productsize'],
+  size:               ['size','itemsize','productsize'],
   sizeUnit:           ['sizeunit','unit','uom','unitofmeasure','itemuom','item_uom'],
-  pack:               ['pack','casepack','casepacks','casesizecf','units','unitspercase','packsize'],
-  casePacks:          ['casepacks','innerpack','packspercase'],
-  sellUnitSize:       ['sellunitsize','unitsperpack','countperpack'],
+  // ── Pack fields (fix for Case Packs / Pack size collision) ─────────────
+  // IMPORTANT: `packInCase` and `unitPack` are listed BEFORE `pack` so
+  // detectColumns claims "Case Packs" and "Pack size" to the specific
+  // fields first, leaving `pack` as a generic total-units alias.
+  packInCase:         ['packincase','pack_in_case','casepacks','case_packs','casepack','innerpack','packspercase','unitspercase'],
+  unitPack:           ['unitpack','packsize','pack_size','unitsize','unit_size','unitspersellunit','sellunitsize','sell_unit_size','unitsperpack','countperpack'],
+  casePacks:          ['casepacksraw','innerpackraw'],   // kept for manual mapping; aliased by packInCase above
+  sellUnitSize:       ['sellunitsizeraw','unitsperpackraw'], // kept for manual mapping; aliased by unitPack above
+  pack:               ['pack','totalpack','casesizecf','totalunitspercase','totalunits','units'],
 
-  // Pricing
-  defaultCostPrice:   ['cost','unitcost','invoicecost','eachcost','purchaseprice','ourcost','costprice','unitprice'],
-  defaultRetailPrice: ['retail','price','sellprice','retailprice','suggestedretail','msrp','srp','regprice','regretail','reg_retail','normalretail','normal_price'],
-  defaultCasePrice:   ['casecost','caseprice','costpercase','invoicecasecost','regularcost','reg_cost'],
+  // Pricing — aliases ordered by priority (first alias in list wins)
+  defaultCostPrice:   ['unitcost','cost','invoicecost','eachcost','purchaseprice','ourcost','costprice','unitprice'],
+  defaultRetailPrice: ['price','retail','sellprice','retailprice','suggestedretail','msrp','srp','regprice','regretail','reg_retail','normalretail','normal_price'],
+  // Prefer "casecost" (real cost) over "caseprice" (MSRP) so Case Cost wins when both present
+  defaultCasePrice:   ['casecost','case_cost','costpercase','invoicecasecost','caseprice','case_price','regularcost','reg_cost'],
   regMultiple:        ['regmultiple','reg_multiple','regularmultiple'],
 
   // Classification
@@ -143,7 +150,8 @@ const ALIASES = {
 
   // ── Deposits ──
   depositPerUnit:     ['depositperunit','unitdeposit','bottledeposit','bottle_deposit','bottledep'],
-  caseDeposit:        ['casedeposit','case_deposit','casedep'],
+  // `casebottledeposit` added so the common "Case Bottle Deposit" column maps correctly
+  caseDeposit:        ['casedeposit','case_deposit','casedep','casebottledeposit','case_bottle_deposit','casedeposittotal'],
 
   // ── Linked UPC ──
   linkedUpc:          ['linkedupc','caseupc','case_upc','relatedupc','altbarcode','altupc','secondaryupc'],
@@ -255,10 +263,25 @@ export function detectColumns(headers) {
   const mapping = {};
   const normalizedHeaders = headers.map(h => ({ raw: h, norm: normalizeHeader(h) }));
 
+  // A raw header can only be claimed by ONE schema field so we don't
+  // double-map (e.g. "Case Packs" was being claimed by both `pack` and
+  // `casePacks`, causing unpredictable collisions).
+  const claimedHeaders = new Set();
+
+  // Fields are iterated in the order they appear in the ALIASES object.
+  // Within each field, aliases are tried in order so the FIRST alias in
+  // the list has priority (e.g. `defaultCasePrice` tries `casecost`
+  // before `caseprice` so real cost wins over MSRP case price).
   for (const [field, aliases] of Object.entries(ALIASES)) {
-    for (const { raw, norm } of normalizedHeaders) {
-      if (aliases.includes(norm)) {
-        if (!mapping[field]) mapping[field] = raw; // first match wins
+    if (mapping[field]) continue;
+    for (const alias of aliases) {
+      const match = normalizedHeaders.find(
+        h => h.norm === alias && !claimedHeaders.has(h.raw)
+      );
+      if (match) {
+        mapping[field] = match.raw;
+        claimedHeaders.add(match.raw);
+        break;
       }
     }
   }
@@ -452,10 +475,27 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
     warnings.push({ field: 'ageRequired', message: `Age must be 18 or 21 (got "${ageRaw}") — will be ignored` });
   }
 
-  // Pack sizes
-  const packRaw = get('pack');
-  const pack    = parseIntVal(packRaw);
-  if (packRaw && pack === null) warnings.push({ field: 'pack', message: `Invalid pack size "${packRaw}" — will be ignored` });
+  // Pack sizes — read new simplified fields first, fall back to legacy
+  const packRaw        = get('pack');
+  const packInCaseRaw  = get('packInCase');
+  const unitPackRaw    = get('unitPack');
+  const casePacksRaw   = get('casePacks');
+  const sellUnitSizeRaw = get('sellUnitSize');
+
+  let packInCase  = parseIntVal(packInCaseRaw) ?? parseIntVal(casePacksRaw);
+  let unitPack    = parseIntVal(unitPackRaw)   ?? parseIntVal(sellUnitSizeRaw);
+  let pack        = parseIntVal(packRaw);
+
+  if (packRaw && pack === null)              warnings.push({ field: 'pack',       message: `Invalid pack size "${packRaw}" — will be ignored` });
+  if (packInCaseRaw && packInCase === null)  warnings.push({ field: 'packInCase', message: `Invalid packInCase "${packInCaseRaw}" — will be ignored` });
+  if (unitPackRaw && unitPack === null)      warnings.push({ field: 'unitPack',   message: `Invalid unitPack "${unitPackRaw}" — will be ignored` });
+
+  // Compute pack (total units/case) if missing but we know the two parts
+  if (pack === null && packInCase != null && unitPack != null) {
+    pack = packInCase * unitPack;
+  }
+  // Default unitPack to 1 when only packInCase is known (common for "12 singles per case")
+  if (packInCase != null && unitPack === null) unitPack = 1;
 
   if (errors.length > 0) return { valid: false, errors, warnings, cleaned: null };
 
@@ -473,9 +513,13 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
       description:        get('description') || null,
       size:               get('size') || null,
       sizeUnit:           get('sizeUnit') || null,
+      // Legacy pack columns — mirror the new fields for backward compat
       pack:               pack,
-      casePacks:          parseIntVal(get('casePacks')),
-      sellUnitSize:       parseIntVal(get('sellUnitSize')),
+      casePacks:          packInCase,
+      sellUnitSize:       unitPack,
+      // New v2 simplified pack fields — these are what the ProductForm UI reads
+      packInCase:         packInCase,
+      unitPack:           unitPack,
       departmentId:       deptRes.id,
       vendorId:           vendorRes.id,
       // Internal fields stripped before DB write — used by importProductRows for auto-create
