@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wifi, WifiOff, RefreshCw, User, Clock, LogOut, Database, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, User, Clock, LogOut, Database, AlertTriangle, ShieldCheck } from 'lucide-react';
 import StoreveuLogo from '../StoreveuLogo.jsx';
 import { useAuthStore }    from '../../stores/useAuthStore.js';
 import { useStationStore } from '../../stores/useStationStore.js';
@@ -25,7 +25,8 @@ export default function StatusBar({ onRefresh }) {
   const station  = useStationStore(s => s.station);
   const { isOnline, isSyncing, pendingCount, catalogSyncing, catalogSyncedAt, syncError, clearSyncError } = useSyncStore();
   const txNumber = useCartStore(s => s.txNumber);
-  const cartItemCount = useCartStore(s => s.items.length);
+  // Total quantity of items to bag (sum of qty across all lines, not line count)
+  const cartItemCount = useCartStore(s => s.items.reduce((sum, i) => sum + (i.qty || 1), 0));
   const checkLogout   = useAuthStore(s => s.checkLogout);
 
   const [time,          setTime]          = useState(fmtTime());
@@ -59,6 +60,14 @@ export default function StatusBar({ onRefresh }) {
     const id = setInterval(() => setSyncAge(fmtSyncAge(catalogSyncedAt)), 30_000);
     return () => clearInterval(id);
   }, [catalogSyncedAt]);
+
+  // 21+ age-check date: "must be born on or before" for age-restricted sales.
+  // Recalculated with the clock tick so it rolls over at midnight automatically.
+  const age21Date = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 21);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  })();
 
   // Two-tap logout: first tap arms it (3 s window), second tap fires
   const handleLogout = async () => {
@@ -156,6 +165,12 @@ export default function StatusBar({ onRefresh }) {
           )}
         </div>
       )}
+
+      {/* 21+ Age Check — born on or before this date */}
+      <div className="sb-age21" title="Customer must be born on or before this date to purchase 21+ items">
+        <ShieldCheck size={12} />
+        <span>21+: {age21Date}</span>
+      </div>
 
       {/* Clock */}
       <div className="sb-clock">
