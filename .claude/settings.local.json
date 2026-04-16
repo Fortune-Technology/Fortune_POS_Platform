@@ -33,7 +33,10 @@
       "WebFetch(domain:app.theneo.io)",
       "Bash(taskkill /F /IM node.exe)",
       "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2\")",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Read(//c/Program Files/PostgreSQL//**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(reg query:*)"
     ]
   }
 }
