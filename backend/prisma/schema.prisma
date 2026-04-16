@@ -1807,6 +1807,50 @@ model PaymentTransaction {
   @@map("payment_transactions")
 }
 
+// ═══════════════════════════════════════════════════════════════
+// DEJAVOO / iPOSpays — store-scoped merchant credentials
+// One row per store. Managed ONLY via admin panel (superadmin).
+// Credentials encrypted at rest via cryptoVault.js.
+// ═══════════════════════════════════════════════════════════════
+model PaymentMerchant {
+  id               String   @id @default(cuid())
+  orgId            String
+  storeId          String   @unique
+  provider         String   @default("dejavoo")
+  environment      String   @default("uat")
+
+  // ── Dejavoo SPIn (in-person) ──
+  spinTpn          String?
+  spinAuthKey      String?  // encrypted
+  spinBaseUrl      String?
+
+  // ── Dejavoo HPP (online checkout) ──
+  hppMerchantId    String?
+  hppAuthKey       String?  // encrypted
+  hppBaseUrl       String?
+
+  // ── Dejavoo iPOS Transact (card-on-file) ──
+  transactApiKey   String?  // encrypted
+  transactBaseUrl  String?
+
+  // ── Feature flags ──
+  ebtEnabled       Boolean  @default(false)
+  debitEnabled     Boolean  @default(true)
+  tokenizeEnabled  Boolean  @default(false)
+
+  // ── Status / audit ──
+  status           String   @default("active")
+  lastTestedAt     DateTime?
+  lastTestResult   String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  updatedById      String?
+
+  @@index([orgId, storeId])
+  @@map("payment_merchants")
+}
+
 // ─────────────────────────────────────────────────
 // PAYMENT SETTINGS
 // Per-store configuration for card payment behaviour.

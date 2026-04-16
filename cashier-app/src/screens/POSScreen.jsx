@@ -1007,7 +1007,7 @@ export default function POSScreen() {
                       </button>
                     </div>
                   )}
-                  <CartTotals totals={totals} itemCount={items.length} bagCount={bagCount} />
+                  <CartTotals totals={totals} itemCount={items.reduce((s, i) => s + (i.qty || 1), 0)} bagCount={bagCount} />
                   {posConfig.bagFee?.enabled && items.length > 0 && (
                     <BagFeeRow bagCount={bagCount} onIncrement={incrementBags} onDecrement={decrementBags} bagPrice={bagPrice} bagTotal={totals.bagTotal || 0} />
                   )}
@@ -1311,7 +1311,7 @@ export default function POSScreen() {
                   </div>
                 )}
 
-                <CartTotals totals={totals} itemCount={items.length} bagCount={bagCount} />
+                <CartTotals totals={totals} itemCount={items.reduce((s, i) => s + (i.qty || 1), 0)} bagCount={bagCount} />
                 {posConfig.bagFee?.enabled && items.length > 0 && (
                   <BagFeeRow bagCount={bagCount} onIncrement={incrementBags} onDecrement={decrementBags} bagPrice={bagPrice} bagTotal={totals.bagTotal || 0} />
                 )}

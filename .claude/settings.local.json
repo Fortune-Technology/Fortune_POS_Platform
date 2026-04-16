@@ -29,7 +29,10 @@
       "Bash(xargs grep:*)",
       "Bash(xargs ls:*)",
       "Bash(grep -c \"@media\" '/d/The Fortune Tech Projects/Fortune_POS_Platform/storefront/styles/'*)",
-      "Bash(grep -l \"editorType\" \"D:/The Fortune Tech Projects/Fortune_POS_Platform/ecom-backend/prisma/migrations/0_init/\"*.sql)"
+      "Bash(grep -l \"editorType\" \"D:/The Fortune Tech Projects/Fortune_POS_Platform/ecom-backend/prisma/migrations/0_init/\"*.sql)",
+      "WebFetch(domain:app.theneo.io)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2\")"
     ]
   }
 }

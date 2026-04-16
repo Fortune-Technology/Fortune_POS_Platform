@@ -207,6 +207,46 @@ export const getPaymentTerminalForStation = (stationId, storeId) =>
 export const getPaymentSettings = (storeId) =>
   api.get(`/payment/settings/${storeId}`).then(r => r.data?.data || null);
 
+// ── Dejavoo SPIn — In-Store Terminal Payments ────────────────────────────────
+// All Dejavoo card-on-terminal operations. The backend proxies to SPIn REST API.
+// Multi-tenant: backend resolves credentials from stationId → store → PaymentMerchant.
+
+/** Process a card-present sale on the Dejavoo terminal. */
+export const dejavooSale = (body) =>
+  api.post('/payment/dejavoo/sale', body).then(r => r.data);
+
+/** Process a return/refund on the Dejavoo terminal. */
+export const dejavooRefund = (body) =>
+  api.post('/payment/dejavoo/refund', body).then(r => r.data);
+
+/** Void a previous Dejavoo transaction. */
+export const dejavooVoid = (body) =>
+  api.post('/payment/dejavoo/void', body).then(r => r.data);
+
+/** Check EBT balance (SNAP or Cash Benefit). */
+export const dejavooEbtBalance = (body) =>
+  api.post('/payment/dejavoo/ebt-balance', body).then(r => r.data);
+
+/** Abort an in-flight transaction on the terminal (cashier cancels). */
+export const dejavooCancel = (body) =>
+  api.post('/payment/dejavoo/cancel', body).then(r => r.data);
+
+/** Check if the Dejavoo terminal is connected and reachable. */
+export const dejavooTerminalStatus = (body) =>
+  api.post('/payment/dejavoo/terminal-status', body).then(r => r.data);
+
+/** Check status of a specific transaction by referenceId. */
+export const dejavooTransactionStatus = (body) =>
+  api.post('/payment/dejavoo/status', body).then(r => r.data);
+
+/** Settle / close the current batch on the terminal. */
+export const dejavooSettle = (body) =>
+  api.post('/payment/dejavoo/settle', body).then(r => r.data);
+
+/** Get read-only merchant status for the store (no secrets exposed). */
+export const dejavooMerchantStatus = () =>
+  api.get('/payment/dejavoo/merchant-status').then(r => r.data);
+
 // ── Legacy PAX POSLINK (backward compat for un-migrated stations) ──────────
 export const paxSale   = (body) => api.post('/payment/pax/sale',   body).then(r => r.data);
 export const paxVoid   = (body) => api.post('/payment/pax/void',   body).then(r => r.data);
