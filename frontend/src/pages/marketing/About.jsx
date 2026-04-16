@@ -4,7 +4,7 @@ import MarketingNavbar from '../../components/marketing/MarketingNavbar';
 import MarketingFooter from '../../components/marketing/MarketingFooter';
 import MarketingSection from '../../components/marketing/MarketingSection';
 import MarketingButton from '../../components/marketing/MarketingButton';
-import ssLiveDashboard from '../../assets/Store_dashboard/LiveDashboard.png';
+import ssLiveDashboard from '../../assets/Store_Dashboard/LiveDashboard.png';
 import {
   Lightbulb, DollarSign, Brain, ShieldCheck, Layers, WifiOff, TrendingUp, ArrowRight,
 } from 'lucide-react';
