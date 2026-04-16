@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wifi, WifiOff, RefreshCw, User, Clock, LogOut, Database, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, User, Clock, LogOut, Database, AlertTriangle, ShieldCheck } from 'lucide-react';
 import StoreveuLogo from '../StoreveuLogo.jsx';
 import { useAuthStore }    from '../../stores/useAuthStore.js';
 import { useStationStore } from '../../stores/useStationStore.js';
@@ -19,16 +19,29 @@ function fmtSyncAge(isoStr) {
   return `${hrs}h ago`;
 }
 
+/**
+ * Calculate the "must be born on or before" date for age-restricted sales.
+ * Returns a formatted string like "Apr 16, 2005" (today minus 21 years).
+ * Updates every day at midnight automatically via the clock interval.
+ */
+function get21PlusDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 21);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default function StatusBar({ onRefresh }) {
   const cashier  = useAuthStore(s => s.cashier);
   const logout   = useAuthStore(s => s.logout);
   const station  = useStationStore(s => s.station);
   const { isOnline, isSyncing, pendingCount, catalogSyncing, catalogSyncedAt, syncError, clearSyncError } = useSyncStore();
   const txNumber = useCartStore(s => s.txNumber);
-  const cartItemCount = useCartStore(s => s.items.length);
+  // Total quantity of items to bag (sum of qty), not line count
+  const cartItemCount = useCartStore(s => s.items.reduce((sum, i) => sum + (i.qty || 1), 0));
   const checkLogout   = useAuthStore(s => s.checkLogout);
 
   const [time,          setTime]          = useState(fmtTime());
+  const [age21Date,     setAge21Date]     = useState(get21PlusDate());
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [blockMsg,      setBlockMsg]      = useState('');
   const [syncAge,       setSyncAge]       = useState(fmtSyncAge(catalogSyncedAt));
@@ -47,9 +60,12 @@ export default function StatusBar({ onRefresh }) {
     }
   }, []);
 
-  // Clock — update every 10 s
+  // Clock — update every 10 s; also refresh 21+ date (catches midnight rollover)
   useEffect(() => {
-    const id = setInterval(() => setTime(fmtTime()), 10_000);
+    const id = setInterval(() => {
+      setTime(fmtTime());
+      setAge21Date(get21PlusDate());
+    }, 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -156,6 +172,12 @@ export default function StatusBar({ onRefresh }) {
           )}
         </div>
       )}
+
+      {/* 21+ Age Check — born on or before this date */}
+      <div className="sb-age21" title="Customer must be born on or before this date to purchase 21+ items">
+        <ShieldCheck size={12} />
+        <span>21+: {age21Date}</span>
+      </div>
 
       {/* Clock */}
       <div className="sb-clock">
