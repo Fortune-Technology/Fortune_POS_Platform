@@ -760,8 +760,10 @@ export const createMasterProduct = async (req, res) => {
         size:               size || null,
         sizeUnit:           sizeUnit || null,
         pack:               pack         ? parseInt(pack)         : null,
-        casePacks:          casePacks    ? parseInt(casePacks)    : null,
-        sellUnitSize:       sellUnitSize ? parseInt(sellUnitSize) : null,
+        // FIXED: use `!= null` instead of truthiness check so value 0 is preserved.
+        // Previously `packInCase ? parseInt(packInCase) : null` turned 0 into null.
+        casePacks:          casePacks    != null ? parseInt(casePacks)    : null,
+        sellUnitSize:       sellUnitSize != null ? parseInt(sellUnitSize) : null,
         sellUnit:           sellUnit     || null,
         innerPack:          innerPack    ? parseInt(innerPack)    : null,
         unitsPerPack:       unitsPerPack ? parseInt(unitsPerPack) : null,
