@@ -32,7 +32,12 @@
       "Bash(grep -l \"editorType\" \"D:/The Fortune Tech Projects/Fortune_POS_Platform/ecom-backend/prisma/migrations/0_init/\"*.sql)",
       "WebFetch(domain:app.theneo.io)",
       "Bash(taskkill /F /IM node.exe)",
-      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2\")"
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2\")",
+      "Bash(npx esbuild:*)",
+      "Bash(grep -l \"toast\" src/**/*.js src/**/*.jsx)",
+      "Bash(head -20 echo \"---\" grep -l \"superadmin\" prisma/seed*.js)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -c 'Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { \\(Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue\\).OwningProcess -contains $_.Id } | Stop-Process -Force')"
     ]
   }
 }
