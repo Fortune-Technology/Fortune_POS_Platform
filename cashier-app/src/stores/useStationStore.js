@@ -40,11 +40,37 @@ export const useStationStore = create(
       station: null,
 
       setStation: (station) => {
-        backupToDisk(station);
-        set({ station });
+        // Bug-fix: callers across the codebase read `station.id` but the
+        // setup wizard stores it as `stationId`. Mirror the field as an
+        // alias so existing reads (TenderModal, OpenShiftModal, useHardware,
+        // HardwareSettingsModal, POSScreen) work without a sweeping rename.
+        const normalized = station
+          ? { ...station, id: station.id ?? station.stationId ?? null }
+          : null;
+        backupToDisk(normalized);
+        set({ station: normalized });
       },
       clearStation: () => set({ station: null }),
+
+      /**
+       * One-time migration on app boot to back-fill `id` on already-persisted
+       * stations from before this fix shipped. Called from useStationStore
+       * itself via the rehydrate hook below.
+       */
+      _ensureIdAlias: () => set(s => (
+        s.station && !s.station.id && s.station.stationId
+          ? { station: { ...s.station, id: s.station.stationId } }
+          : {}
+      )),
     }),
-    { name: 'pos_station' }
+    {
+      name: 'pos_station',
+      onRehydrateStorage: () => (state) => {
+        // Back-fill `id` alias on stations persisted before the alias fix.
+        if (state?.station && !state.station.id && state.station.stationId) {
+          state.station = { ...state.station, id: state.station.stationId };
+        }
+      },
+    }
   )
 );

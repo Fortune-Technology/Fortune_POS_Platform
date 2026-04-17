@@ -9,6 +9,13 @@
       "cwd": "frontend"
     },
     {
+      "name": "Cashier App",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5174,
+      "cwd": "cashier-app"
+    },
+    {
       "name": "Backend (Node/Express)",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

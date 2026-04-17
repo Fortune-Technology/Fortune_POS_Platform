@@ -194,7 +194,8 @@ export default function LotteryModal({ open, games = [], onClose }) {
                   <button
                     key={p}
                     className={`lm-preset-btn${isSale ? ' lm-preset-btn--sale' : ' lm-preset-btn--payout'}`}
-                    onClick={() => setDisplay(String(p))}
+                    /* Display state stores raw digits (cents). $5 → "500", $20 → "2000". */
+                    onClick={() => setDisplay(String(Math.round(p * 100)))}
                   >
                     ${p}
                   </button>

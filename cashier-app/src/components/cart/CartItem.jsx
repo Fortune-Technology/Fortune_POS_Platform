@@ -132,6 +132,14 @@ export default function CartItem({ item, selected, onSelect, onEdit }) {
               <span>{fmt$(item.unitPrice)} each</span>
             )}
             {!item.taxable && <span>&middot; No Tax</span>}
+            {item.quantityOnHand != null && (
+              <>
+                <span className="ci-upc-sep">&middot;</span>
+                <span className={`ci-onhand ${item.quantityOnHand <= 0 ? 'ci-onhand--out' : item.quantityOnHand <= 5 ? 'ci-onhand--low' : ''}`}>
+                  On hand: {item.quantityOnHand}
+                </span>
+              </>
+            )}
           </div>
         </div>
 

@@ -121,7 +121,7 @@ export const getCatalogSnapshot = async (req, res) => {
           depositRule: { select: { id: true, name: true, depositAmount: true } },
           storeProducts: storeId ? {
             where:  { storeId, active: true },
-            select: { retailPrice: true, costPrice: true, active: true, inStock: true },
+            select: { retailPrice: true, costPrice: true, active: true, inStock: true, quantityOnHand: true },
             take:   1,
           } : false,
         },
@@ -142,6 +142,7 @@ export const getCatalogSnapshot = async (req, res) => {
         sellUnitSize:   p.sellUnitSize,
         casePacks:      p.casePacks,
         retailPrice:    sp?.retailPrice != null ? Number(sp.retailPrice) : (p.defaultRetailPrice != null ? Number(p.defaultRetailPrice) : null),
+        quantityOnHand: sp?.quantityOnHand != null ? Number(sp.quantityOnHand) : null,
         taxable:        p.taxable,
         taxClass:       p.taxClass || p.department?.taxClass || 'grocery',
         ebtEligible:    p.ebtEligible || p.department?.ebtEligible || false,
@@ -233,6 +234,10 @@ export const createTransaction = async (req, res) => {
         storeId,
         cashierId:       req.user.id,
         stationId:       stationId || null,
+        // shiftId intentionally not stored — Transaction model has no shiftId
+        // column. Shift reports query by `createdAt >= shift.openedAt` instead.
+        // Adding the column would require a Prisma migration; tracked as a
+        // P3 backlog item for accurate per-shift filtering.
         txNumber,
         status:          status || 'complete',
         lineItems:       lineItems || [],
@@ -544,22 +549,26 @@ export const listTransactions = async (req, res) => {
       if (amountMax) where.grandTotal.lte = parseFloat(amountMax);
     }
 
-    // Date/time window
+    // Date/time window — use local server day boundaries (matches the
+    // dashboard / employee report fix in Session 7). `new Date('YYYY-MM-DD')`
+    // parses as UTC midnight; calling getFullYear/getMonth/getDate on that
+    // returns LOCAL components, which silently shifts the day window by the
+    // server's UTC offset and hides transactions made after local midnight.
+    // Splitting on `-` and constructing the Date in local time avoids this.
+    const startOfLocalDay = (str) => {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    };
+    const endOfLocalDay = (str) => {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 23, 59, 59, 999);
+    };
     if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (dateFrom) {
-        const d = new Date(dateFrom);
-        where.createdAt.gte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      }
-      if (dateTo) {
-        const d = new Date(dateTo);
-        where.createdAt.lte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-      }
+      if (dateFrom) where.createdAt.gte = startOfLocalDay(dateFrom);
+      if (dateTo)   where.createdAt.lte = endOfLocalDay(dateTo);
     } else if (date) {
-      const d     = new Date(date);
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-      where.createdAt = { gte: start, lte: end };
+      where.createdAt = { gte: startOfLocalDay(date), lte: endOfLocalDay(date) };
     }
 
     const [total, txs] = await Promise.all([

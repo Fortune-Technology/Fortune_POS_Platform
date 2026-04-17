@@ -71,6 +71,7 @@ export default function TenderModal({
   bagFeeInfo     = null,   // { bagTotal, ebtEligible, discountable } | null
   bagCount       = 0,
   bagPrice       = 0,
+  shiftId        = null,   // active Shift.id — attached to the saved transaction
 }) {
   const { items, clearCart, customer, loyaltyRedemption, orderDiscount } = useCartStore();
 
@@ -192,12 +193,11 @@ export default function TenderModal({
   const removeSplit = (id) => setSplits(prev => prev.filter(l => l.id !== id));
 
   const finish = (finalTx, cashChange) => {
-    onComplete?.(finalTx);           // notify POSScreen so it can reprint later
-    if (cashChange > 0.005) {
-      setCompletedTx(finalTx); setCompletedChg(cashChange); setScreen('change');
-    } else {
-      clearCart(); onClose();
-    }
+    // Pass both the tx and the change amount so POSScreen can render
+    // the unified ChangeDueOverlay (with auto-close + scan interrupt).
+    onComplete?.(finalTx, cashChange);
+    clearCart();
+    onClose();
     setSaving(false);
   };
 
@@ -292,6 +292,8 @@ export default function TenderModal({
 
     const payload = {
       localId: nanoid(), storeId, txNumber,
+      stationId: station?.id || null,
+      shiftId: shiftId || null,
       lineItems: txLineItems,
       lotteryItems: items.filter(i => i.isLottery).map(i => ({
         type:   i.lotteryType,

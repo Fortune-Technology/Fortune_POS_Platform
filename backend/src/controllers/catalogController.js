@@ -598,6 +598,7 @@ export const searchMasterProducts = async (req, res) => {
   try {
     const orgId = getOrgId(req);
     const rawQuery = req.query.q?.trim() || '';
+    const storeId = req.query.storeId || null;
     const { skip, take, page, limit } = paginationParams(req.query);
 
     if (!rawQuery) {
@@ -608,6 +609,10 @@ export const searchMasterProducts = async (req, res) => {
     // e.g. "0 80686 00637 4" → "0806860063 74" → digits only → "080686006374"
     const digitsOnlyQuery = rawQuery.replace(/[\s\-\.]/g, '').replace(/\D/g, '');
     const isUpcLike = digitsOnlyQuery.length >= 6 && digitsOnlyQuery.length <= 14;
+
+    const storeProductsInclude = storeId
+      ? { where: { storeId, active: true }, select: { quantityOnHand: true, retailPrice: true, inStock: true }, take: 1 }
+      : false;
 
     // Exact UPC match first (fastest, for barcode scanner)
     // Build all plausible variants so storage format differences never cause a miss.
@@ -632,9 +637,15 @@ export const searchMasterProducts = async (req, res) => {
           depositRule:{ select: { id: true, depositAmount: true } },
           upcs:       { select: { id: true, upc: true, label: true, isDefault: true } },
           packSizes:  { orderBy: { sortOrder: 'asc' } },
+          ...(storeProductsInclude ? { storeProducts: storeProductsInclude } : {}),
         },
       });
-      if (exact) return res.json({ success: true, data: [exact], pagination: { page: 1, limit: 1, total: 1, pages: 1 } });
+      if (exact) {
+        if (storeId && exact.storeProducts?.[0]?.quantityOnHand != null) {
+          exact.quantityOnHand = Number(exact.storeProducts[0].quantityOnHand);
+        }
+        return res.json({ success: true, data: [exact], pagination: { page: 1, limit: 1, total: 1, pages: 1 } });
+      }
     }
 
     // Use the original raw query for text search (name, brand, SKU)
