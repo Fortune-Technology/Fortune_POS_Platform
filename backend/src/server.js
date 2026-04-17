@@ -45,6 +45,7 @@ import webhookRoutes     from './routes/webhookRoutes.js';
 import storefrontAuthRoutes from './routes/storefrontAuthRoutes.js';
 import { startTokenRefreshScheduler } from './utils/posScheduler.js';
 import { startBillingScheduler } from './services/billingScheduler.js';
+import { startShiftScheduler }  from './services/shiftScheduler.js';
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
 
 dotenv.config();
@@ -149,6 +150,7 @@ const startServer = async () => {
 
   startTokenRefreshScheduler();
   startBillingScheduler();
+  startShiftScheduler();
 
   // Recurring task spawner — checks every 15 minutes for tasks due
   setInterval(() => spawnRecurringTasks().catch(() => {}), 15 * 60 * 1000);

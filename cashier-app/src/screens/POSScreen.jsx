@@ -53,6 +53,9 @@ import { useLotteryStore } from '../stores/useLotteryStore.js';
 import { getLotteryBoxes, getPosBranding, logPosEvent } from '../api/pos.js';
 import * as posApi from '../api/pos.js';
 import api from '../api/client.js';
+import { nanoid } from 'nanoid';
+import { playErrorBeep } from '../utils/sound.js';
+import ChangeDueOverlay from '../components/pos/ChangeDueOverlay.jsx';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner.js';
 import { useProductLookup }  from '../hooks/useProductLookup.js';
@@ -94,6 +97,8 @@ export default function POSScreen() {
 
   // Watch catalog sync timestamp so promos reload after every sync
   const catalogSyncedAt   = useSyncStore(s => s.catalogSyncedAt);
+  const isOnline          = useSyncStore(s => s.isOnline);
+  const enqueueTx         = useSyncStore(s => s.enqueue);
 
   const requireManager = useManagerStore(s => s.requireManager);
   const { lookup }     = useProductLookup();
@@ -598,6 +603,23 @@ export default function POSScreen() {
   // ── Barcode scan ─────────────────────────────────────────────────────────
   const handleScan = useCallback(async (raw) => {
     if (scanMode !== 'normal') return;
+
+    // Change-due overlay open → dismiss it and continue (start new transaction)
+    if (changeDueRef.current) {
+      setChangeDueTx(null);
+      setChangeDueAmt(0);
+      setChangeDueRefund(false);
+      // Fall through and process the scan as the first item of a new sale
+    }
+
+    // Tender modal open → reject scan, beep, show toast
+    if (showTenderRef.current) {
+      playErrorBeep();
+      flash('miss');
+      showScanError(raw);
+      return;
+    }
+
     const { product } = await lookup(raw);
     if (!product) {
       flash('miss');
@@ -717,6 +739,143 @@ export default function POSScreen() {
     setTenderInitMethod(null);
     setTenderInitCash(null);
   };
+
+  // ── Change Due Overlay state ────────────────────────────────────────────
+  // When a cash sale completes we render <ChangeDueOverlay /> instead of
+  // showing the change inside TenderModal. The overlay auto-closes after 5s
+  // and any barcode scan dismisses it (and starts a new transaction).
+  const [changeDueTx,     setChangeDueTx]     = useState(null);
+  const [changeDueAmt,    setChangeDueAmt]    = useState(0);
+  const [changeDueRefund, setChangeDueRefund] = useState(false);
+  const changeDueRef = useRef(null);
+  useEffect(() => { changeDueRef.current = changeDueTx; }, [changeDueTx]);
+
+  // Mirror showTender into a ref so handleScan (a useCallback) can read the
+  // current value without being re-created every time the modal opens/closes.
+  const showTenderRef = useRef(false);
+  useEffect(() => { showTenderRef.current = showTender; }, [showTender]);
+
+  const dismissChangeDue = useCallback(() => {
+    setChangeDueTx(null);
+    setChangeDueAmt(0);
+    setChangeDueRefund(false);
+  }, []);
+
+  // Shared post-sale routine — broadcast to display, drawer, receipt, change overlay.
+  const handleSaleCompleted = useCallback((tx, change) => {
+    setLastCompletedTx(tx);
+    publishDisplay({
+      type: 'transaction_complete',
+      txNumber: tx.txNumber,
+      change: change || tx.changeGiven || 0,
+    });
+
+    const hasCashTender = tx.tenderLines?.some(t => t.method === 'cash');
+    if (hasCashTender && hasCashDrawer) {
+      openDrawer().catch(() => {});
+    }
+
+    // Non-cash auto-print (cash flow uses the overlay's Print button)
+    if (!hasCashTender && hasReceiptPrinter) {
+      const printBehavior = storeBranding.receiptPrintBehavior || 'always';
+      if (printBehavior === 'always') {
+        handlePrintTx(tx);
+      } else if (printBehavior === 'ask') {
+        setReceiptAskTx(tx);
+      }
+    }
+
+    // Show ChangeDueOverlay whenever cash was tendered (refund or change)
+    const refund = (tx.grandTotal ?? 0) < -0.005;
+    if (refund || (change && change > 0.005) || hasCashTender) {
+      setChangeDueTx(tx);
+      setChangeDueAmt(refund ? Math.abs(tx.grandTotal) : (change || 0));
+      setChangeDueRefund(refund);
+    }
+  }, [hasCashDrawer, hasReceiptPrinter, openDrawer, publishDisplay, storeBranding, handlePrintTx]);
+
+  // Quick-cash submit — bypasses TenderModal entirely.
+  // Used by on-screen quick-cash buttons and the plain CASH button (exact total).
+  const quickCashSubmit = useCallback(async (cashAmt) => {
+    if (!items.length) return;
+    if (!storeId) return;
+
+    const grandTotal = totals.grandTotal;
+    const isRefund   = grandTotal < -0.005;
+
+    // For refunds (net-negative cart, e.g. bottle returns): cash goes OUT
+    // to the customer. Record cash tender as the absolute amount (matches
+    // TenderModal.complete() refund semantics) and "change" is what's
+    // physically handed back.
+    let tendered, change;
+    if (isRefund) {
+      const absRefund = Math.abs(grandTotal);
+      tendered = absRefund;          // line records cash disbursed
+      change   = absRefund;           // overlay shows the refund amount
+    } else {
+      tendered = Math.max(Number(cashAmt) || 0, grandTotal);
+      change   = Math.max(0, Math.round((tendered - grandTotal) * 100) / 100);
+    }
+
+    const txNumber = `TXN-${Date.now().toString(36).toUpperCase()}`;
+    const txLineItems = items.filter(i => !i.isLottery);
+    if (bagCount > 0 && bagPrice > 0) {
+      const bt = Math.round(bagCount * bagPrice * 100) / 100;
+      txLineItems.push({
+        isBagFee:        true,
+        name:            'Bag Fee',
+        qty:             bagCount,
+        unitPrice:       bagPrice,
+        effectivePrice:  bagPrice,
+        lineTotal:       bt,
+        depositTotal:    0,
+        taxable:         false,
+        ebtEligible:     posConfig.bagFee?.ebtEligible || false,
+        discountEligible:false,
+      });
+    }
+
+    const finalLines = isRefund
+      ? [{ method: 'cash', amount: tendered, note: 'Refund/Bottle Return' }]
+      : [{ method: 'cash', amount: tendered }];
+    const payload = {
+      localId: nanoid(),
+      storeId,
+      stationId: station?.id || null,
+      shiftId: shift?.id || null,
+      txNumber,
+      lineItems: txLineItems,
+      lotteryItems: items.filter(i => i.isLottery).map(i => ({
+        type:   i.lotteryType,
+        amount: Math.abs(i.lineTotal),
+        gameId: i.gameId || undefined,
+        notes:  i.name,
+      })),
+      tenderLines: finalLines,
+      changeGiven: change,
+      offlineCreatedAt: new Date().toISOString(),
+      ...(customer?.id ? { customerId: customer.id } : {}),
+      ...(loyaltyRedemption ? { loyaltyPointsRedeemed: loyaltyRedemption.pointsCost } : {}),
+      ...totals,
+    };
+
+    let savedTx = payload;
+    try {
+      if (isOnline) {
+        const saved = await submitTransaction(payload);
+        savedTx = { ...payload, id: saved.id, txNumber: saved.txNumber || txNumber };
+      } else {
+        await enqueueTx(payload);
+        savedTx = { ...payload };
+      }
+    } catch {
+      try { await enqueueTx(payload); } catch {}
+      savedTx = { ...payload };
+    }
+
+    clearCart();
+    handleSaleCompleted(savedTx, change);
+  }, [items, totals, storeId, bagCount, bagPrice, posConfig.bagFee, customer, loyaltyRedemption, isOnline, enqueueTx, clearCart, handleSaleCompleted]);
 
   // ── Flash background ─────────────────────────────────────────────────────
   const flashBg = flashState === 'hit'
@@ -1116,7 +1275,7 @@ export default function POSScreen() {
                         <div style={{ fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', marginBottom: 5 }}>QUICK CASH</div>
                         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                           {cp.map((amt, i) => (
-                            <button key={amt} onClick={() => openTender('cash', amt)} style={{ padding: '0.3rem 0.65rem', borderRadius: 7, background: i < 2 ? 'rgba(245,158,11,.08)' : 'var(--bg-input)', border: `1px solid ${i < 2 ? 'rgba(245,158,11,.3)' : 'var(--border)'}`, color: i < 2 ? 'var(--amber)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}>
+                            <button key={amt} onClick={() => quickCashSubmit(amt)} style={{ padding: '0.3rem 0.65rem', borderRadius: 7, background: i < 2 ? 'rgba(245,158,11,.08)' : 'var(--bg-input)', border: `1px solid ${i < 2 ? 'rgba(245,158,11,.3)' : 'var(--border)'}`, color: i < 2 ? 'var(--amber)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}>
                               {fmt$(amt)}
                             </button>
                           ))}
@@ -1138,7 +1297,7 @@ export default function POSScreen() {
                       >
                         <CreditCard size={16} /><span>CARD</span>
                       </button>
-                      <button onClick={() => openTender('cash')} style={{ height: 56, borderRadius: 12, background: 'rgba(122,193,67,.12)', border: '1px solid rgba(122,193,67,.3)', color: 'var(--green)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, transition: 'background .1s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(122,193,67,.2)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(122,193,67,.12)'; }}>
+                      <button onClick={() => quickCashSubmit(totals.grandTotal)} style={{ height: 56, borderRadius: 12, background: 'rgba(122,193,67,.12)', border: '1px solid rgba(122,193,67,.3)', color: 'var(--green)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, transition: 'background .1s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(122,193,67,.2)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(122,193,67,.12)'; }}>
                         <Banknote size={16} /><span>CASH</span>
                       </button>
                       {showEbtButton && (
@@ -1449,7 +1608,7 @@ export default function POSScreen() {
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                         {/* Exact amount button — shows dollar figure, not the word "Exact" */}
                         <button
-                          onClick={() => openTender('cash', total)}
+                          onClick={() => quickCashSubmit(total)}
                           style={{
                             padding: '0.3rem 0.65rem', borderRadius: 7,
                             background: 'var(--bg-input)',
@@ -1467,7 +1626,7 @@ export default function POSScreen() {
                         {cashPresets.map((amt, i) => (
                           <button
                             key={amt}
-                            onClick={() => openTender('cash', amt)}
+                            onClick={() => quickCashSubmit(amt)}
                             style={{
                               padding: '0.3rem 0.65rem', borderRadius: 7,
                               background: i < 2 ? 'rgba(245,158,11,.08)' : 'var(--bg-input)',
@@ -1528,7 +1687,7 @@ export default function POSScreen() {
 
                     {/* CASH */}
                     <button
-                      onClick={() => openTender('cash')}
+                      onClick={() => quickCashSubmit(totals.grandTotal)}
                       style={{
                         height: 56, borderRadius: 12,
                         background: 'rgba(122,193,67,.12)',
@@ -1731,35 +1890,19 @@ export default function POSScreen() {
           bagPrice={bagPrice}
           onClose={closeTender}
           onPrint={hasReceiptPrinter ? handlePrintTx : undefined}
-          onComplete={(tx) => {
-            setLastCompletedTx(tx);
+          onComplete={(tx, change) => handleSaleCompleted(tx, change)}
+        />
+      )}
 
-            // ── Broadcast transaction complete to customer display ─────────
-            publishDisplay({
-              type: 'transaction_complete',
-              txNumber: tx.txNumber,
-              change: tx.changeGiven || 0,
-            });
-
-            // ── Auto-open cash drawer on cash payment ──────────────────────
-            const hasCashTender = tx.tenderLines?.some(t => t.method === 'cash');
-            if (hasCashTender && hasCashDrawer) {
-              openDrawer().catch(() => {});
-            }
-
-            // ── Receipt printing — for cash transactions the change-due screen
-            //    shows Print / Skip so the cashier controls it there.
-            //    For non-cash (card, EBT, etc.) use the store-level setting.
-            if (!hasCashTender && hasReceiptPrinter) {
-              const printBehavior = storeBranding.receiptPrintBehavior || 'always';
-              if (printBehavior === 'always') {
-                handlePrintTx(tx);
-              } else if (printBehavior === 'ask') {
-                setReceiptAskTx(tx);
-              }
-              // 'never' → do nothing
-            }
-          }}
+      {/* Change-due overlay — shown after every cash sale (quick or modal). */}
+      {/* Auto-closes after 5s; any barcode scan dismisses it via handleScan. */}
+      {changeDueTx && (
+        <ChangeDueOverlay
+          tx={changeDueTx}
+          changeDue={changeDueAmt}
+          isRefund={changeDueRefund}
+          onClose={dismissChangeDue}
+          onPrint={hasReceiptPrinter ? handlePrintTx : undefined}
         />
       )}
 
@@ -1867,7 +2010,7 @@ export default function POSScreen() {
       )}
 
       {showRefund && (
-        <RefundModal onClose={() => setShowRefund(false)} />
+        <RefundModal storeId={storeId} onClose={() => setShowRefund(false)} />
       )}
 
       {showEndOfDay && (

@@ -120,6 +120,7 @@ export const useCartStore = create((set, get) => ({
         depositRuleId:    product.depositRuleId || null,
         departmentId:     product.departmentId || null,
         discountEligible: product.discountEligible !== false,
+        quantityOnHand:   product.quantityOnHand != null ? Number(product.quantityOnHand) : null,
         priceOverridden:  false,
         discountType:     null,
         discountValue:    null,

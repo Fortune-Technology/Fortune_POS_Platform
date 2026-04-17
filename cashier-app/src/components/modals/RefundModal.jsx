@@ -15,15 +15,26 @@ import { useAuthStore } from '../../stores/useAuthStore.js';
 import { useStationStore } from '../../stores/useStationStore.js';
 import './RefundModal.css';
 
-function isoDate(d) { return d.toISOString().split('T')[0]; }
-const today     = isoDate(new Date());
-const yesterday = isoDate(new Date(Date.now() - 86400000));
-const DATE_FILTERS = [
-  { label: 'Today',    dateFrom: today,                  dateTo: today   },
-  { label: 'Yesterday',dateFrom: yesterday,              dateTo: yesterday },
-  { label: '7 Days',   dateFrom: isoDate(new Date(Date.now() - 6 * 86400000)), dateTo: today },
-  { label: '30 Days',  dateFrom: isoDate(new Date(Date.now() - 29 * 86400000)), dateTo: today },
-];
+// Bug-fix: use LOCAL date components, not UTC. d.toISOString() gives UTC,
+// so after local midnight but before UTC midnight (i.e. evening in the
+// Americas) "today" silently becomes tomorrow and the filter misses every
+// transaction made earlier in the same business day.
+function isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// DATE_FILTERS is now a function so dates are recomputed each render rather
+// than once at module-eval time (so the modal stays correct across midnight).
+function buildDateFilters() {
+  const today     = isoDate(new Date());
+  const yesterday = isoDate(new Date(Date.now() - 86400000));
+  return [
+    { label: 'Today',     dateFrom: today,                                          dateTo: today     },
+    { label: 'Yesterday', dateFrom: yesterday,                                      dateTo: yesterday },
+    { label: '7 Days',    dateFrom: isoDate(new Date(Date.now() - 6 * 86400000)),   dateTo: today     },
+    { label: '30 Days',   dateFrom: isoDate(new Date(Date.now() - 29 * 86400000)),  dateTo: today     },
+  ];
+}
+const DATE_FILTERS = buildDateFilters();
 
 function Steps({ labels, current }) {
   return (

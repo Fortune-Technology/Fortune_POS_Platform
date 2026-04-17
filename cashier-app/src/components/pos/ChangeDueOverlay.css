@@ -1,0 +1,158 @@
+/* ChangeDueOverlay.css — prefix: cdo- */
+
+.cdo-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.cdo-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-panel, #15182a);
+  border: 1px solid rgba(122, 193, 67, 0.3);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+  animation: cdo-pop 0.18s ease-out;
+}
+
+@keyframes cdo-pop {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.cdo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1rem 1.25rem;
+  background: rgba(122, 193, 67, 0.1);
+  border-bottom: 1px solid rgba(122, 193, 67, 0.2);
+}
+.cdo-header--refund {
+  background: rgba(52, 211, 153, 0.1);
+  border-bottom-color: rgba(52, 211, 153, 0.2);
+}
+
+.cdo-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--green, #7ac143);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f1117;
+}
+
+.cdo-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--green, #7ac143);
+}
+.cdo-title--refund {
+  color: #34d399;
+}
+
+.cdo-tx {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.cdo-amount-block {
+  padding: 1.5rem 1.5rem 0.75rem;
+  text-align: center;
+}
+
+.cdo-amount-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 8px;
+}
+
+.cdo-amount {
+  font-size: 4.5rem;
+  font-weight: 900;
+  color: var(--green, #7ac143);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.cdo-amount--refund {
+  color: #34d399;
+}
+
+.cdo-tender-summary {
+  margin: 0.5rem 1.25rem 0.75rem;
+  background: var(--bg-input, rgba(255, 255, 255, 0.04));
+  border-radius: 10px;
+  padding: 0.6rem 0.875rem;
+}
+
+.cdo-tender-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 2px;
+}
+.cdo-tender-row:last-child { margin-bottom: 0; }
+
+.cdo-actions {
+  padding: 0 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cdo-btn {
+  width: 100%;
+  padding: 0.95rem;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: filter 0.1s, transform 0.1s;
+  border: 1px solid transparent;
+}
+.cdo-btn:active {
+  transform: scale(0.98);
+}
+
+.cdo-btn--primary {
+  background: var(--green, #7ac143);
+  color: #0f1117;
+  border: none;
+}
+.cdo-btn--primary:hover {
+  filter: brightness(1.05);
+}
+
+.cdo-btn--ghost {
+  background: var(--bg-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.9rem;
+  padding: 0.875rem;
+}
+
+.cdo-countdown {
+  padding: 0 1.25rem 1.1rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted, #6b7280);
+  letter-spacing: 0.02em;
+}

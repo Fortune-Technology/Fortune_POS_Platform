@@ -315,6 +315,19 @@
   background: rgba(59, 130, 246, 0.3);
 }
 
+/* ── On-hand quantity badge ── */
+.ci-onhand {
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+.ci-onhand--low {
+  color: #f59e0b;
+}
+.ci-onhand--out {
+  color: #ef4444;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .ci-name {
