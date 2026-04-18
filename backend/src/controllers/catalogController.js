@@ -560,6 +560,9 @@ export const getMasterProducts = async (req, res) => {
     const orgId = getOrgId(req);
     const { skip, take, page, limit } = paginationParams(req.query);
     const includeDeleted = req.query.includeDeleted === 'true';
+    // When a storeId is supplied (X-Store-Id header or ?storeId param), include
+    // that store's StoreProduct row so the catalog list can show On-Hand etc.
+    const storeId = req.query.storeId || req.headers['x-store-id'] || req.storeId || null;
 
     const where = {
       orgId,
@@ -576,6 +579,13 @@ export const getMasterProducts = async (req, res) => {
           department: { select: { id: true, name: true, code: true, taxClass: true } },
           vendor:     { select: { id: true, name: true, code: true } },
           depositRule:{ select: { id: true, name: true, depositAmount: true } },
+          ...(storeId && {
+            storeProducts: {
+              where: { storeId },
+              select: { quantityOnHand: true, retailPrice: true, costPrice: true, inStock: true },
+              take: 1,
+            },
+          }),
         },
         orderBy: { name: 'asc' },
         skip,
@@ -584,9 +594,23 @@ export const getMasterProducts = async (req, res) => {
       prisma.masterProduct.count({ where }),
     ]);
 
+    // Flatten the per-store fields onto the product object for easier consumption.
+    const enriched = storeId
+      ? products.map(p => {
+          const sp = p.storeProducts?.[0];
+          return {
+            ...p,
+            quantityOnHand: sp?.quantityOnHand != null ? Number(sp.quantityOnHand) : null,
+            storeRetailPrice: sp?.retailPrice != null ? Number(sp.retailPrice) : null,
+            storeCostPrice: sp?.costPrice != null ? Number(sp.costPrice) : null,
+            inStock: sp?.inStock ?? null,
+          };
+        })
+      : products;
+
     res.json({
       success: true,
-      data: products,
+      data: enriched,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (err) {
