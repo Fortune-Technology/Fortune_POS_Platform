@@ -7,8 +7,34 @@
 
 import bcrypt from 'bcryptjs';
 import prisma from '../config/postgres.js';
+import { syncUserDefaultRole } from '../rbac/permissionService.js';
 
-const ALLOWED_ROLES = ['admin', 'manager', 'cashier'];
+// Role keys that cannot be assigned via Invite / Role-change UI.
+// Owner is set only on org creation; superadmin is platform-level.
+const FIXED_ROLE_KEYS = ['owner', 'superadmin'];
+
+// Roles that are restricted to exactly one store.
+const SINGLE_STORE_ROLE_KEYS = new Set(['cashier']);
+
+/**
+ * Verify that `roleKey` is an assignable role (system or org-custom) for
+ * this org. Returns the Role row or null.
+ */
+async function resolveAssignableRole(orgId, roleKey) {
+  if (!roleKey) return null;
+  if (FIXED_ROLE_KEYS.includes(roleKey)) return null;
+  return prisma.role.findFirst({
+    where: {
+      key: roleKey,
+      status: 'active',
+      scope: 'org',
+      OR: [
+        { orgId: null, isSystem: true },      // built-in system roles
+        { orgId },                            // org-specific custom roles
+      ],
+    },
+  });
+}
 
 /* ── GET /api/users  — list all users in this org ───────────────────────── */
 export const getTenantUsers = async (req, res, next) => {
@@ -90,13 +116,14 @@ export const inviteUser = async (req, res, next) => {
     }
 
     const effectiveRole = role || 'cashier';
-    if (!ALLOWED_ROLES.includes(effectiveRole)) {
-      return res.status(400).json({ error: `Invalid role. Choose: ${ALLOWED_ROLES.join(', ')}` });
+    const roleRow = await resolveAssignableRole(req.orgId, effectiveRole);
+    if (!roleRow) {
+      return res.status(400).json({ error: `Role "${effectiveRole}" is not assignable. Create it in Roles & Permissions or pick an active role.` });
     }
 
     const storeList = Array.isArray(storeIds) ? storeIds.filter(Boolean) : [];
-    if (effectiveRole === 'cashier' && storeList.length !== 1) {
-      return res.status(400).json({ error: 'Cashiers must be assigned to exactly one store.' });
+    if (SINGLE_STORE_ROLE_KEYS.has(effectiveRole) && storeList.length !== 1) {
+      return res.status(400).json({ error: `The "${roleRow.name}" role must be assigned to exactly one store.` });
     }
 
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
@@ -134,6 +161,8 @@ export const inviteUser = async (req, res, next) => {
       },
     });
 
+    await syncUserDefaultRole(user.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
+
     const responseBody = {
       user: {
         id:        user.id,
@@ -163,8 +192,9 @@ export const updateUserRole = async (req, res, next) => {
   try {
     const { role, storeIds } = req.body;
 
-    if (role && !ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ error: `Invalid role. Choose: ${ALLOWED_ROLES.join(', ')}` });
+    if (role) {
+      const rr = await resolveAssignableRole(req.orgId, role);
+      if (!rr) return res.status(400).json({ error: `Role "${role}" is not assignable.` });
     }
 
     const target = await prisma.user.findFirst({
@@ -178,8 +208,8 @@ export const updateUserRole = async (req, res, next) => {
     const effectiveRole = role || target.role;
     const storeList = Array.isArray(storeIds) ? storeIds.filter(Boolean) : undefined;
 
-    if (storeList !== undefined && effectiveRole === 'cashier' && storeList.length !== 1) {
-      return res.status(400).json({ error: 'Cashiers must be assigned to exactly one store.' });
+    if (storeList !== undefined && SINGLE_STORE_ROLE_KEYS.has(effectiveRole) && storeList.length !== 1) {
+      return res.status(400).json({ error: `The "${effectiveRole}" role must be assigned to exactly one store.` });
     }
 
     const data = {};
@@ -203,6 +233,10 @@ export const updateUserRole = async (req, res, next) => {
         stores: { select: { store: { select: { id: true, name: true } } } },
       },
     });
+
+    if (role) {
+      await syncUserDefaultRole(updated.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
+    }
 
     res.json({ ...updated, _id: updated.id, stores: updated.stores.map(us => ({ ...us.store, _id: us.store.id })) });
   } catch (err) {

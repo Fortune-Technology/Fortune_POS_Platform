@@ -24,13 +24,14 @@ import AdminStores from './pages/AdminStores';
 import AdminMerchants       from './pages/AdminMerchants';
 import AdminBilling         from './pages/AdminBilling';
 import AdminChat            from './pages/AdminChat';
+import AdminRoles           from './pages/AdminRoles';
+
+import PermissionRoute from './components/PermissionRoute';
 
 const ProtectedRoute = ({ children }) => {
-  const user = JSON.parse(localStorage.getItem('admin_user'));
-  if (!user || !user.token || user.role !== 'superadmin') {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
+  // Route-level permission checks happen in <PermissionRoute>. This wrapper
+  // just ensures an admin session exists; non-superadmins are redirected.
+  return <PermissionRoute>{children}</PermissionRoute>;
 };
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
         <Route path="/merchants" element={<ProtectedRoute><AdminLayout><AdminMerchants /></AdminLayout></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><AdminLayout><AdminBilling /></AdminLayout></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><AdminLayout><AdminChat /></AdminLayout></ProtectedRoute>} />
+        <Route path="/roles" element={<ProtectedRoute><AdminLayout><AdminRoles /></AdminLayout></ProtectedRoute>} />
 
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

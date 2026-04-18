@@ -140,4 +140,14 @@ export const downloadDatabaseBackup = (target, format = 'sql') =>
 export const getImageRehostStatus = ()           => api.get('/admin/images/rehost-status').then(r => r.data);
 export const triggerImageRehost   = (batchSize)  => api.post('/admin/images/rehost', { batchSize }).then(r => r.data);
 
+// ── RBAC — Roles & Permissions ───────────────────────────────────────────────
+export const getPermissions       = (scope)           => api.get('/roles/permissions', { params: scope ? { scope } : undefined }).then(r => r.data);
+export const listRoles            = (params)          => api.get('/roles', { params }).then(r => r.data);
+export const getRole              = (id)              => api.get(`/roles/${id}`).then(r => r.data);
+export const createRole           = (data, params)    => api.post('/roles', data, { params }).then(r => r.data);
+export const updateRole           = (id, data)        => api.put(`/roles/${id}`, data).then(r => r.data);
+export const deleteRole           = (id)              => api.delete(`/roles/${id}`).then(r => r.data);
+export const getUserRoles         = (userId)          => api.get(`/roles/users/${userId}/roles`).then(r => r.data);
+export const setUserRoles         = (userId, roleIds) => api.put(`/roles/users/${userId}/roles`, { roleIds }).then(r => r.data);
+
 export default api;

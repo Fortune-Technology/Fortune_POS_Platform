@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 import { SetupGuide } from '../components/SetupGuide';
+import { usePermissions } from '../hooks/usePermissions';
 import './ProductCatalog.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -84,6 +85,10 @@ const DEFAULT_VISIBLE_COLS = CATALOG_COLUMNS.filter(c => c.defaultOn).map(c => c
 export default function ProductCatalog() {
   const navigate = useNavigate();
   const setup    = useSetupStatus();
+  const { can } = usePermissions();
+  const canCreate = can('products.create');
+  const canEdit   = can('products.edit');
+  const canDelete = can('products.delete');
   const [guideDismissed, setGuideDismissed] = useState(false);
 
   const [products,    setProducts]    = useState([]);
@@ -343,21 +348,25 @@ export default function ProductCatalog() {
             >
               <Settings size={14} />
             </button>
-            <button
-              onClick={() => setShowDeleteAll(true)}
-              className="pc-add-btn"
-              style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                color: '#ef4444',
-              }}
-              title="Delete all products in this organization"
-            >
-              <Trash2 size={14} /> Delete All
-            </button>
-            <button onClick={() => navigate('/portal/catalog/new')} className="pc-add-btn">
-              <Plus size={14} /> Add Product
-            </button>
+            {canDelete && (
+              <button
+                onClick={() => setShowDeleteAll(true)}
+                className="pc-add-btn"
+                style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#ef4444',
+                }}
+                title="Delete all products in this organization"
+              >
+                <Trash2 size={14} /> Delete All
+              </button>
+            )}
+            {canCreate && (
+              <button onClick={() => navigate('/portal/catalog/new')} className="pc-add-btn">
+                <Plus size={14} /> Add Product
+              </button>
+            )}
           </div>
         </div>
 
@@ -632,16 +641,20 @@ export default function ProductCatalog() {
                       {/* Actions */}
                       <td>
                         <div className="pc-action-btns">
-                          <button title="Edit"
-                            onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}
-                            className="pc-action-btn">
-                            <Edit2 size={13} />
-                          </button>
-                          <button title="Delete"
-                            onClick={() => handleDelete(p)}
-                            className="pc-action-btn delete">
-                            <Trash2 size={13} />
-                          </button>
+                          {canEdit && (
+                            <button title="Edit"
+                              onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}
+                              className="pc-action-btn">
+                              <Edit2 size={13} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button title="Delete"
+                              onClick={() => handleDelete(p)}
+                              className="pc-action-btn delete">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

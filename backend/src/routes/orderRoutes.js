@@ -9,8 +9,9 @@
  */
 
 import { Router } from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   getSuggestions,
   generatePOs,
@@ -34,9 +35,9 @@ const router = Router();
 router.use(protect);
 router.use(scopeToTenant);
 
-const readRoles  = authorize('superadmin', 'admin', 'owner', 'manager');
-const writeRoles = authorize('superadmin', 'admin', 'owner', 'manager');
-const ownerRoles = authorize('superadmin', 'admin', 'owner');
+const readRoles  = requirePermission('vendor_orders.view');
+const writeRoles = requirePermission('vendor_orders.edit', 'vendor_orders.create');
+const ownerRoles = requirePermission('vendor_orders.manage');
 
 // Suggestions (run algorithm)
 router.get('/suggestions', readRoles, getSuggestions);

@@ -508,4 +508,15 @@ export const createLoyaltyReward  = (data)       => api.post('/loyalty/rewards',
 export const updateLoyaltyReward  = (id, data)   => api.put(`/loyalty/rewards/${id}`, data).then(r => r.data);
 export const deleteLoyaltyReward  = (id)         => api.delete(`/loyalty/rewards/${id}`).then(r => r.data);
 
+// ── RBAC — Roles & Permissions ───────────────────────────────────────────────
+export const getPermissions     = (scope)              => api.get('/roles/permissions', { params: scope ? { scope } : undefined }).then(r => r.data);
+export const listRoles          = (params)             => api.get('/roles', { params }).then(r => r.data);
+export const getRole            = (id)                 => api.get(`/roles/${id}`).then(r => r.data);
+export const createRole         = (data)               => api.post('/roles', data).then(r => r.data);
+export const updateRole         = (id, data)           => api.put(`/roles/${id}`, data).then(r => r.data);
+export const deleteRole         = (id)                 => api.delete(`/roles/${id}`).then(r => r.data);
+export const getUserRolesApi    = (userId)             => api.get(`/roles/users/${userId}/roles`).then(r => r.data);
+export const setUserRolesApi    = (userId, roleIds)    => api.put(`/roles/users/${userId}/roles`, { roleIds }).then(r => r.data);
+export const getMyPermissions   = ()                   => api.get('/roles/me/permissions').then(r => r.data);
+
 export default api;

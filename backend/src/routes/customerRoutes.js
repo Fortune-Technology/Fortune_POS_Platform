@@ -1,14 +1,16 @@
 /**
  * Customer Routes — /api/customers
  *
- * Role tiers (matching catalogRoutes.js convention):
- *   Read   — all authenticated roles incl. cashier (for POS customer search)
- *   Write  — manager and above
- *   Delete — owner and above
+ * Permission tiers:
+ *   customers.view   — all authenticated roles incl. cashier
+ *   customers.create — cashier+ (for POS customer quick-add)
+ *   customers.edit   — manager+
+ *   customers.delete — manager+ (soft delete)
  */
 
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   getCustomers,
   getCustomerById,
@@ -19,48 +21,18 @@ import {
 } from '../controllers/customerController.js';
 
 const router = express.Router();
-
-// All routes require a valid JWT (protect also calls scopeToTenant → req.orgId)
 router.use(protect);
 
-// ── Read (cashier-accessible) ─────────────────────────────────────────────────
-router.get(
-  '/',
-  authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'),
-  getCustomers,
-);
+// Read
+router.get('/',            requirePermission('customers.view'),   getCustomers);
+router.get('/:id',         requirePermission('customers.view'),   getCustomerById);
 
-router.get(
-  '/:id',
-  authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'),
-  getCustomerById,
-);
+// Write
+router.post('/',           requirePermission('customers.create'), createCustomer);
+router.put('/:id',         requirePermission('customers.edit'),   updateCustomer);
+router.delete('/:id',      requirePermission('customers.delete'), deleteCustomer);
 
-// ── Write (manager and above) ─────────────────────────────────────────────────
-router.post(
-  '/',
-  authorize('superadmin', 'admin', 'owner', 'manager', 'cashier'),
-  createCustomer,
-);
-
-router.put(
-  '/:id',
-  authorize('superadmin', 'admin', 'owner', 'manager'),
-  updateCustomer,
-);
-
-// ── Soft-delete (owner and above) ─────────────────────────────────────────────
-router.delete(
-  '/:id',
-  authorize('superadmin', 'admin', 'owner', 'manager'),
-  deleteCustomer,
-);
-
-// ── Loyalty points phone-lookup (cashier+ only — prevents customer enumeration) ──
-router.post(
-  '/check-points',
-  authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'),
-  checkPoints,
-);
+// Loyalty points phone-lookup (same as view — never allow anonymous)
+router.post('/check-points', requirePermission('customers.view'), checkPoints);
 
 export default router;

@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   getPublicPlans,
   getMySubscription,
@@ -18,8 +19,8 @@ router.get('/plans', getPublicPlans);
 
 // Protected — org users only
 router.use(protect);
-router.get('/subscription',    getMySubscription);
-router.get('/invoices',        getMyInvoices);
-router.post('/payment-method', savePaymentMethod);
+router.get('/subscription',    requirePermission('billing.view'), getMySubscription);
+router.get('/invoices',        requirePermission('billing.view'), getMyInvoices);
+router.post('/payment-method', requirePermission('billing.edit'), savePaymentMethod);
 
 export default router;

@@ -115,11 +115,18 @@ import AnalyticsHub      from './pages/AnalyticsHub';
 import AccountHub        from './pages/AccountHub';
 import CustomersHub      from './pages/CustomersHub';
 import EndOfDayReport    from './pages/EndOfDayReport';
+import Roles             from './pages/Roles';
 
 // Components
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
+import PermissionRoute from './components/PermissionRoute';
+import Unauthorized from './pages/Unauthorized';
 import { StoreProvider } from './contexts/StoreContext';
+
+// Shorthand: wrap an element in PermissionRoute so it auto-looks-up the
+// required permission via the current pathname (see rbac/routePermissions.js).
+const gated = (el) => <PermissionRoute>{el}</PermissionRoute>;
 
 // Placeholder pages
 const Placeholder = ({ name }) => (
@@ -204,74 +211,78 @@ function App() {
 
         {/* ── Portal routes with shared Layout (sidebar persists) ────── */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          {/* Unauthorized placeholder (used by PermissionRoute fallbacks) */}
+          <Route path="/portal/unauthorized"   element={<Unauthorized />} />
+
           {/* ── Customers & Loyalty Hub (tabbed) ──────────────────────── */}
-          <Route path="/portal/customers-hub"  element={<CustomersHub />} />
+          <Route path="/portal/customers-hub"  element={gated(<CustomersHub />)} />
 
           {/* ── Operations ────────────────────────────────────────────── */}
-          <Route path="/portal/invoice-import"  element={<InvoiceImport />} />
-          <Route path="/portal/inventory-count" element={<InventoryCount />} />
-          <Route path="/portal/price-update"    element={<PriceUpdate />} />
-          <Route path="/portal/fees-mappings"   element={<FeesMappings />} />
-          <Route path="/portal/pos-api"         element={<POSAPI />} />
-          <Route path="/portal/realtime"        element={<RealTimeDashboard />} />
+          <Route path="/portal/invoice-import"  element={gated(<InvoiceImport />)} />
+          <Route path="/portal/inventory-count" element={gated(<InventoryCount />)} />
+          <Route path="/portal/price-update"    element={gated(<PriceUpdate />)} />
+          <Route path="/portal/fees-mappings"   element={gated(<FeesMappings />)} />
+          <Route path="/portal/pos-api"         element={gated(<POSAPI />)} />
+          <Route path="/portal/realtime"        element={gated(<RealTimeDashboard />)} />
           <Route path="/portal/chat"            element={<ChatPage />} />
-          <Route path="/portal/tasks"           element={<TasksPage />} />
-          <Route path="/portal/audit"           element={<AuditLogPage />} />
+          <Route path="/portal/tasks"           element={gated(<TasksPage />)} />
+          <Route path="/portal/audit"           element={gated(<AuditLogPage />)} />
 
           {/* ── Analytics Hub (tabbed) ─────────────────────────────── */}
-          <Route path="/portal/analytics"       element={<AnalyticsHub />} />
-          <Route path="/portal/vendor-orders"   element={<VendorOrderSheet />} />
+          <Route path="/portal/analytics"       element={gated(<AnalyticsHub />)} />
+          <Route path="/portal/vendor-orders"   element={gated(<VendorOrderSheet />)} />
 
           {/* ── Account Hub (tabbed) ──────────────────────────────────── */}
-          <Route path="/portal/account"         element={<AccountHub />} />
-          <Route path="/portal/branding"        element={<StoreBranding />} />
+          <Route path="/portal/account"         element={gated(<AccountHub />)} />
+          <Route path="/portal/roles"           element={gated(<Roles />)} />
+          <Route path="/portal/branding"        element={gated(<StoreBranding />)} />
 
           {/* ── POS Configuration Hub (tabbed) ────────────────────────── */}
-          <Route path="/portal/pos-config"      element={<POSConfig />} />
+          <Route path="/portal/pos-config"      element={gated(<POSConfig />)} />
 
           {/* ── POS Reports Hub (tabbed) ──────────────────────────────── */}
-          <Route path="/portal/pos-reports"     element={<POSReports />} />
-          <Route path="/portal/end-of-day"      element={<EndOfDayReport />} />
+          <Route path="/portal/pos-reports"     element={gated(<POSReports />)} />
+          <Route path="/portal/end-of-day"      element={gated(<EndOfDayReport />)} />
 
           {/* ── Rules & Fees Hub (tabbed) ─────────────────────────────── */}
-          <Route path="/portal/rules"           element={<RulesAndFees />} />
+          <Route path="/portal/rules"           element={gated(<RulesAndFees />)} />
 
           {/* ── Employees ────────────────────────────────────────────── */}
-          <Route path="/portal/employees"       element={<EmployeeManagement />} />
+          <Route path="/portal/employees"       element={gated(<EmployeeManagement />)} />
 
           {/* ── Remaining POS items ───────────────────────────────────── */}
-          <Route path="/portal/vendor-payouts"  element={<VendorPayouts />} />
+          <Route path="/portal/vendor-payouts"  element={gated(<VendorPayouts />)} />
 
           {/* ── Catalog ───────────────────────────────────────────────── */}
-          <Route path="/portal/catalog"          element={<ProductCatalog />} />
-          <Route path="/portal/catalog/new"      element={<ProductForm />} />
-          <Route path="/portal/catalog/edit/:id" element={<ProductForm />} />
-          <Route path="/portal/product-groups"   element={<ProductGroups />} />
-          <Route path="/portal/departments"      element={<Departments />} />
-          <Route path="/portal/vendors"          element={<Vendors />} />
-          <Route path="/portal/vendors/:id"      element={<VendorDetail />} />
-          <Route path="/portal/promotions"       element={<Promotions />} />
-          <Route path="/portal/import"           element={<BulkImport />} />
-          <Route path="/portal/label-queue"    element={<LabelQueue />} />
+          <Route path="/portal/catalog"          element={gated(<ProductCatalog />)} />
+          <Route path="/portal/catalog/new"      element={gated(<ProductForm />)} />
+          <Route path="/portal/catalog/edit/:id" element={gated(<ProductForm />)} />
+          <Route path="/portal/product-groups"   element={gated(<ProductGroups />)} />
+          <Route path="/portal/departments"      element={gated(<Departments />)} />
+          <Route path="/portal/vendors"          element={gated(<Vendors />)} />
+          <Route path="/portal/vendors/:id"      element={gated(<VendorDetail />)} />
+          <Route path="/portal/promotions"       element={gated(<Promotions />)} />
+          <Route path="/portal/import"           element={gated(<BulkImport />)} />
+          <Route path="/portal/label-queue"      element={gated(<LabelQueue />)} />
 
           {/* ── Billing ───────────────────────────────────────────────── */}
-          <Route path="/portal/billing"          element={<BillingPortal />} />
+          <Route path="/portal/billing"          element={gated(<BillingPortal />)} />
 
           {/* ── Lottery ───────────────────────────────────────────────── */}
-          <Route path="/portal/lottery"          element={<Lottery />} />
+          <Route path="/portal/lottery"          element={gated(<Lottery />)} />
 
           {/* ── Fuel ──────────────────────────────────────────────────── */}
-          <Route path="/portal/fuel"             element={<Fuel />} />
-          <Route path="/portal/reports"          element={<ReportsHub />} />
-          <Route path="/portal/support-tickets"  element={<SupportTickets />} />
+          <Route path="/portal/fuel"             element={gated(<Fuel />)} />
+          <Route path="/portal/reports"          element={gated(<ReportsHub />)} />
+          <Route path="/portal/support-tickets"  element={gated(<SupportTickets />)} />
 
           {/* ── Online Store (E-commerce) ──────────────────────────── */}
-          <Route path="/portal/ecom/setup"       element={<EcomSetup />} />
-          <Route path="/portal/ecom/orders"      element={<EcomOrders />} />
-          <Route path="/portal/ecom/analytics"   element={<EcomAnalytics />} />
+          <Route path="/portal/ecom/setup"       element={gated(<EcomSetup />)} />
+          <Route path="/portal/ecom/orders"      element={gated(<EcomOrders />)} />
+          <Route path="/portal/ecom/analytics"   element={gated(<EcomAnalytics />)} />
 
           {/* ── Delivery Platform Integrations ───────────────────────── */}
-          <Route path="/portal/integrations"     element={<IntegrationHub />} />
+          <Route path="/portal/integrations"     element={gated(<IntegrationHub />)} />
 
           {/* ── Placeholders ──────────────────────────────────────────── */}
           <Route path="/portal/products"         element={<Placeholder name="Products" />} />

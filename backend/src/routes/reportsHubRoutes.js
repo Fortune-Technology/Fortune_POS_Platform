@@ -4,6 +4,7 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   getSummaryReport,
   getTaxReport,
@@ -18,6 +19,7 @@ import {
 const router = Router();
 router.use(protect);
 router.use(scopeToTenant);
+router.use(requirePermission('reports.view'));
 
 router.get('/summary',        getSummaryReport);
 router.get('/tax',            getTaxReport);

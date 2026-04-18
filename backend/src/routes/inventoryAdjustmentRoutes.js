@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   createAdjustment,
   listAdjustments,
@@ -16,8 +17,8 @@ const router = Router();
 router.use(protect);
 router.use(scopeToTenant);
 
-router.get('/summary', getAdjustmentSummary);
-router.get('/',        listAdjustments);
-router.post('/',       createAdjustment);
+router.get('/summary', requirePermission('inventory.view'), getAdjustmentSummary);
+router.get('/',        requirePermission('inventory.view'), listAdjustments);
+router.post('/',       requirePermission('inventory.edit'), createAdjustment);
 
 export default router;

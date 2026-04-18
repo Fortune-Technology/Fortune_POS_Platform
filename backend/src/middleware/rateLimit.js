@@ -8,7 +8,25 @@
  * Each limiter keeps a fixed-window counter per IP.
  */
 
+// Development bypass: skip rate limiting entirely when NODE_ENV is
+// 'development' (the default when nodemon runs `npm run dev`), or when the
+// operator sets DISABLE_RATE_LIMIT=true explicitly. In production this is
+// always OFF, so no way to silently run unlimited by accident.
+const isDevBypass =
+  process.env.DISABLE_RATE_LIMIT === 'true' ||
+  process.env.NODE_ENV === 'development';
+
+if (isDevBypass) {
+  // Log once at module load so it's obvious this guard is off
+  console.log('⚠  Rate limiter DISABLED (NODE_ENV=' + (process.env.NODE_ENV || 'unset') + ', DISABLE_RATE_LIMIT=' + (process.env.DISABLE_RATE_LIMIT || 'unset') + ')');
+}
+
 function createLimiter({ windowMs, max, message = 'Too many requests, please try again later.' }) {
+  // Dev bypass — always pass. Cheaper than maintaining counters nobody reads.
+  if (isDevBypass) {
+    return (req, res, next) => next();
+  }
+
   const hits = new Map(); // key -> { count, resetAt }
 
   // Periodic cleanup to avoid unbounded memory.

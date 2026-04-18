@@ -13,7 +13,8 @@ import {
   getMatchAccuracy,
   rematchInvoice,
 } from '../controllers/invoiceController.js';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
@@ -53,24 +54,21 @@ const upload = multer({
 });
 
 router.use(protect);
-router.use(authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'));
 
-// instant-queue: single or multiple separate invoices
-router.post('/queue', upload.array('invoices'), queueUpload);
-// instant-queue: multiple files as ONE multi-page invoice
-router.post('/queue-multipage', upload.array('invoices'), queueMultipageUpload);
+// Writes (upload / confirm / rematch / draft)
+router.post('/queue',           requirePermission('invoices.create'), upload.array('invoices'), queueUpload);
+router.post('/queue-multipage', requirePermission('invoices.create'), upload.array('invoices'), queueMultipageUpload);
+router.post('/upload',          requirePermission('invoices.create'), upload.array('invoices'), uploadInvoices);
+router.post('/confirm',         requirePermission('invoices.edit'),   confirmInvoice);
+router.post('/clear-pos-cache', requirePermission('invoices.edit'),   clearInvoicePOSCache);
+router.patch('/:id/draft',      requirePermission('invoices.edit'),   saveDraft);
+router.post('/:id/rematch',     requirePermission('invoices.edit'),   rematchInvoice);
+router.delete('/drafts/:id',    requirePermission('invoices.delete'), deleteDraft);
 
-// Legacy synchronous upload (kept for compatibility)
-router.post('/upload', upload.array('invoices'), uploadInvoices);
-
-router.post('/confirm', confirmInvoice);
-router.post('/clear-pos-cache', clearInvoicePOSCache);
-router.get('/accuracy', getMatchAccuracy);
-router.get('/history', getInvoiceHistory);
-router.get('/drafts', getInvoiceDrafts);
-router.patch('/:id/draft', saveDraft);
-router.post('/:id/rematch', rematchInvoice);
-router.get('/:id', getInvoiceById);
-router.delete('/drafts/:id', deleteDraft);
+// Reads
+router.get('/accuracy', requirePermission('invoices.view'), getMatchAccuracy);
+router.get('/history',  requirePermission('invoices.view'), getInvoiceHistory);
+router.get('/drafts',   requirePermission('invoices.view'), getInvoiceDrafts);
+router.get('/:id',      requirePermission('invoices.view'), getInvoiceById);
 
 export default router;

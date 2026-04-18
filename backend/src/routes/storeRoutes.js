@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   createStore,
   getStores,
@@ -19,19 +20,19 @@ const router = Router();
 
 router.use(protect); // sets req.user + req.tenantId via scopeToTenant
 
-router.get('/billing-summary', getBillingSummary);
+router.get('/billing-summary', requirePermission('billing.view', 'stores.view'), getBillingSummary);
 
 router.route('/')
-  .get(getStores)
-  .post(createStore);
+  .get(requirePermission('stores.view'),   getStores)
+  .post(requirePermission('stores.create'), createStore);
 
 router.route('/:id')
-  .get(getStoreById)
-  .put(updateStore)
-  .delete(deactivateStore);
+  .get(requirePermission('stores.view'),   getStoreById)
+  .put(requirePermission('stores.edit'),   updateStore)
+  .delete(requirePermission('stores.delete'), deactivateStore);
 
 router.route('/:id/branding')
-  .get(getStoreBranding)
-  .put(updateStoreBranding);
+  .get(requirePermission('stores.view'),  getStoreBranding)
+  .put(requirePermission('stores.edit'),  updateStoreBranding);
 
 export default router;

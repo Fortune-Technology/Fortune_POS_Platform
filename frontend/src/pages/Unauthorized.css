@@ -1,0 +1,54 @@
+/* Unauthorized page — prefix: unauth- */
+.unauth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+.unauth-card {
+  max-width: 440px;
+  text-align: center;
+  padding: 2.5rem 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.06);
+}
+.unauth-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(239,68,68,0.08);
+  color: var(--error, #ef4444);
+}
+.unauth-card h1 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+.unauth-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0.4rem 0;
+}
+.unauth-key {
+  margin-top: 0.5rem !important;
+  font-size: 0.8rem !important;
+}
+.unauth-key code {
+  padding: 0.15rem 0.45rem;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+.unauth-hint {
+  font-size: 0.78rem !important;
+  color: var(--text-muted) !important;
+  margin: 1rem 0 1.5rem !important;
+}
