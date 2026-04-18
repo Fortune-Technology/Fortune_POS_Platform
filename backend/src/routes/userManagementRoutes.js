@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { protect, authorize } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   getTenantUsers,
   inviteUser,
@@ -18,17 +19,17 @@ const router = Router();
 
 router.use(protect);
 
-// List all users in tenant (any authenticated member can view)
-router.get('/', getTenantUsers);
+// List — users.view
+router.get('/', requirePermission('users.view'), getTenantUsers);
 
-// Invite / manage — admin and above only
-router.post('/invite', authorize('superadmin', 'owner', 'admin', 'manager'), inviteUser);
-router.put('/:id/role',  authorize('superadmin', 'admin'), updateUserRole);
-router.delete('/:id',    authorize('superadmin', 'admin'), removeUser);
+// Invite / manage
+router.post('/invite',   requirePermission('users.create'), inviteUser);
+router.put('/:id/role',  requirePermission('users.edit'),   updateUserRole);
+router.delete('/:id',    requirePermission('users.delete'), removeUser);
 
-// POS PIN management — manager and above only
+// POS PIN management — users.edit (manager+)
 router.route('/:id/pin')
-  .put(protect, authorize('manager', 'owner', 'admin', 'superadmin'), requireTenant, setCashierPin)
-  .delete(protect, authorize('manager', 'owner', 'admin', 'superadmin'), requireTenant, removeCashierPin);
+  .put(requirePermission('users.edit'), requireTenant, setCashierPin)
+  .delete(requirePermission('users.edit'), requireTenant, removeCashierPin);
 
 export default router;

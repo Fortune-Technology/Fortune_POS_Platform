@@ -26,6 +26,7 @@ import {
   getCustomers, getCustomerById,
   createCustomer, updateCustomer, deleteCustomer,
 } from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
 
 import { fmtMoney as fmt, fmtDate as fmtDt, fmtDateTime as fmtTs } from '../utils/formatters';
 
@@ -335,6 +336,10 @@ function DeleteConfirm({ customer, onConfirm, onClose, saving }) {
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function Customers({ embedded }) {
+  const { can } = usePermissions();
+  const canCreate = can('customers.create');
+  const canEdit   = can('customers.edit');
+  const canDelete = can('customers.delete');
   const [customers,   setCustomers]   = useState([]);
   const [total,       setTotal]       = useState(0);
   const [totalPages,  setTotalPages]  = useState(1);
@@ -486,9 +491,11 @@ export default function Customers({ embedded }) {
             <RefreshCw size={13} className={loading ? 'cust-spin' : ''} />
             Refresh
           </button>
-          <button className="cust-btn cust-btn-primary" onClick={() => setFormMode('create')}>
-            <Plus size={14} /> Add Customer
-          </button>
+          {canCreate && (
+            <button className="cust-btn cust-btn-primary" onClick={() => setFormMode('create')}>
+              <Plus size={14} /> Add Customer
+            </button>
+          )}
         </div>
       </div>
 
@@ -579,12 +586,16 @@ export default function Customers({ embedded }) {
               {/* Actions */}
               <div className="cust-actions">
                 <button className="cust-btn cust-btn-sm" onClick={() => setViewTarget(c)}>View</button>
-                <button className="cust-btn cust-btn-sm" onClick={() => openEdit(c)} title="Edit">
-                  <Edit2 size={13} />
-                </button>
-                <button className="cust-btn cust-btn-sm cust-btn-danger-ghost" onClick={() => setDeleteTarget(c)} title="Delete">
-                  <Trash2 size={13} />
-                </button>
+                {canEdit && (
+                  <button className="cust-btn cust-btn-sm" onClick={() => openEdit(c)} title="Edit">
+                    <Edit2 size={13} />
+                  </button>
+                )}
+                {canDelete && (
+                  <button className="cust-btn cust-btn-sm cust-btn-danger-ghost" onClick={() => setDeleteTarget(c)} title="Delete">
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             </div>
           ))

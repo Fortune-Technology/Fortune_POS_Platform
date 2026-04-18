@@ -4029,3 +4029,296 @@ Changed default `JWT_ACCESS_TTL` from `2h` to `8h` in `.env` and `.env.example`.
 
 *Last updated: April 2026 — Session 29: Admin UI consistency, button hover fixes, database backup, product image system (Phase 1-3), dashboard showcase, mobile responsiveness, CSS variable centralization*
 
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 30)
+
+### RBAC (Role & Permission Management) — foundation
+
+Backward-compatible RBAC on branch `feature-24/RoleModule`. The legacy `User.role` string column stays in place and keeps every existing `authorize(...)` call working. New code can use permission-based checks in parallel; admins can create custom roles with tailored permission sets via either dashboard.
+
+#### Schema (additive, no breaking changes)
+Four new Prisma models in [schema.prisma](backend/prisma/schema.prisma):
+- **`Permission`** — global catalog (`key`, `module`, `action`, `scope: 'org' | 'admin'`). 133 seeded keys.
+- **`Role`** — system-level (`orgId=null`, `isSystem=true`, seeded) or per-org. Has `status`, `scope`, `key`, `name`, `description`.
+- **`RolePermission`** — m:n.
+- **`UserRole`** — m:n — users may hold **multiple roles**. Effective perms = union.
+
+`User.role` (legacy) is preserved and maps to the matching built-in system role so `authorize()` still passes.
+
+#### Permission catalog ([permissionCatalog.js](backend/src/rbac/permissionCatalog.js))
+30 modules × {view, create, edit, delete} (+ `manage` where relevant) = 133 keys:
+- **Org-scope** (119): dashboard, pos, products, departments, promotions, inventory, vendors, vendor_payouts, vendor_orders, invoices, lottery, fuel, customers, loyalty, transactions, shifts, reports, analytics, predictions, users, roles, stores, organization, pos_config, rules_fees, ecom, support, billing, audit, tasks, chat
+- **Admin-scope** (14): admin_dashboard, admin_users, admin_organizations, admin_stores, admin_analytics, admin_cms, admin_careers, admin_tickets, admin_chat, admin_billing, admin_payments, admin_system, admin_backup, admin_roles
+
+#### Six built-in system roles (seeded, idempotent)
+
+| Role | Scope | # perms | Notes |
+|------|-------|---------|-------|
+| `superadmin` | admin | 133 | Full platform — admin panel only |
+| `owner` / `admin` | org | 90 | Full org access |
+| `manager` | org | 62 | Day-to-day ops + refunds/shifts/reports |
+| `cashier` | org | 16 | POS + customers + lottery/fuel sales |
+| `staff` | org | 1 | Dashboard view only |
+
+Seed: `cd backend && node prisma/seedRbac.js` (safe to re-run; system roles always resync).
+
+#### Backend API — `/api/roles`
+[roleRoutes.js](backend/src/routes/roleRoutes.js):
+- `GET /permissions` — full catalog
+- `GET /` / `GET /:id` — list/get roles (`?scope=admin` for admin panel; `?includeSystem=false` to hide builtins)
+- `POST /` / `PUT /:id` / `DELETE /:id` — CRUD (write = owner/admin/superadmin; system roles refuse edit/delete)
+- `GET /users/:userId/roles` / `PUT /users/:userId/roles` — per-user assignment
+- `GET /me/permissions` — effective permission set for frontend refresh
+
+Login response now includes `permissions: string[]`.
+
+#### New middleware: `requirePermission()`
+```js
+router.post('/products', protect, requirePermission('products.create'), handler);
+```
+Superadmins auto-pass. Multiple keys OR-ed. Use **alongside** legacy `authorize(...)`, not as replacement. Also exports `userHasPermission(req, key)` for inline controller checks and `computeUserPermissions(user)` used by login.
+
+#### Admin panel — `/roles`
+New [AdminRoles.jsx](admin-app/src/pages/AdminRoles.jsx) + [`.css`](admin-app/src/pages/AdminRoles.css) (`ar-` prefix):
+- Tabs: **Admin Panel Roles** | **Store / Org Roles**
+- Card grid with search, status/system badges, user count
+- Create / edit / delete modals with **module-grouped permission checkbox grid** (click module heading to toggle all its actions)
+- System roles view-only. Sidebar: "Roles" link under Management.
+
+#### Portal — `/portal/roles`
+New [Roles.jsx](frontend/src/pages/Roles.jsx) + [`.css`](frontend/src/pages/Roles.css) (`rl-` prefix):
+- Same layout as admin, org-scoped
+- Built-in org-scope system roles listed view-only
+- Org admins create custom roles (e.g. "Inventory Clerk", "Shift Lead") with tailored perm sets
+- Sidebar: "Roles & Permissions" under Account group
+
+#### Portal — User role assignment
+New [UserRolesModal.jsx](frontend/src/components/UserRolesModal.jsx) + [`.css`](frontend/src/components/UserRolesModal.css) (`urm-` prefix):
+- "Roles" button on each user row in [UserManagement.jsx](frontend/src/pages/UserManagement.jsx)
+- Lists active org-scope roles with checkboxes, description, perm count
+- Saves via `PUT /api/roles/users/:userId/roles` (replace-all semantics)
+- Explains that assigned roles are **additive** to the user's legacy primary role
+
+#### Frontend `usePermissions()` hook + `<Can>` component
+New [usePermissions.js](frontend/src/hooks/usePermissions.js):
+```jsx
+const { can, canAny, canAll, refresh } = usePermissions();
+
+<button disabled={!can('products.edit')}>Edit</button>
+
+<Can permission="reports.manage"><ExportButton /></Can>
+<Can anyOf={['products.create','products.edit']} fallback={<p>No access</p>}>
+  <ProductForm />
+</Can>
+```
+Reads from `localStorage.user.permissions`. Falls back to `/api/roles/me/permissions` on mount if missing. Superadmins always return `true`.
+
+#### Multi-tenant & security guards
+- Org admins only see/edit roles with `orgId === req.orgId` (plus built-in org-scope system roles)
+- Org admins cannot assign admin-scope or cross-org roles — API rejects with 403
+- System roles immutable (server-enforced)
+- Deleting a role with ≥1 assigned user blocked with helpful error
+- Permission-scope mismatch rejected (no admin-scope perms on org role)
+
+#### Migration path for existing routes
+**Not done this session.** Every existing `authorize('manager', 'owner', ...)` keeps working because the legacy role maps to a system role with the same perm set. Migrate incrementally:
+```js
+// Before
+router.post('/products', protect, authorize('manager','owner','admin','superadmin'), createProduct);
+// After (equivalent)
+router.post('/products', protect, requirePermission('products.create'), createProduct);
+```
+30+ route files → tackle a few per session, not all at once.
+
+#### Deployment
+1. `cd backend && npx prisma db push` — adds `permissions`, `roles`, `role_permissions`, `user_roles` tables
+2. `cd backend && node prisma/seedRbac.js` — seeds 133 perms + 6 system roles
+3. **Restart backend** — Prisma client needs regen to pick up new models (DLL was locked during session; restart releases it)
+4. Rebuild portal + admin-app — both confirmed clean (16.33s admin, 12.73s portal)
+
+#### Files changed (Session 30)
+
+| File | Change |
+|------|--------|
+| `backend/prisma/schema.prisma` | 4 new models + back-relations on User and Organization |
+| `backend/prisma/seedRbac.js` | NEW — idempotent seeder |
+| `backend/src/rbac/permissionCatalog.js` | NEW — 133-key catalog + system-role grants |
+| `backend/src/rbac/permissionService.js` | NEW — computeUserPermissions, requirePermission, userHasPermission |
+| `backend/src/controllers/roleController.js` | NEW — full CRUD + user-role assignment + /me/permissions |
+| `backend/src/routes/roleRoutes.js` | NEW — /api/roles/* |
+| `backend/src/server.js` | Mount /api/roles |
+| `backend/src/controllers/authController.js` | Login includes `permissions[]` |
+| `admin-app/src/services/api.js` | 8 RBAC API helpers |
+| `admin-app/src/pages/AdminRoles.jsx` + `.css` | NEW — `ar-` prefix |
+| `admin-app/src/App.jsx` | /roles route |
+| `admin-app/src/components/AdminSidebar.jsx` | "Roles" link |
+| `frontend/src/services/api.js` | 9 RBAC API helpers |
+| `frontend/src/pages/Roles.jsx` + `.css` | NEW — `rl-` prefix |
+| `frontend/src/App.jsx` | /portal/roles route |
+| `frontend/src/components/Sidebar.jsx` | "Roles & Permissions" link |
+| `frontend/src/hooks/usePermissions.js` | NEW — hook + `<Can>` |
+| `frontend/src/components/UserRolesModal.jsx` + `.css` | NEW — `urm-` prefix |
+| `frontend/src/pages/UserManagement.jsx` | "Roles" button in user row |
+
+---
+
+*Last updated: April 2026 — Session 30: RBAC module — Role & Permission management, admin + portal UIs, middleware, frontend hook*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 31)
+
+### Production-Level Permission Enforcement — 5 layers
+
+Session 30 shipped the RBAC foundation. This session makes it **actually enforced** across the stack. Every data-mutating route is now permission-gated on the backend, and every UI entry-point is permission-aware on the frontend.
+
+#### Single source of truth: route → permission mapping
+
+New files:
+- [`frontend/src/rbac/routePermissions.js`](frontend/src/rbac/routePermissions.js) — maps every `/portal/*` path to its required permission key (40+ routes). Exports `getRoutePermission(pathname)` which handles dynamic segments like `/portal/catalog/edit/:id`.
+- [`admin-app/src/rbac/routePermissions.js`](admin-app/src/rbac/routePermissions.js) — same for the admin panel (17 routes, all `admin_*.view`).
+
+Used by `<PermissionRoute>` **and** by the Sidebar filter so both stay in lockstep.
+
+#### Layer 1 — Sidebar filters by permission
+
+[`Sidebar.jsx`](frontend/src/components/Sidebar.jsx) and [`AdminSidebar.jsx`](admin-app/src/components/AdminSidebar.jsx) now call `getRoutePermission(item.path)` for every nav item and filter out anything the user can't access. Empty groups collapse entirely.
+
+Verified live: cashier sees only 10 of ~30 sidebar items (Products, Customers, Lottery, Fuel, Transactions, Chat, Label Queue, CSV Transform, Product Groups, Logout). Analytics / Reports / Audit / Account / Vendors / E-commerce / POS Config all hidden.
+
+#### Layer 2 — Route guard blocks direct URL navigation
+
+New [`frontend/src/components/PermissionRoute.jsx`](frontend/src/components/PermissionRoute.jsx) + [`admin-app/src/components/PermissionRoute.jsx`](admin-app/src/components/PermissionRoute.jsx):
+- Not logged in → redirect to `/login`
+- Loading permissions → render null (prevents false-negative flash)
+- Permission known but not granted → render `<Unauthorized />` page
+- Otherwise render children
+
+Used everywhere via a tiny `gated(element)` helper in App.jsx:
+```jsx
+const gated = (el) => <PermissionRoute>{el}</PermissionRoute>;
+// ...
+<Route path="/portal/analytics" element={gated(<AnalyticsHub />)} />
+```
+
+All 40+ portal routes + all 17 admin routes wrapped. The legacy `<ProtectedRoute>` (auth-only) still wraps the outer Layout — it's the `<PermissionRoute>` on each child that does the permission check.
+
+New [`pages/Unauthorized.jsx`](frontend/src/pages/Unauthorized.jsx) + [`admin-app/src/pages/Unauthorized.jsx`](admin-app/src/pages/Unauthorized.jsx) — clear "You don't have permission" card showing the exact required key (e.g. `analytics.view`) plus a "Back to Dashboard" link. Verified live: cashier browsing to `/portal/analytics` sees the Unauthorized page, not the analytics dashboard.
+
+#### Layer 3 — Backend API enforcement (the critical one)
+
+Every critical-module route file retrofitted to use `requirePermission(...)` instead of the legacy `authorize('manager','owner',...)`:
+
+| File | Module(s) |
+|------|-----------|
+| `salesRoutes.js` | `analytics.view` / `predictions.view` (realtime also accepts `dashboard.view`) |
+| `reportsRoutes.js` | `reports.view` (already had it via prior session) |
+| `reportsHubRoutes.js` | `reports.view` (router-level guard) |
+| `auditRoutes.js` | `audit.view` |
+| `customerRoutes.js` | `customers.view/create/edit/delete` |
+| `catalogRoutes.js` | `products.* / departments.* / vendors.* / promotions.* / inventory.edit / rules_fees.* / vendor_payouts.* / products.create` (for imports) |
+| `lotteryRoutes.js` | `lottery.view/create/edit/delete/manage` |
+| `fuelRoutes.js` | `fuel.view/create/edit/delete` |
+| `userManagementRoutes.js` | `users.view/create/edit/delete` |
+| `storeRoutes.js` | `stores.view/create/edit/delete` + `billing.view` |
+| `billingRoutes.js` | `billing.view/edit` |
+| `invoiceRoutes.js` | `invoices.view/create/edit/delete` |
+| `orderRoutes.js` | `vendor_orders.view/edit/create/manage` |
+| `vendorReturnRoutes.js` | `vendors.view/edit` + `vendor_payouts.edit` |
+| `inventoryAdjustmentRoutes.js` | `inventory.view/edit` |
+
+**Remaining files** (tasks, chat, loyalty, feeMapping, posTerminal, posRoutes, dejavooPayment, equipment, labelQueue, tenant, storefront, webhook) — intentionally untouched this session: some are cashier-app routes (use station token), some already have narrow guards, some are public/internal. Follow-up session can migrate these.
+
+Verified live with a cashier JWT:
+- `GET /api/sales/daily` → **403** `Missing permission: analytics.view or predictions.view`
+- `GET /api/reports/hub/summary` → **403** `Missing permission: reports.view`
+- `GET /api/audit` → **403** `Missing permission: audit.view`
+- `GET /api/billing/invoices` → **403** `Missing permission: billing.view`
+- `POST /api/catalog/products` → **403** `Missing permission: products.create`
+- `DELETE /api/catalog/products/1` → **403** `Missing permission: products.delete`
+
+And the cashier's allowed endpoints still pass:
+- `GET /api/catalog/products` → **200**
+- `GET /api/customers` → **200**
+- `GET /api/lottery/games` → **200**
+- `GET /api/fuel/types` → **200**
+
+#### Layer 4 — Per-button CRUD gating on flagship pages
+
+Pattern applied to [`ProductCatalog.jsx`](frontend/src/pages/ProductCatalog.jsx) and [`Customers.jsx`](frontend/src/pages/Customers.jsx):
+
+```jsx
+const { can } = usePermissions();
+const canCreate = can('products.create');
+const canEdit   = can('products.edit');
+const canDelete = can('products.delete');
+
+{canCreate && <button>Add Product</button>}
+{canEdit && <button>Edit</button>}
+{canDelete && <button>Delete</button>}
+```
+
+Verified: cashier viewing `/portal/catalog` sees the product table but ZERO Add/Edit/Delete/Delete-All buttons. The one-line `usePermissions()` pattern is drop-in — any page can adopt it in under a minute.
+
+#### Layer 5 — Permissions injected into JWT response + auto-refresh
+
+Session 30 already did this: login returns `permissions: string[]`, stored in `localStorage.user`. `usePermissions()` reads from there and falls back to `GET /api/roles/me/permissions` if missing. `<PermissionRoute>` reads the same source.
+
+**Superadmin bypass**: the `<Can>` hook, `requirePermission()` middleware, and both `PermissionRoute` components all short-circuit to "allowed" for `role === 'superadmin'` so the platform never accidentally locks out the top role.
+
+#### Defense in depth
+
+Every layer above can be independently bypassed by an attacker, but together they form a real defense:
+1. Sidebar hidden → UX clean, but user could type URL
+2. Route guard blocks URL → user could curl the API
+3. **API returns 403** → hard stop, no data leaks
+4. Per-button hiding → UX affordance
+5. JWT permissions → read-only source of truth for UI
+
+The **API layer (3)** is the load-bearing one. Even if someone tampers with `localStorage.user.permissions` or monkey-patches the frontend, the backend still enforces.
+
+#### Files changed (Session 31)
+
+| File | Change |
+|------|--------|
+| `frontend/src/rbac/routePermissions.js` | NEW — route→permission map |
+| `frontend/src/components/PermissionRoute.jsx` | NEW |
+| `frontend/src/pages/Unauthorized.jsx` + `.css` | NEW |
+| `frontend/src/App.jsx` | `gated()` helper; wrapped all 40+ portal routes |
+| `frontend/src/components/Sidebar.jsx` | Filter menu items by `getRoutePermission()` + `can()` |
+| `frontend/src/pages/ProductCatalog.jsx` | `usePermissions()` + gate Add/Edit/Delete buttons |
+| `frontend/src/pages/Customers.jsx` | Same pattern |
+| `admin-app/src/rbac/routePermissions.js` | NEW |
+| `admin-app/src/components/PermissionRoute.jsx` | NEW |
+| `admin-app/src/pages/Unauthorized.jsx` | NEW |
+| `admin-app/src/App.jsx` | `ProtectedRoute` delegates to `PermissionRoute` |
+| `admin-app/src/components/AdminSidebar.jsx` | Filter menu items by permission |
+| `backend/src/routes/salesRoutes.js` | Router-level `requirePermission('analytics.view' \| 'predictions.view')` + per-route override for realtime |
+| `backend/src/routes/reportsHubRoutes.js` | `requirePermission('reports.view')` |
+| `backend/src/routes/auditRoutes.js` | `requirePermission('audit.view')` |
+| `backend/src/routes/customerRoutes.js` | Per-verb `customers.*` |
+| `backend/src/routes/catalogRoutes.js` | Per-verb `products.* / departments.* / vendors.* / promotions.*` etc. |
+| `backend/src/routes/lotteryRoutes.js` | Full rewrite — `lottery.*` per verb |
+| `backend/src/routes/fuelRoutes.js` | Full rewrite — `fuel.*` per verb |
+| `backend/src/routes/userManagementRoutes.js` | `users.*` per verb |
+| `backend/src/routes/storeRoutes.js` | `stores.*` per verb |
+| `backend/src/routes/billingRoutes.js` | `billing.view/edit` |
+| `backend/src/routes/invoiceRoutes.js` | `invoices.*` per verb |
+| `backend/src/routes/orderRoutes.js` | `vendor_orders.*` per verb |
+| `backend/src/routes/vendorReturnRoutes.js` | `vendors.view/edit` + `vendor_payouts.edit` |
+| `backend/src/routes/inventoryAdjustmentRoutes.js` | `inventory.view/edit` |
+
+Builds verified clean: portal 18.31s, admin 11.21s. Live verification with cashier@storeveu.com: sidebar filtered (10/30 items), direct URL blocked, 6/6 restricted APIs return 403, 4/4 allowed APIs return 200, CRUD buttons hidden.
+
+#### Follow-up for future sessions
+
+1. Per-button gating on remaining flagship pages — Vendors, Promotions, Users, Departments, Lottery, Fuel. Pattern is 5 lines per page.
+2. Backend migration for the ~10 remaining route files (tasks, chat, loyalty, feeMapping, equipment, labelQueue, tenant).
+3. Field-level permissions (e.g. manager can see but not edit `costPrice`) — if ever needed.
+4. Cashier-app integration — currently uses station token, but the same `requirePermission()` model applies when a cashier opens manager-gated modals.
+
+---
+
+*Last updated: April 2026 — Session 31: Production RBAC enforcement — sidebar filter, route guard, API gates, per-button CRUD gating, 15 backend route files migrated*
+

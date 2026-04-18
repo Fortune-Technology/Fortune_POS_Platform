@@ -5,8 +5,9 @@ import {
   Users, UserPlus, X, Loader, AlertCircle,
   RefreshCw, Shield, ChevronDown, Trash2, Eye, EyeOff, Store, ArrowLeft,
 } from 'lucide-react';
-import { getTenantUsers, inviteUser, updateUserRole, removeUser, getStores, setCashierPin, removeCashierPin } from '../services/api';
+import { getTenantUsers, inviteUser, updateUserRole, removeUser, getStores, setCashierPin, removeCashierPin, listRoles } from '../services/api';
 import { toast } from 'react-toastify';
+import UserRolesModal from '../components/UserRolesModal';
 
 /* ── Validation helpers ──────────────────────────────────────────────────── */
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -15,22 +16,41 @@ const validatePassword = (pw) => pw.length >= 8 && /\d/.test(pw);
 const validatePin = (pin) => !pin || /^\d{4,6}$/.test(pin);
 
 /* ── Role config ─────────────────────────────────────────────────────────── */
-const ROLES = [
-  { value: 'admin', label: 'Admin', color: '#f97316', bg: 'rgba(249,115,22,0.12)', multiStore: true },
-  { value: 'manager', label: 'Manager', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', multiStore: true },
-  { value: 'cashier', label: 'Cashier', color: 'var(--accent-primary)', bg: 'var(--brand-12)', multiStore: false },
-];
+// Styling for built-in system roles. Custom roles fall back to a neutral
+// gray scheme (see `badgeFor()`).
+const BUILTIN_ROLE_STYLES = {
+  admin:   { color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  manager: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  cashier: { color: 'var(--accent-primary)', bg: 'var(--brand-12)' },
+  staff:   { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+};
+const FALLBACK_BADGE = { color: '#6366f1', bg: 'rgba(99,102,241,0.12)' };
 
+// Roles that are fixed and cannot be assigned via Invite / Role-change UI.
+// Owner is set only on org creation; superadmin is platform-level.
 const FIXED_ROLES = ['owner', 'superadmin'];
 
+// Roles that are restricted to a single store assignment. Backward-compat:
+// the built-in `cashier` role is single-store. Custom roles default to
+// multi-store — org admins can still pick one store if they want.
+const SINGLE_STORE_ROLE_KEYS = new Set(['cashier']);
+const isSingleStoreRole = (key) => SINGLE_STORE_ROLE_KEYS.has(key);
+
+// Human-readable tagline shown under the role selector.
+const roleTagline = (r) =>
+  r?.description ||
+  (isSingleStoreRole(r?.key) ? 'Single store · limited POS access' : 'Access across selected stores');
+
+function badgeFor(roleKey) {
+  return BUILTIN_ROLE_STYLES[roleKey] || FALLBACK_BADGE;
+}
+
 function roleBadge(role) {
-  const r = ROLES.find((x) => x.value === role);
-  if (!r) return (
-    <span className="badge badge-gray" style={{ textTransform: 'capitalize' }}>{role}</span>
-  );
+  if (!role) return <span className="badge badge-gray">—</span>;
+  const { color, bg } = badgeFor(role);
   return (
-    <span style={{ padding: '0.2rem 0.65rem', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 700, background: r.bg, color: r.color }}>
-      {r.label}
+    <span style={{ padding: '0.2rem 0.65rem', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 700, background: bg, color, textTransform: 'capitalize' }}>
+      {role}
     </span>
   );
 }
@@ -53,7 +73,7 @@ function Initials({ name }) {
 
 /* ── Store assignment input ──────────────────────────────────────────────── */
 function StoreAssignment({ role, storeIds, setStoreIds, stores }) {
-  const isMulti = ROLES.find(r => r.value === role)?.multiStore ?? false;
+  const isMulti = !isSingleStoreRole(role);
 
   if (!isMulti) {
     return (
@@ -147,6 +167,32 @@ function InviteModal({ stores, onClose, onInvited }) {
   const [created, setCreated] = useState(null);
   const [errors, setErrors] = useState({});
 
+  // Dynamically loaded assignable roles (system + any org-specific custom roles).
+  // Owner/superadmin are excluded — those are set elsewhere.
+  const [assignableRoles, setAssignableRoles] = useState([]);
+  const [rolesLoading, setRolesLoading]       = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRoles({ includeSystem: true })
+      .then(res => {
+        if (cancelled) return;
+        const roles = (res.roles || [])
+          .filter(r => r.scope === 'org' && r.status === 'active' && !FIXED_ROLES.includes(r.key));
+        setAssignableRoles(roles);
+        // If the default "cashier" role doesn't exist (custom setups), pick the first available
+        if (roles.length && !roles.some(r => r.key === form.role)) {
+          setForm(f => ({ ...f, role: roles[0].key }));
+        }
+      })
+      .catch(() => { /* silent — user sees an empty role list below */ })
+      .finally(() => { if (!cancelled) setRolesLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedRoleObj = assignableRoles.find(r => r.key === form.role);
+
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: undefined }));
@@ -165,7 +211,9 @@ function InviteModal({ stores, onClose, onInvited }) {
     if (!form.email.trim()) errs.email = 'Email is required.';
     else if (!validateEmail(form.email)) errs.email = 'Enter a valid email address.';
     if (form.phone && !validatePhone(form.phone)) errs.phone = 'Enter a valid phone number (7–15 digits).';
-    if (form.role === 'cashier' && storeIds.length !== 1) errs.storeIds = 'Cashiers must be assigned to exactly one store.';
+    if (isSingleStoreRole(form.role) && storeIds.length !== 1) {
+      errs.storeIds = 'This role must be assigned to exactly one store.';
+    }
     return errs;
   };
 
@@ -186,7 +234,8 @@ function InviteModal({ stores, onClose, onInvited }) {
     else if (!validatePassword(password)) errs.password = 'Password must be at least 8 characters and include a number.';
     if (!confirmPassword) errs.confirmPassword = 'Please confirm the password.';
     else if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
-    const pinRequired = ['cashier', 'manager', 'staff'].includes(form.role);
+    // Any non-admin role gets a PIN (so they can log into the cashier app).
+    const pinRequired = form.role !== 'admin';
     if (pinRequired && !pin) errs.pin = 'PIN is required for this role.';
     else if (pin && !validatePin(pin)) errs.pin = 'PIN must be 4–6 digits.';
     return errs;
@@ -350,28 +399,44 @@ function InviteModal({ stores, onClose, onInvited }) {
             {/* Role */}
             <div className="form-group" style={{ marginBottom: '0.875rem' }}>
               <label className="form-label">Role</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {ROLES.map(r => (
-                  <button
-                    key={r.value} type="button"
-                    onClick={() => handleRoleChange(r.value)}
-                    style={{
-                      flex: 1, padding: '0.6rem 0.5rem',
-                      border: `1.5px solid ${form.role === r.value ? r.color : 'var(--border-color)'}`,
-                      borderRadius: 'var(--radius-md)',
-                      background: form.role === r.value ? r.bg : 'var(--bg-tertiary)',
-                      color: form.role === r.value ? r.color : 'var(--text-muted)',
-                      fontWeight: form.role === r.value ? 700 : 500,
-                      fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.15s',
-                    }}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
+              {rolesLoading ? (
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', padding: '0.6rem 0' }}>
+                  <Loader size={13} className="animate-spin" style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                  Loading roles…
+                </div>
+              ) : assignableRoles.length === 0 ? (
+                <div style={{ fontSize: '0.78rem', color: 'var(--error)', padding: '0.6rem 0' }}>
+                  No assignable roles found. Create one under <b>Roles &amp; Permissions</b> first.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {assignableRoles.map(r => {
+                    const active = form.role === r.key;
+                    const { color, bg } = badgeFor(r.key);
+                    return (
+                      <button
+                        key={r.id} type="button"
+                        onClick={() => handleRoleChange(r.key)}
+                        title={r.description || ''}
+                        style={{
+                          flex: '1 1 100px', minWidth: 100,
+                          padding: '0.6rem 0.5rem',
+                          border: `1.5px solid ${active ? color : 'var(--border-color)'}`,
+                          borderRadius: 'var(--radius-md)',
+                          background: active ? bg : 'var(--bg-tertiary)',
+                          color: active ? color : 'var(--text-muted)',
+                          fontWeight: active ? 700 : 500,
+                          fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.15s',
+                          textTransform: 'capitalize',
+                        }}>
+                        {r.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div style={{ marginTop: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                {form.role === 'cashier' && 'Single store · limited POS access'}
-                {form.role === 'manager' && 'Multiple stores · can manage products & staff'}
-                {form.role === 'admin' && 'Multiple stores · full org access except billing'}
+                {roleTagline(selectedRoleObj)}
               </div>
             </div>
 
@@ -505,11 +570,16 @@ export default function UserManagement({ embedded }) {
   const [showInvite, setShowInvite] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [rolesModal, setRolesModal] = useState(null); // null | user
   const [pinModal, setPinModal] = useState(null); // null | { userId, userName }
   const [pinValue, setPinValue] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
   const [pinError, setPinError] = useState('');
   const [showPinPw, setShowPinPw] = useState(false);
+
+  // All assignable roles for this org — used by the inline role dropdown in
+  // the user table and passed down to the Invite modal.
+  const [availableRoles, setAvailableRoles] = useState([]);
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -517,9 +587,16 @@ export default function UserManagement({ embedded }) {
     setLoading(true);
     setError(null);
     try {
-      const [u, s] = await Promise.all([getTenantUsers(), getStores()]);
+      const [u, s, rolesRes] = await Promise.all([
+        getTenantUsers(),
+        getStores(),
+        listRoles({ includeSystem: true }).catch(() => ({ roles: [] })),
+      ]);
       setUsers(u);
       setStores(s);
+      setAvailableRoles(
+        (rolesRes.roles || []).filter(r => r.scope === 'org' && r.status === 'active' && !FIXED_ROLES.includes(r.key))
+      );
     } catch (e) {
       setError(e.response?.data?.error || 'Could not load users.');
     } finally {
@@ -588,7 +665,7 @@ export default function UserManagement({ embedded }) {
   const storeNames = (user) => {
     const ids = user.storeIds || [];
     if (ids.length === 0) {
-      const isMulti = ROLES.find(r => r.value === user.role)?.multiStore ?? false;
+      const isMulti = !isSingleStoreRole(user.role);
       return isMulti
         ? <span style={{ color: 'var(--accent-primary)', fontSize: '0.75rem', fontWeight: 600 }}>All stores</span>
         : <span style={{ color: 'var(--text-muted)' }}>—</span>;
@@ -726,11 +803,17 @@ export default function UserManagement({ embedded }) {
                               style={{
                                 appearance: 'none', border: 'none', background: 'transparent',
                                 cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700,
-                                color: ROLES.find(r => r.value === u.role)?.color || 'var(--text-muted)',
-                                paddingRight: '1.1rem',
+                                color: badgeFor(u.role).color,
+                                paddingRight: '1.1rem', textTransform: 'capitalize',
                               }}
                             >
-                              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                              {availableRoles.map(r => (
+                                <option key={r.id} value={r.key}>{r.name}</option>
+                              ))}
+                              {/* Preserve the user's current role option if it's no longer in the assignable list */}
+                              {!availableRoles.some(r => r.key === u.role) && (
+                                <option value={u.role}>{u.role}</option>
+                              )}
                             </select>
                             {updating
                               ? <Loader size={12} className="animate-spin" />
@@ -754,6 +837,21 @@ export default function UserManagement({ embedded }) {
                       {/* Actions */}
                       <td style={{ padding: '0.875rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {!isSelf && (
+                            <button
+                              onClick={() => setRolesModal({ id: u.id, name: uName, email: u.email, role: u.role })}
+                              title="Manage roles"
+                              style={{
+                                background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)',
+                                color: '#6366f1', cursor: 'pointer',
+                                padding: '0.2rem 0.55rem', borderRadius: '6px',
+                                fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em',
+                                transition: 'background 0.15s',
+                              }}
+                            >
+                              Roles
+                            </button>
+                          )}
                           {['cashier', 'staff', 'manager'].includes(u.role) && (
                             <button
                               onClick={() => { setPinModal({ userId: u.id, userName: uName }); setPinValue(''); setPinError(''); }}
@@ -803,6 +901,9 @@ export default function UserManagement({ embedded }) {
       )}
 
       {/* PIN Modal — Change PIN for existing user */}
+      {rolesModal && (
+        <UserRolesModal user={rolesModal} onClose={() => setRolesModal(null)} />
+      )}
       {pinModal && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1000,

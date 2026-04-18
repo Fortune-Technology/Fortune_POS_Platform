@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { protect, authorize } from '../middleware/auth.js';
 import { requireTenant, requireActiveTenant } from '../middleware/scopeToTenant.js';
 import prisma from '../config/postgres.js';
+import { syncUserDefaultRole } from '../rbac/permissionService.js';
 
 const router = Router();
 
@@ -35,6 +36,9 @@ router.post('/', protect, async (req, res, next) => {
       where: { id: req.user.id },
       data:  { orgId: org.id, role: 'owner' },
     });
+
+    // Re-sync their default system role (staff → owner)
+    await syncUserDefaultRole(req.user.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
 
     res.status(201).json(org);
   } catch (err) {

@@ -42,6 +42,8 @@ import {
   Shield,
 } from 'lucide-react';
 import StoreSwitcher from './StoreSwitcher';
+import { usePermissions } from '../hooks/usePermissions';
+import { getRoutePermission } from '../rbac/routePermissions';
 
 const menuGroups = [
   {
@@ -136,6 +138,7 @@ const menuGroups = [
     label: 'Account',
     items: [
       { name: 'Account Settings', icon: <Building2 size={13} />, path: '/portal/account' },
+      { name: 'Roles & Permissions', icon: <Shield size={13} />, path: '/portal/roles' },
     ],
   },
 ];
@@ -145,6 +148,22 @@ const Sidebar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
+  const { can } = usePermissions();
+
+  // Filter menu items against the user's effective permissions. Items without
+  // a mapped required permission ("chat", etc.) are always visible to any
+  // authenticated user.
+  const visibleMenuGroups = React.useMemo(() => (
+    menuGroups
+      .map(g => ({
+        ...g,
+        items: g.items.filter(i => {
+          const perm = getRoutePermission(i.path);
+          return !perm || can(perm);
+        }),
+      }))
+      .filter(g => g.items.length > 0)
+  ), [can]);
 
   // ── Poll chat unread count every 15 s ────────────────────────────────────
   const fetchUnread = useCallback(() => {
@@ -240,7 +259,7 @@ const Sidebar = () => {
 
         {/* ── Navigation ──────────────────────────────────────────────── */}
         <nav className="sidebar-menu">
-          {menuGroups.map((group) => (
+          {visibleMenuGroups.map((group) => (
             <div key={group.label} className="nav-group">
               <span className="nav-group-label">{group.label}</span>
               {group.items.map((item) => {

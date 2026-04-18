@@ -10,6 +10,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendUserApproved, sendUserRejected, sendUserSuspended } from '../services/emailService.js';
+import { syncUserDefaultRole } from '../rbac/permissionService.js';
 
 // ─────────────────────────────────────────────────────────────
 // DASHBOARD
@@ -258,6 +259,8 @@ export const createUser = async (req, res, next) => {
       select: { id: true, name: true, email: true, role: true, status: true, orgId: true, createdAt: true },
     });
 
+    await syncUserDefaultRole(user.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
+
     // Return the temp password exactly once. Admin must deliver it out-of-band.
     // (A future enhancement is a `mustChangePassword` flag + forced-change flow.)
     res.status(201).json({
@@ -288,6 +291,10 @@ export const updateUser = async (req, res, next) => {
       data,
       select: { id: true, name: true, email: true, role: true, status: true, orgId: true },
     });
+
+    if (role !== undefined) {
+      await syncUserDefaultRole(user.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
+    }
 
     res.json({ success: true, data: user });
   } catch (error) {

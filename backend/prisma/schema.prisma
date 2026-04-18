@@ -680,6 +680,7 @@ model Organization {
   purchaseOrders PurchaseOrder[]
   vendorReturns  VendorReturn[]
   productGroups  ProductGroup[]
+  roles          Role[]
 
   @@map("organizations")
 }
@@ -720,10 +721,93 @@ model User {
   invoices  Invoice[]
   documents Document[]
   posToken  PosToken?
+  userRoles UserRole[]
 
   @@index([orgId, role])
   @@index([orgId, email])
   @@map("users")
+}
+
+// ─────────────────────────────────────────────────
+// RBAC — Permission catalog (global, seeded)
+// Examples: "products.view", "users.edit", "reports.view"
+// ─────────────────────────────────────────────────
+model Permission {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique           // e.g. "products.edit"
+  module      String                     // e.g. "products"
+  action      String                     // view | create | edit | delete | manage
+  label       String                     // Human-readable ("Edit Products")
+  description String?
+  scope       String   @default("org")   // "org" | "admin" — admin = superadmin-only
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@index([scope])
+  @@map("permissions")
+}
+
+// ─────────────────────────────────────────────────
+// RBAC — Role. System roles are seeded (orgId=null, isSystem=true);
+// per-org custom roles are created by org admins.
+// ─────────────────────────────────────────────────
+model Role {
+  id          String   @id @default(cuid())
+  orgId       String?                    // null for built-in system roles
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  key         String                     // unique identifier within scope (e.g. "cashier", "custom_foo")
+  name        String                     // display name
+  description String?
+  status      String   @default("active") // "active" | "inactive"
+  isSystem    Boolean  @default(false)   // true = built-in, cannot be deleted (but can be edited)
+  isCustomized Boolean @default(false)   // true once a system role has been edited — seeder will skip perm resync
+  scope       String   @default("org")   // "org" | "admin"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([orgId, key])
+  @@index([orgId])
+  @@index([scope])
+  @@map("roles")
+}
+
+// ─────────────────────────────────────────────────
+// RBAC — Role ↔ Permission junction
+// ─────────────────────────────────────────────────
+model RolePermission {
+  roleId       String
+  permissionId Int
+  role         Role       @relation(fields: [roleId],       references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────────────
+// RBAC — User ↔ Role junction (users may hold multiple roles)
+// ─────────────────────────────────────────────────
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
 }
 
 // ─────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import prisma from '../config/postgres.js';
 import { sendForgotPassword, sendNewSignupNotifyAdmin, sendPasswordChanged } from '../services/emailService.js';
 import { validateEmail, validatePassword, validatePhone, runValidators } from '../utils/validators.js';
+import { computeUserPermissions, syncUserDefaultRole } from '../rbac/permissionService.js';
 
 // ── Token generation ──────────────────────────────────────────────────────────
 // Short-lived access token. A 30-day token combined with XSS or leaked
@@ -59,6 +60,9 @@ export const signup = async (req, res, next) => {
       },
     });
 
+    // Auto-assign the default system role (staff) to the new user
+    await syncUserDefaultRole(user.id).catch(err => console.warn('syncUserDefaultRole:', err.message));
+
     // Notify admin of new signup (non-blocking)
     sendNewSignupNotifyAdmin(user.name, user.email);
 
@@ -107,6 +111,8 @@ export const login = async (req, res, next) => {
       return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
     }
 
+    const permissions = await computeUserPermissions(user);
+
     res.json({
       id:               user.id,
       _id:              user.id,   // legacy alias for frontend compatibility
@@ -117,6 +123,7 @@ export const login = async (req, res, next) => {
       status:           user.status,
       orgId:            user.orgId,
       tenantId:         user.orgId, // legacy alias used by Onboarding page
+      permissions,                  // effective permission keys (union of all roles)
       token: generateToken(user.id, { name: user.name, email: user.email, role: user.role, orgId: user.orgId }),
     });
   } catch (error) {

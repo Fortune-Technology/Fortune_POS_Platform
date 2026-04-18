@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
 import { attachPOSUser } from '../middleware/attachPOSUser.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   daily,
   weekly,
@@ -39,6 +40,11 @@ router.use(protect);
 router.use(scopeToTenant);   // sets req.storeId from X-Store-Id header or first store
 router.use(attachPOSUser);   // gets store.pos JSON → req.posUser.marktPOSConfig
 
+// All sales analytics endpoints require analytics.view — except /realtime
+// which feeds the Live Dashboard and needs dashboard.view.
+router.get('/realtime', requirePermission('dashboard.view', 'analytics.view'), realtimeSales);
+router.use(requirePermission('analytics.view', 'predictions.view'));
+
 // Sales summaries
 router.get('/daily', daily);
 router.get('/weekly', weekly);
@@ -50,7 +56,6 @@ router.get('/daily-with-weather', dailyWithWeather);
 router.get('/weekly-with-weather', weeklyWithWeather);
 router.get('/monthly-with-weather', monthlyWithWeather);
 router.get('/yearly-with-weather', yearlyWithWeather);
-router.get('/realtime', realtimeSales);
 
 // Departments
 router.get('/departments', departments);

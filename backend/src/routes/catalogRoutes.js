@@ -13,6 +13,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { protect, authorize } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   // Departments
   getDepartments,
@@ -112,68 +113,68 @@ router.use(scopeToTenant);
 
 // ─── Departments ─────────────────────────────────────────
 // Cashiers can read (for POS display); managers+ can write
-router.get('/departments', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getDepartments);
-router.post('/departments', authorize('superadmin', 'admin', 'owner', 'manager'), createDepartment);
-router.put('/departments/:id', authorize('superadmin', 'admin', 'owner', 'manager'), updateDepartment);
-router.delete('/departments/:id', authorize('superadmin', 'admin', 'owner'), deleteDepartment);
+router.get('/departments',        requirePermission('departments.view'),   getDepartments);
+router.post('/departments',       requirePermission('departments.create'), createDepartment);
+router.put('/departments/:id',    requirePermission('departments.edit'),   updateDepartment);
+router.delete('/departments/:id', requirePermission('departments.delete'), deleteDepartment);
 
 // ─── Tax Rules ───────────────────────────────────────────
-router.get('/tax-rules', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getTaxRules);
-router.post('/tax-rules', authorize('superadmin', 'admin', 'owner'), createTaxRule);
-router.put('/tax-rules/:id', authorize('superadmin', 'admin', 'owner'), updateTaxRule);
-router.delete('/tax-rules/:id', authorize('superadmin', 'admin', 'owner'), deleteTaxRule);
+router.get('/tax-rules',        requirePermission('rules_fees.view'), getTaxRules);
+router.post('/tax-rules',       requirePermission('rules_fees.edit'), createTaxRule);
+router.put('/tax-rules/:id',    requirePermission('rules_fees.edit'), updateTaxRule);
+router.delete('/tax-rules/:id', requirePermission('rules_fees.edit'), deleteTaxRule);
 
 // ─── Deposit Rules ───────────────────────────────────────
-router.get('/deposit-rules', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getDepositRules);
-router.post('/deposit-rules', authorize('superadmin', 'admin', 'owner'), createDepositRule);
-router.put('/deposit-rules/:id', authorize('superadmin', 'admin', 'owner'), updateDepositRule);
+router.get('/deposit-rules',     requirePermission('rules_fees.view'), getDepositRules);
+router.post('/deposit-rules',    requirePermission('rules_fees.edit'), createDepositRule);
+router.put('/deposit-rules/:id', requirePermission('rules_fees.edit'), updateDepositRule);
 
 // ─── Vendors ─────────────────────────────────────────────
-router.get('/vendors', authorize('superadmin', 'admin', 'owner', 'manager', 'store'), getVendors);
-router.post('/vendors', authorize('superadmin', 'admin', 'owner', 'manager'), createVendor);
-router.get('/vendors/:id', authorize('superadmin', 'admin', 'owner', 'manager'), getVendor);
-router.put('/vendors/:id', authorize('superadmin', 'admin', 'owner', 'manager'), updateVendor);
-router.delete('/vendors/:id', authorize('superadmin', 'admin', 'owner'), deleteVendor);
-router.get('/vendors/:id/products', authorize('superadmin', 'admin', 'owner', 'manager'), getVendorProducts);
-router.get('/vendors/:id/payouts', authorize('superadmin', 'admin', 'owner', 'manager'), getVendorPayouts);
-router.get('/vendors/:id/stats', authorize('superadmin', 'admin', 'owner', 'manager'), getVendorStats);
+router.get('/vendors',                 requirePermission('vendors.view'),   getVendors);
+router.post('/vendors',                requirePermission('vendors.create'), createVendor);
+router.get('/vendors/:id',             requirePermission('vendors.view'),   getVendor);
+router.put('/vendors/:id',             requirePermission('vendors.edit'),   updateVendor);
+router.delete('/vendors/:id',          requirePermission('vendors.delete'), deleteVendor);
+router.get('/vendors/:id/products',    requirePermission('vendors.view'),   getVendorProducts);
+router.get('/vendors/:id/payouts',     requirePermission('vendor_payouts.view'), getVendorPayouts);
+router.get('/vendors/:id/stats',       requirePermission('vendors.view'),   getVendorStats);
 
 // ─── Rebate Programs ─────────────────────────────────────
-router.get('/rebates', authorize('superadmin', 'admin', 'owner', 'manager'), getRebatePrograms);
-router.post('/rebates', authorize('superadmin', 'admin', 'owner'), createRebateProgram);
-router.put('/rebates/:id', authorize('superadmin', 'admin', 'owner'), updateRebateProgram);
+router.get('/rebates',     requirePermission('vendors.view'), getRebatePrograms);
+router.post('/rebates',    requirePermission('vendors.edit'), createRebateProgram);
+router.put('/rebates/:id', requirePermission('vendors.edit'), updateRebateProgram);
 
 // ─── Master Products ─────────────────────────────────────
 // Search first (must be before /:id)
 // ─── Product Groups (template groups for shared classification/pricing) ─────
-router.get('/groups',                 authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), listProductGroups);
-router.get('/groups/:id',             authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getProductGroup);
-router.post('/groups',                authorize('superadmin', 'admin', 'owner', 'manager'), createProductGroup);
-router.put('/groups/:id',             authorize('superadmin', 'admin', 'owner', 'manager'), updateProductGroup);
-router.delete('/groups/:id',          authorize('superadmin', 'admin', 'owner'),           deleteProductGroup);
-router.post('/groups/:id/apply',      authorize('superadmin', 'admin', 'owner', 'manager'), applyGroupTemplate);
-router.post('/groups/:id/add-products',    authorize('superadmin', 'admin', 'owner', 'manager'), addProductsToGroup);
-router.post('/groups/:id/remove-products', authorize('superadmin', 'admin', 'owner', 'manager'), removeProductsFromGroup);
+router.get('/groups',                      requirePermission('products.view'),   listProductGroups);
+router.get('/groups/:id',                  requirePermission('products.view'),   getProductGroup);
+router.post('/groups',                     requirePermission('products.create'), createProductGroup);
+router.put('/groups/:id',                  requirePermission('products.edit'),   updateProductGroup);
+router.delete('/groups/:id',               requirePermission('products.delete'), deleteProductGroup);
+router.post('/groups/:id/apply',           requirePermission('products.edit'),   applyGroupTemplate);
+router.post('/groups/:id/add-products',    requirePermission('products.edit'),   addProductsToGroup);
+router.post('/groups/:id/remove-products', requirePermission('products.edit'),   removeProductsFromGroup);
 
-router.get('/products/search', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), searchMasterProducts);
-router.get('/products/bulk', authorize('superadmin', 'admin', 'owner', 'manager'), getMasterProducts);
-router.post('/products/bulk-update',     authorize('superadmin', 'admin', 'owner', 'manager'), bulkUpdateMasterProducts);
-router.post('/products/bulk-delete',     authorize('superadmin', 'admin', 'owner'),           bulkDeleteMasterProducts);
-router.post('/products/delete-all',      authorize('superadmin', 'admin', 'owner'),           deleteAllProducts);
-router.post('/products/bulk-department', authorize('superadmin', 'admin', 'owner', 'manager'), bulkSetDepartment);
-router.post('/products/bulk-active',     authorize('superadmin', 'admin', 'owner', 'manager'), bulkToggleActive);
+router.get('/products/search',           requirePermission('products.view'),   searchMasterProducts);
+router.get('/products/bulk',             requirePermission('products.view'),   getMasterProducts);
+router.post('/products/bulk-update',     requirePermission('products.edit'),   bulkUpdateMasterProducts);
+router.post('/products/bulk-delete',     requirePermission('products.delete'), bulkDeleteMasterProducts);
+router.post('/products/delete-all',      requirePermission('products.delete'), deleteAllProducts);
+router.post('/products/bulk-department', requirePermission('products.edit'),   bulkSetDepartment);
+router.post('/products/bulk-active',     requirePermission('products.edit'),   bulkToggleActive);
 
-router.get('/products', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getMasterProducts);
-router.post('/products', authorize('superadmin', 'admin', 'owner', 'manager'), createMasterProduct);
-router.get('/products/:id', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getMasterProduct);
-router.post('/products/:id/duplicate', authorize('superadmin', 'admin', 'owner', 'manager'), duplicateMasterProduct);
-router.put('/products/:id', authorize('superadmin', 'admin', 'owner', 'manager'), updateMasterProduct);
-router.delete('/products/:id', authorize('superadmin', 'admin', 'owner'), deleteMasterProduct);
+router.get('/products',                requirePermission('products.view'),   getMasterProducts);
+router.post('/products',               requirePermission('products.create'), createMasterProduct);
+router.get('/products/:id',            requirePermission('products.view'),   getMasterProduct);
+router.post('/products/:id/duplicate', requirePermission('products.create'), duplicateMasterProduct);
+router.put('/products/:id',            requirePermission('products.edit'),   updateMasterProduct);
+router.delete('/products/:id',         requirePermission('products.delete'), deleteMasterProduct);
 
 // ─── Product UPCs ─────────────────────────────────────
-router.get('/products/:id/upcs', authorize('superadmin', 'admin', 'owner', 'manager'), getProductUpcs);
-router.post('/products/:id/upcs', authorize('superadmin', 'admin', 'owner', 'manager'), addProductUpc);
-router.delete('/products/:id/upcs/:upcId', authorize('superadmin', 'admin', 'owner', 'manager'), deleteProductUpc);
+router.get('/products/:id/upcs',            requirePermission('products.view'), getProductUpcs);
+router.post('/products/:id/upcs',           requirePermission('products.edit'), addProductUpc);
+router.delete('/products/:id/upcs/:upcId',  requirePermission('products.edit'), deleteProductUpc);
 
 // ─── Product Image Upload ────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -196,7 +197,7 @@ const imgUpload = multer({
   },
 });
 
-router.post('/products/:id/image', authorize('superadmin', 'admin', 'owner', 'manager'), imgUpload.single('image'), async (req, res) => {
+router.post('/products/:id/image', requirePermission('products.edit'), imgUpload.single('image'), async (req, res) => {
   try {
     const prisma = (await import('../config/postgres.js')).default;
     const productId = parseInt(req.params.id);
@@ -223,36 +224,35 @@ router.post('/products/:id/image', authorize('superadmin', 'admin', 'owner', 'ma
 });
 
 // ─── Product Pack Sizes ───────────────────────────────
-router.get('/products/:id/pack-sizes', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getProductPackSizes);
-router.post('/products/:id/pack-sizes', authorize('superadmin', 'admin', 'owner', 'manager'), addProductPackSize);
-router.put('/products/:id/pack-sizes/bulk-replace', authorize('superadmin', 'admin', 'owner', 'manager'), bulkReplacePackSizes);
-router.put('/products/:id/pack-sizes/:sizeId', authorize('superadmin', 'admin', 'owner', 'manager'), updateProductPackSize);
-router.delete('/products/:id/pack-sizes/:sizeId', authorize('superadmin', 'admin', 'owner', 'manager'), deleteProductPackSize);
+router.get('/products/:id/pack-sizes',                 requirePermission('products.view'), getProductPackSizes);
+router.post('/products/:id/pack-sizes',                requirePermission('products.edit'), addProductPackSize);
+router.put('/products/:id/pack-sizes/bulk-replace',    requirePermission('products.edit'), bulkReplacePackSizes);
+router.put('/products/:id/pack-sizes/:sizeId',         requirePermission('products.edit'), updateProductPackSize);
+router.delete('/products/:id/pack-sizes/:sizeId',      requirePermission('products.edit'), deleteProductPackSize);
 
 // ─── Store Products ──────────────────────────────────────
-router.get('/store-products', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier', 'store'), getStoreProducts);
-router.post('/store-products', authorize('superadmin', 'admin', 'owner', 'manager'), upsertStoreProduct);
-router.put('/store-products/stock', authorize('superadmin', 'admin', 'owner', 'manager'), adjustStoreStock);
+router.get('/store-products',        requirePermission('products.view'),   getStoreProducts);
+router.post('/store-products',       requirePermission('inventory.edit'),  upsertStoreProduct);
+router.put('/store-products/stock',  requirePermission('inventory.edit'),  adjustStoreStock);
 
 // ─── Promotions ──────────────────────────────────────────
-router.get('/promotions', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier'), getPromotions);
-router.post('/promotions', authorize('superadmin', 'admin', 'owner', 'manager'), createPromotion);
-router.put('/promotions/:id', authorize('superadmin', 'admin', 'owner', 'manager'), updatePromotion);
-router.delete('/promotions/:id', authorize('superadmin', 'admin', 'owner'), deletePromotion);
-router.post('/promotions/evaluate', authorize('superadmin', 'admin', 'owner', 'manager', 'cashier'), evaluatePromotions);
+router.get('/promotions',           requirePermission('promotions.view'),   getPromotions);
+router.post('/promotions',          requirePermission('promotions.create'), createPromotion);
+router.put('/promotions/:id',       requirePermission('promotions.edit'),   updatePromotion);
+router.delete('/promotions/:id',    requirePermission('promotions.delete'), deletePromotion);
+router.post('/promotions/evaluate', requirePermission('promotions.view'),   evaluatePromotions);
 
 // ─── Import ───────────────────────────────────────────────────
-// Preview requires manager+; commit requires manager+; templates are public (no auth needed for template download)
-router.post('/import/preview', authorize('superadmin', 'admin', 'owner', 'manager'), previewImport);
-router.post('/import/commit', authorize('superadmin', 'admin', 'owner', 'manager'), commitImport);
-router.get('/import/template/:type', authorize('superadmin', 'admin', 'owner', 'manager'), getImportTemplate);
-router.get('/import/history', authorize('superadmin', 'admin', 'owner', 'manager'), getImportHistory);
-router.get('/import/history/:id', authorize('superadmin', 'admin', 'owner', 'manager'), getImportJob);
+router.post('/import/preview',       requirePermission('products.create'), previewImport);
+router.post('/import/commit',        requirePermission('products.create'), commitImport);
+router.get('/import/template/:type', requirePermission('products.view'),   getImportTemplate);
+router.get('/import/history',        requirePermission('products.view'),   getImportHistory);
+router.get('/import/history/:id',    requirePermission('products.view'),   getImportJob);
 
 // ─── Vendor Payments (back-office) ────────────────────────────────
-router.get('/vendor-payments', authorize('superadmin', 'admin', 'owner', 'manager'), listVendorPayments);
-router.post('/vendor-payments', authorize('superadmin', 'admin', 'owner', 'manager'), createVendorPayment);
-router.put('/vendor-payments/:id', authorize('superadmin', 'admin', 'owner'), updateVendorPayment);
+router.get('/vendor-payments',        requirePermission('vendor_payouts.view'),   listVendorPayments);
+router.post('/vendor-payments',       requirePermission('vendor_payouts.create'), createVendorPayment);
+router.put('/vendor-payments/:id',    requirePermission('vendor_payouts.edit'),   updateVendorPayment);
 
 
 

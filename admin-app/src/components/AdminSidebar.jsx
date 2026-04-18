@@ -23,6 +23,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import api from '../services/api';
+import { getRoutePermission } from '../rbac/routePermissions';
 
 const adminMenuGroups = [
   {
@@ -46,6 +47,7 @@ const adminMenuGroups = [
       { name: 'Users',         icon: <Users size={13} />,     path: '/users' },
       { name: 'Organizations', icon: <Building2 size={13} />, path: '/organizations' },
       { name: 'Stores',        icon: <Store size={13} />,     path: '/stores' },
+      { name: 'Roles',         icon: <Shield size={13} />,    path: '/roles' },
     ],
   },
   {
@@ -82,6 +84,24 @@ const AdminSidebar = () => {
   const location  = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
+
+  // Read effective permissions once on mount (written to localStorage by
+  // /login and refreshed by <PermissionRoute>). Superadmins see everything.
+  const user = React.useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('admin_user') || 'null'); } catch { return null; }
+  }, []);
+  const perms = user?.permissions || [];
+  const canView = React.useCallback((path) => {
+    if (user?.role === 'superadmin') return true;
+    const required = getRoutePermission(path);
+    return !required || perms.includes(required);
+  }, [user, perms]);
+
+  const visibleMenuGroups = React.useMemo(() => (
+    adminMenuGroups
+      .map(g => ({ ...g, items: g.items.filter(i => canView(i.path)) }))
+      .filter(g => g.items.length > 0)
+  ), [canView]);
 
   const fetchUnread = useCallback(() => {
     api.get('/chat/unread')
@@ -153,7 +173,7 @@ const AdminSidebar = () => {
 
         {/* Navigation */}
         <nav className="sidebar-menu">
-          {adminMenuGroups.map((group) => (
+          {visibleMenuGroups.map((group) => (
             <div key={group.label} className="nav-group">
               <span className="nav-group-label">{group.label}</span>
               {group.items.map((item) => {

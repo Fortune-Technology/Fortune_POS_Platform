@@ -8,8 +8,9 @@
  */
 
 import { Router } from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
 import { scopeToTenant } from '../middleware/scopeToTenant.js';
+import { requirePermission } from '../rbac/permissionService.js';
 import {
   listVendorReturns,
   getVendorReturn,
@@ -25,9 +26,9 @@ const router = Router();
 router.use(protect);
 router.use(scopeToTenant);
 
-const readRoles  = authorize('superadmin', 'admin', 'owner', 'manager');
-const writeRoles = authorize('superadmin', 'admin', 'owner', 'manager');
-const ownerRoles = authorize('superadmin', 'admin', 'owner');
+const readRoles  = requirePermission('vendors.view');
+const writeRoles = requirePermission('vendors.edit');
+const ownerRoles = requirePermission('vendor_payouts.edit');
 
 router.get('/',            readRoles,  listVendorReturns);
 router.get('/:id',         readRoles,  getVendorReturn);
