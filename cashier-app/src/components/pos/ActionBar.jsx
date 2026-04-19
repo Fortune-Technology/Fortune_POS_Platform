@@ -8,6 +8,7 @@ import {
   RotateCcw, Ban, BarChart2, Lock, Unlock, X,
   ArrowDownCircle, ArrowUpCircle, LockKeyhole, UnlockKeyhole, Ticket, Fuel, History, Recycle,
   ClipboardList, Settings, Monitor, MessageSquare, Edit3, Leaf, ExternalLink,
+  Camera,
 } from 'lucide-react';
 import { useManagerStore } from '../../stores/useManagerStore.js';
 import { useCartStore }    from '../../stores/useCartStore.js';
@@ -40,6 +41,7 @@ export default function ActionBar({
   onLotteryShift,
   onFuelSale,
   onFuelRefund,
+  onScanCamera,
   onHardwareSettings,
   onAdminPortal,
   onCustomerDisplay,
@@ -146,6 +148,11 @@ export default function ActionBar({
       {/* Cash Drawer actions */}
       {shiftOpen && (
         <>
+          {/* Camera scan — useful for tablets / phones without a handheld scanner.
+              Works offline via @zxing/browser fallback; no extra hardware needed. */}
+          {onScanCamera && (
+            <ACT icon={Camera} label="Scan" onClick={onScanCamera} color="#0ea5e9" />
+          )}
           <ACT icon={ArrowDownCircle} label="Cash Drop" onClick={onCashDrop} color="var(--amber)" />
           <ACT icon={ArrowUpCircle} label="Paid Out" onClick={onPayout} color="#a855f7" />
           <Divider />

@@ -1,26 +1,33 @@
 /* PinLoginScreen.css — prefix: pls- */
 
 .pls-page {
-  min-height: 100vh;
-  min-height: 100dvh; /* dynamic viewport height — accounts for mobile browser chrome */
+  /* Must be height: 100vh (not min-height) because html/body/#root have
+     overflow:hidden — if the page grows beyond viewport, content is clipped
+     with no way to scroll. Capping at viewport makes .pls-page itself the
+     scroll container so overflow-y:auto below actually activates. */
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height — accounts for mobile browser chrome */
+  width: 100%;
   background: var(--bg-base);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: safe center; /* prevents top content from being clipped when overflowing */
+  justify-content: flex-start;
   padding: 1.5rem 1.5rem 2.5rem;
   user-select: none;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-}
-/* Fallback for browsers that don't support 'safe center' */
-@supports not (justify-content: safe center) {
-  .pls-page { justify-content: flex-start; padding-top: 2rem; }
+  box-sizing: border-box;
 }
 
-/* Store + station identity */
+/* Auto-margin trick: centers content when viewport has room, collapses
+   to 0 and lets content scroll from the top when it overflows. Replaces
+   `justify-content: safe center` which clips content on some Chromium/Electron
+   versions and hides the bottom buttons at 1366x768. */
 .pls-identity {
   text-align: center;
+  margin-top: auto;
   margin-bottom: 1.75rem;
 }
 
@@ -338,9 +345,12 @@
   cursor: not-allowed;
 }
 
-/* Reset station */
+/* Reset station — paired with .pls-identity auto-margin to vertically
+   center the sign-in card when viewport has room; collapses to 0 margin
+   when content overflows so nothing is clipped (verified at 1366x768 Electron). */
 .pls-reset-section {
   margin-top: 3rem;
+  margin-bottom: auto;
 }
 
 .pls-reset-link {

@@ -43,6 +43,7 @@ import {
   Shield,
   Handshake,
   Repeat,
+  Layout,
 } from 'lucide-react';
 import StoreSwitcher from './StoreSwitcher';
 import { usePermissions } from '../hooks/usePermissions';
@@ -134,6 +135,7 @@ const menuGroups = [
     label: 'Point of Sale',
     items: [
       { name: 'POS Configuration', icon: <Monitor size={13} />, path: '/portal/pos-config' },
+      { name: 'Quick Buttons',     icon: <Layout size={13} />,  path: '/portal/quick-buttons' },
       { name: 'Rules & Fees', icon: <Recycle size={13} />, path: '/portal/rules' },
     ],
   },

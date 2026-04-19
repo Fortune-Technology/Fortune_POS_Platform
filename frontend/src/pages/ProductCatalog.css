@@ -64,6 +64,31 @@
   position: relative;
   flex: 1;
   min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Scan-camera toggle — rendered inside search wrap, right of the input */
+.pc-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.45rem 0.75rem;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.pc-scan-btn:hover {
+  color: var(--brand-primary, #7ac143);
+  border-color: var(--brand-primary, #7ac143);
 }
 .pc-search-icon {
   position: absolute;

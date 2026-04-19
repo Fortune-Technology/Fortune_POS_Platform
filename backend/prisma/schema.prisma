@@ -729,6 +729,7 @@ model User {
   posToken  PosToken?
   userRoles UserRole[]
   orgs      UserOrg[]
+  priceScenarios PriceScenario[] @relation("PriceScenarioCreator")
 
   @@index([orgId, role])
   @@index([orgId, email])
@@ -879,6 +880,12 @@ model UserRole {
 model UserStore {
   userId  String
   storeId String
+  // Per-store POS PIN override (bcrypt hash of 4–6 digits).
+  // Takes precedence over User.posPin at this store — lets owners/managers
+  // use a different PIN per location. Non-owner users MUST have a per-store
+  // entry here to log in at that station. Owners fall back to User.posPin
+  // as a global org-wide override (highest hierarchy, works everywhere).
+  posPin  String?
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -897,6 +904,11 @@ model Store {
   ownerId      String? // User.id of the store owner / manager
 
   name                  String
+  // 2-letter US state code (e.g. "MA", "CA"). Nullable for legacy stores.
+  // When set, the backend auto-populates TaxRule / DepositRule defaults /
+  // LotterySettings.state / ageLimits from the State admin catalog.
+  stateCode             String?
+  state                 State?   @relation(fields: [stateCode], references: [code], onDelete: SetNull)
   latitude              Float?
   longitude             Float?
   timezone              String?
@@ -3063,4 +3075,125 @@ model Settlement {
   @@index([storeAId, storeBId, recordedAt])
   @@index([status, disputeWindowEndsAt]) // for auto-accept scan
   @@map("partner_settlements")
+}
+
+// ─────────────────────────────────────────────────
+// PRICE SCENARIO (superadmin-only price calculator)
+// Saved Interchange-plus rate/earning scenarios that the sales team uses to
+// pitch the StoreVeu processing model to prospective merchants. Not linked
+// to an Organisation — these are marketing/sales collateral, stored only at
+// the platform level and managed from the admin panel.
+//
+// `inputs` JSON shape (see admin-app/src/pages/AdminPriceCalculator.jsx):
+//   {
+//     storeName, location?, mcc?, notes?,
+//     volume, txns, trueIc,
+//     mcVol, viVol, discVol, amexVol,
+//     mcCredit, mcDebit, viCredit, viDebit,
+//     svPct, svTxn, svSaas,
+//     currentProc, currentPosSaas
+//   }
+// `results` cache is updated on every save so the list view can render
+// summary columns (effRate, savesMo, svTotal) without recomputing.
+// ─────────────────────────────────────────────────
+model PriceScenario {
+  id          String   @id @default(cuid())
+  storeName   String
+  location    String?
+  mcc         String?
+  notes       String?
+  inputs      Json
+  results     Json
+  createdById String?
+  createdBy   User?    @relation("PriceScenarioCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([storeName])
+  @@map("price_scenarios")
+}
+
+// ─────────────────────────────────────────────────
+// QUICK BUTTON LAYOUT (per-store cashier home-screen customisation)
+//
+// Freeform drag-and-drop "iPhone home screen" style tile grid that the
+// cashier sees on the POS. Shared across all cashiers at the store (the
+// user's original request — per-store, not per-station). Supersedes the
+// older `store.pos.quickFolders` JSON when this row exists and `tree` is
+// non-empty; legacy quickFolders still load as a fallback so existing
+// setups keep working until migrated.
+//
+// `tree` JSON shape (flat array — folder children render in drill-in view):
+//   [
+//     { id, type: 'product', x, y, w, h, productId, name, price, upc?,
+//       backgroundColor?, textColor?, imageUrl? },
+//     { id, type: 'folder',  x, y, w, h, label, emoji?, color?,
+//       children: [<buttons — max 1 level deep>] },
+//     { id, type: 'action',  x, y, w, h, actionKey, label,
+//       backgroundColor?, textColor?, imageUrl? },
+//     { id, type: 'text',    x, y, w, h, label, fontSize?,
+//       backgroundColor?, textColor? },
+//     { id, type: 'image',   x, y, w, h, imageUrl, label?,
+//       targetProductId?, targetActionKey? },
+//   ]
+//
+// Folder depth: capped at 2 levels by the save handler (a folder's
+// `children[]` may NOT contain another folder — backend enforces this
+// and returns 400 when violated).
+//
+// Grid: `gridCols` defaults to 6; rows are effectively unlimited (the
+// grid grows as tiles are placed). Cashier renderer reflows to whatever
+// viewport width is available.
+// ─────────────────────────────────────────────────
+model QuickButtonLayout {
+  id          String   @id @default(cuid())
+  orgId       String
+  storeId     String   @unique
+  name        String   @default("Main Screen")
+  gridCols    Int      @default(6)  // columns in the layout grid
+  rowHeight   Int      @default(64) // pixel height per grid row (for h=1 tile)
+  tree        Json     @default("[]")  // flat array of tiles (see shape above)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orgId, storeId])
+  @@map("quick_button_layouts")
+}
+
+// ─────────────────────────────────────────────────
+// STATE (superadmin-managed US state catalog)
+// Superadmin curates per-state defaults that stores inherit when their
+// `Store.stateCode` is set (or changed). The backend's `applyStateDefaults`
+// controller upserts TaxRule / DepositRule / LotterySettings / POS-config
+// ageLimits from this record. Managed-at-platform-level: not org-scoped.
+//
+// JSON field shapes:
+//   bottleDepositRules: [
+//     { containerType: 'can'|'bottle', material: 'aluminum'|'plastic'|'glass',
+//       minVolumeOz, maxVolumeOz, depositAmount }
+//   ]
+//   lotteryGameStubs: [{ name, ticketPrice, notes }]  (informational — actual
+//     games are created via LotteryGame with state=<code>)
+// ─────────────────────────────────────────────────
+model State {
+  code                     String   @id  // 2-letter US state code, e.g. "MA"
+  name                     String          // "Massachusetts"
+  country                  String   @default("US")
+  defaultTaxRate           Decimal? @db.Decimal(6, 4)  // e.g. 0.0625 = 6.25%
+  defaultLotteryCommission Decimal? @db.Decimal(6, 4)  // 0.05 = 5%
+  alcoholAgeLimit          Int      @default(21)
+  tobaccoAgeLimit          Int      @default(21)
+  // Deposit rules as JSON (varies widely by state — 10 states have mandates)
+  bottleDepositRules       Json?    @default("[]")
+  // Lottery game catalog stubs (for reference; actual games created in LotteryGame)
+  lotteryGameStubs         Json?    @default("[]")
+  notes                    String?
+  active                   Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  stores Store[]
+
+  @@map("states")
 }

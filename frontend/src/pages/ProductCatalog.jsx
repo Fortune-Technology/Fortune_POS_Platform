@@ -24,10 +24,12 @@ import {
   Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight,
   Package, Loader, RefreshCw, Copy, CheckSquare, Square,
   XCircle, Tag, ToggleLeft, DollarSign, Layers, AlertTriangle, Settings, X,
+  Camera,
 } from 'lucide-react';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 import { SetupGuide } from '../components/SetupGuide';
 import { usePermissions } from '../hooks/usePermissions';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 import './ProductCatalog.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,6 +107,7 @@ export default function ProductCatalog() {
   const [bulkPrice,   setBulkPrice]   = useState('');
   const [bulkActive,  setBulkActive]  = useState(true);
   const [bulkSaving,  setBulkSaving]  = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   // Delete All state
   const [showDeleteAll,    setShowDeleteAll]    = useState(false);
@@ -390,6 +393,14 @@ export default function ProductCatalog() {
               className="pc-search-input"
               placeholder="Search name, UPC, brand…"
               value={q} onChange={e => { setQ(e.target.value); setPage(1); }} />
+            <button
+              type="button"
+              className="pc-scan-btn"
+              onClick={() => setShowScanner(true)}
+              title="Scan barcode with camera"
+            >
+              <Camera size={14} /> Scan
+            </button>
           </div>
           <select className="pc-filter-select" value={filters.departmentId}
             onChange={e => { setFilters(f=>({...f,departmentId:e.target.value})); setPage(1); }}>
@@ -857,6 +868,14 @@ export default function ProductCatalog() {
           hasStore={!!activeStoreId}
         />
       )}
+
+      {/* ── Barcode Scanner Modal — tablets / phones without handheld scanner ── */}
+      <BarcodeScannerModal
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onDetected={(code) => { setQ(code); setPage(1); }}
+        title="Scan product barcode"
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   getStoreBranding,
   updateStoreBranding,
 } from '../controllers/storeController.js';
+import { setStoreState, applyStateDefaults } from '../controllers/stateController.js';
 
 const router = Router();
 
@@ -34,5 +35,9 @@ router.route('/:id')
 router.route('/:id/branding')
   .get(requirePermission('stores.view'),  getStoreBranding)
   .put(requirePermission('stores.edit'),  updateStoreBranding);
+
+// State assignment + default-apply (Store Settings UI)
+router.put ('/:id/state',                  requirePermission('stores.edit'), setStoreState);
+router.post('/:id/apply-state-defaults',   requirePermission('stores.edit'), applyStateDefaults);
 
 export default router;

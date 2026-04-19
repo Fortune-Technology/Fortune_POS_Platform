@@ -132,12 +132,32 @@ const AdminUsers = () => {
       const res = await impersonateUser(u.id);
       const d = res.data || res;
       const userParam = encodeURIComponent(JSON.stringify(d.user));
-      const portalBase = import.meta.env.VITE_PORTAL_URL || window.location.origin.replace('admin.', '');
+      const portalBase = resolvePortalBase();
+      if (!portalBase) {
+        toast.error('Portal URL not configured — set VITE_PORTAL_URL in admin-app/.env');
+        return;
+      }
       window.open(`${portalBase}/impersonate?token=${d.token}&user=${userParam}`, '_blank');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Impersonation failed');
     }
   };
+
+  // Resolve the portal base URL for the impersonation redirect. Priority:
+  //   1. VITE_PORTAL_URL env var (production + any explicit override)
+  //   2. Production subdomain pattern: strip `admin.` prefix (admin.x.com → x.com)
+  //   3. Dev port pattern: admin-app on :5175 → portal on :5173
+  //   4. null → caller shows a toast. Previously the fallback silently used
+  //      admin-app's own origin, so the new tab had no /impersonate route
+  //      and ended up bouncing to /dashboard — the bug we're fixing here.
+  function resolvePortalBase() {
+    const envUrl = import.meta.env.VITE_PORTAL_URL;
+    if (envUrl) return envUrl.replace(/\/$/, '');
+    const origin = window.location.origin;
+    if (origin.includes('admin.')) return origin.replace('admin.', '');
+    if (origin.includes(':5175'))  return origin.replace(':5175', ':5173');
+    return null;
+  }
 
   /* ---- modal open / close ---- */
 

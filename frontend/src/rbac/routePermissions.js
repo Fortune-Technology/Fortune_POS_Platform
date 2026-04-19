@@ -66,6 +66,7 @@ export const PORTAL_ROUTE_PERMISSIONS = {
 
   // POS
   '/portal/pos-config':        'pos_config.view',
+  '/portal/quick-buttons':     'pos_config.view',
   '/portal/rules':             'rules_fees.view',
   '/portal/fees-mappings':     'rules_fees.edit',
 

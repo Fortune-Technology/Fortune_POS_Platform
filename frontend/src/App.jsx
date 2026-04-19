@@ -52,6 +52,7 @@ import PayoutsReport   from './pages/PayoutsReport.jsx';
 import VendorPayouts  from './pages/VendorPayouts.jsx';
 import StoreSettings  from './pages/StoreSettings';
 import QuickAccess    from './pages/QuickAccess.jsx';
+import QuickButtonBuilder from './pages/QuickButtonBuilder.jsx';
 import DepositRules    from './pages/DepositRules.jsx';
 import TaxRules        from './pages/TaxRules.jsx';
 import PaymentSettings from './pages/PaymentSettings.jsx';
@@ -245,6 +246,7 @@ function App() {
 
           {/* ── POS Configuration Hub (tabbed) ────────────────────────── */}
           <Route path="/portal/pos-config"      element={gated(<POSConfig />)} />
+          <Route path="/portal/quick-buttons"   element={gated(<QuickButtonBuilder />)} />
 
           {/* ── POS Reports Hub (tabbed) ──────────────────────────────── */}
           <Route path="/portal/pos-reports"     element={gated(<POSReports />)} />
@@ -329,7 +331,7 @@ function App() {
         <Route path="/portal/payouts"            element={<Navigate to="/portal/pos-reports?tab=payouts" replace />} />
         <Route path="/portal/deposit-rules"      element={<Navigate to="/portal/rules?tab=deposits" replace />} />
         <Route path="/portal/tax-rules"          element={<Navigate to="/portal/rules?tab=tax" replace />} />
-        <Route path="/portal/quick-access"       element={<Navigate to="/portal/pos-config?tab=quick-keys" replace />} />
+        <Route path="/portal/quick-access"       element={<Navigate to="/portal/quick-buttons" replace />} />
         <Route path="/portal/ecomm"            element={<Navigate to="/portal/integrations" replace />} />
         <Route path="/portal/ecom/domain"     element={<Navigate to="/portal/ecom/setup?tab=domain" replace />} />
         <Route path="/portal/ecom/customers"  element={<Navigate to="/portal/customers-hub?tab=customers" replace />} />

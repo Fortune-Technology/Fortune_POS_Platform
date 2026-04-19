@@ -74,6 +74,11 @@ export const getLoyaltyConfig = (storeId) =>
 export const getPOSConfig = (storeId) =>
   api.get('/pos-terminal/config', { params: { storeId } }).then(r => r.data);
 
+// Quick-button layout (cashier home-screen WYSIWYG). Read-only from the
+// cashier-app — portal builder manages writes.
+export const getQuickButtonLayout = (storeId) =>
+  api.get('/quick-buttons', { params: { storeId } }).then(r => r.data);
+
 export const getDepartmentsForPOS = () =>
   api.get('/catalog/departments').then(r => {
     const d = r.data;
