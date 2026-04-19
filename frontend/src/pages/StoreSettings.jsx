@@ -4,9 +4,12 @@
  * Stores config in store's POS JSON via /api/pos-terminal/config.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings2, Plus, Trash2, Save, Check, ChevronDown, Ticket, Fuel } from 'lucide-react';
+import { Settings2, Plus, Trash2, Save, Check, ChevronDown, Ticket, Fuel, MapPin, Wand2 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getStores, getPOSConfig, updatePOSConfig, getFuelSettings, updateFuelSettings } from '../services/api.js';
+import {
+  getStores, getPOSConfig, updatePOSConfig, getFuelSettings, updateFuelSettings,
+  listStatesPublic, setStoreStateCode, applyStoreStateDefaults,
+} from '../services/api.js';
 
 import './StoreSettings.css';
 
@@ -57,14 +60,68 @@ export default function StoreSettings({ embedded }) {
     markDirty();
   };
 
-  // Load stores
+  // ── State (US state catalog for auto-populate defaults) ──
+  const [states,       setStates]       = useState([]);
+  const [stateCode,    setStateCode]    = useState('');
+  const [stateDirty,   setStateDirty]   = useState(false);
+  const [applying,     setApplying]     = useState(false);
+
+  // Load stores + state catalog
   useEffect(() => {
     getStores().then(r => {
       const list = Array.isArray(r) ? r : (r?.stores || r?.data || []);
       setStores(list);
       if (!storeId && list.length > 0) setStoreId(list[0].id);
     }).catch(() => {});
+    listStatesPublic().then(r => {
+      setStates(r.states || []);
+    }).catch(() => {});
   }, []);
+
+  // Sync stateCode selection when storeId changes (pulls from the Store record).
+  useEffect(() => {
+    if (!storeId || !stores.length) return;
+    const current = stores.find(s => s.id === storeId);
+    setStateCode(current?.stateCode || '');
+    setStateDirty(false);
+  }, [storeId, stores]);
+
+  const saveStateCode = async () => {
+    if (!storeId) return;
+    try {
+      await setStoreStateCode(storeId, stateCode || null);
+      toast.success(stateCode ? 'State saved' : 'State cleared');
+      setStateDirty(false);
+      // Refresh store list so the new stateCode is reflected
+      const r = await getStores();
+      const list = Array.isArray(r) ? r : (r?.stores || r?.data || []);
+      setStores(list);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to save state');
+    }
+  };
+
+  const applyDefaults = async () => {
+    if (!storeId || !stateCode) return;
+    if (!window.confirm(
+      `Apply ${states.find(s => s.code === stateCode)?.name || stateCode} defaults to this store? ` +
+      `This will overwrite the Default Sales Tax rule, bottle-deposit rules for this state, ` +
+      `lottery settings (state + commission), and tobacco/alcohol age limits.`
+    )) return;
+    setApplying(true);
+    try {
+      const res = await applyStoreStateDefaults(storeId);
+      const bits = [];
+      if (res.applied?.taxRate != null) bits.push(`tax rate ${(res.applied.taxRate * 100).toFixed(2)}%`);
+      if (res.applied?.depositRules) bits.push(`${res.applied.depositRules} deposit rule(s)`);
+      if (res.applied?.lotteryState) bits.push(`lottery (${res.applied.lotteryState})`);
+      if (res.applied?.ageLimits) bits.push(`age limits`);
+      toast.success(`Applied: ${bits.join(', ') || 'no changes'}`);
+      loadConfig();  // refresh the UI with new defaults
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to apply defaults');
+    } finally { setApplying(false); }
+  };
 
   // Load config when storeId changes.
   // Lottery enablement lives in the POS config (store.pos JSON) alongside the
@@ -182,6 +239,66 @@ export default function StoreSettings({ embedded }) {
               <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
             </div>
             {loading && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Loading…</span>}
+          </div>
+
+          {/* ── Section: State (auto-populate defaults) ── */}
+          <div className="ss-section">
+            <div className="ss-section-title">
+              <MapPin size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              State
+            </div>
+            <div className="ss-section-desc">
+              Selecting a state lets you apply the platform-curated defaults for sales tax, bottle-deposit rules, tobacco/alcohol age limits, and lottery commission in one click. You can still edit each of those settings manually afterwards.
+            </div>
+
+            <div className="ss-state-row">
+              <div className="ss-state-select-wrap">
+                <select
+                  className="ss-store-select"
+                  value={stateCode}
+                  onChange={e => { setStateCode(e.target.value); setStateDirty(true); }}
+                  disabled={!storeId}
+                >
+                  <option value="">— No state —</option>
+                  {states.map(s => (
+                    <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="ss-state-chev" />
+              </div>
+
+              <button
+                className="ss-btn-primary"
+                onClick={saveStateCode}
+                disabled={!stateDirty || !storeId}
+                title={stateDirty ? 'Save state selection' : 'No change'}
+              >
+                <Save size={13} /> Save
+              </button>
+
+              <button
+                className="ss-btn-secondary"
+                onClick={applyDefaults}
+                disabled={!stateCode || applying || stateDirty || !storeId}
+                title={stateDirty ? 'Save the state selection first' : 'Overwrite tax / deposit / lottery / age defaults from this state'}
+              >
+                <Wand2 size={13} /> {applying ? 'Applying…' : 'Apply State Defaults'}
+              </button>
+            </div>
+
+            {stateCode && (() => {
+              const s = states.find(x => x.code === stateCode);
+              if (!s) return null;
+              return (
+                <div className="ss-state-preview">
+                  <div><strong>{s.name}</strong> defaults:</div>
+                  <div>Sales tax: {s.defaultTaxRate != null ? `${(Number(s.defaultTaxRate) * 100).toFixed(2)}%` : '—'}</div>
+                  <div>Lottery comm: {s.defaultLotteryCommission != null ? `${(Number(s.defaultLotteryCommission) * 100).toFixed(2)}%` : '—'}</div>
+                  <div>Alcohol {s.alcoholAgeLimit}+, Tobacco {s.tobaccoAgeLimit}+</div>
+                  <div>{(s.bottleDepositRules || []).length} bottle-deposit rule(s)</div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── Section: Vendor Payment Tender Methods ── */}

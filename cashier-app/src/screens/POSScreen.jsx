@@ -24,6 +24,8 @@ import AgeVerificationModal from '../components/modals/AgeVerificationModal.jsx'
 import ActionBar            from '../components/pos/ActionBar.jsx';
 import CategoryPanel        from '../components/pos/CategoryPanel.jsx';
 import QuickFoldersPanel    from '../components/pos/QuickFoldersPanel.jsx';
+import QuickButtonRenderer  from '../components/pos/QuickButtonRenderer.jsx';
+import { useQuickButtonLayout } from '../hooks/useQuickButtonLayout.js';
 import NumpadModal          from '../components/pos/NumpadModal.jsx';
 import ManagerPinModal      from '../components/modals/ManagerPinModal.jsx';
 import DiscountModal        from '../components/modals/DiscountModal.jsx';
@@ -45,6 +47,7 @@ import BottleRedemptionModal   from '../components/modals/BottleRedemptionModal.
 import VendorPayoutModal from '../components/modals/VendorPayoutModal.jsx';
 import PackSizePickerModal from '../components/modals/PackSizePickerModal.jsx';
 import AddProductModal from '../components/modals/AddProductModal.jsx';
+import BarcodeScannerModal from '../components/BarcodeScannerModal.jsx';
 import ProductEditModal from '../components/modals/ProductEditModal.jsx';
 import OpenItemModal from '../components/modals/OpenItemModal.jsx';
 import TasksPanel      from '../components/modals/TasksPanel.jsx';
@@ -418,7 +421,11 @@ export default function POSScreen() {
   const [showTasks,          setShowTasks]          = useState(false);
   const [showChat,           setShowChat]           = useState(false);
   const [chatUnread,         setChatUnread]         = useState(0);
-  const [quickTab,           setQuickTab]           = useState('catalog'); // 'catalog' | 'quick'
+  const [quickTab,           setQuickTab]           = useState('catalog'); // 'catalog' | 'quick' | 'buttons'
+  // WYSIWYG quick-button layout (new iPhone-home-screen style). When this
+  // layout has tiles, the BUTTONS tab appears and auto-activates.
+  const { layout: quickButtonLayout } = useQuickButtonLayout(storeId);
+  const hasQuickButtons = Array.isArray(quickButtonLayout?.tree) && quickButtonLayout.tree.length > 0;
   const [lotteryActiveBoxes, setLotteryActiveBoxes] = useState([]);
   // Lottery shift reconciliation state
   const [lotteryShiftDone,   setLotteryShiftDone]   = useState(false);
@@ -593,6 +600,7 @@ export default function POSScreen() {
   const [scanError, setScanError]           = useState(null);  // { upc, ts }
   const [addProductUpc, setAddProductUpc]   = useState(null);  // UPC string when manager creates product
   const [showOpenItem, setShowOpenItem]     = useState(false); // Manual item entry modal
+  const [showCameraScan, setShowCameraScan] = useState(false); // Tablet/phone camera scan
   const scanErrorTimer = useRef(null);
 
   // ── Scale weight warning (by-weight product scanned without stable weight) ──
@@ -748,6 +756,40 @@ export default function POSScreen() {
       .catch(() => {});
     setShowLotteryShift(true);
   };
+
+  // ── Quick-button action dispatch ─────────────────────────────────────────
+  // The WYSIWYG builder lets admins drop "Action" tiles onto the home grid.
+  // Each tile carries an `actionKey` (validated server-side against
+  // VALID_ACTIONS) — here we map it to the existing POSScreen handler.
+  // Unknown keys are a no-op + console.warn (e.g. if the portal catalog
+  // adds an action before we wire it here).
+  const handleQuickAction = useCallback((actionKey) => {
+    switch (actionKey) {
+      case 'discount':           requireManager('Apply Discount', () => setDiscountTarget(null)); break;
+      case 'void':               requireManager('Void Transaction', () => setShowVoid(true)); break;
+      case 'refund':             requireManager('Refund Sale', () => setShowRefund(true)); break;
+      case 'open_drawer':
+      case 'no_sale':            handleNoSale(); break;
+      case 'print_last_receipt':
+        if (lastCompletedTx) setReprintTx(lastCompletedTx);
+        else setShowHistory(true);
+        break;
+      case 'customer_lookup':
+      case 'customer_add':       setShowCustomer(true); break;
+      case 'price_check':        setShowPriceCheck(true); break;
+      case 'hold':
+      case 'recall':             setShowHold(true); break;
+      case 'cash_drop':          setCashDrawerTab('drop'); setShowCashDrawer(true); break;
+      case 'payout':             setShowVendorPayout(true); break;
+      case 'end_of_day':         setShowEndOfDay(true); break;
+      case 'lottery_sale':       setShowLottery(true); break;
+      case 'fuel_sale':          setFuelModalMode('sale'); break;
+      case 'bottle_return':      setShowBottleReturn(true); break;
+      case 'manual_entry':       setShowOpenItem(true); break;
+      case 'clock_event':        console.warn('clock_event from quick-button not supported — use PIN login screen'); break;
+      default:                   console.warn(`[QuickButtons] unknown actionKey: ${actionKey}`);
+    }
+  }, [requireManager, handleNoSale, lastCompletedTx]);
 
   // ── Quick tender helpers ─────────────────────────────────────────────────
   // cashAmt: optional pre-fill for cash amount (from on-screen quick-cash buttons)
@@ -1122,16 +1164,18 @@ export default function POSScreen() {
             )}
           </div>
 
-          {/* ── Quick Access tab bar ── */}
-          {posConfig.quickFolders?.length > 0 && (
+          {/* ── Quick Access tab bar ── shown only when Quick-Folders
+              (legacy) OR the new WYSIWYG Buttons layout has content. */}
+          {(posConfig.quickFolders?.length > 0 || hasQuickButtons) && (
             <div style={{
               display: 'flex', borderBottom: '1px solid var(--border)',
               flexShrink: 0, background: 'var(--bg-panel)',
             }}>
               {[
-                { key: 'catalog', label: 'CATALOG' },
-                { key: 'quick',   label: '⚡ QUICK' },
-              ].map(tab => (
+                { key: 'catalog', label: 'CATALOG', show: true },
+                { key: 'buttons', label: '▦ BUTTONS', show: hasQuickButtons },
+                { key: 'quick',   label: '⚡ FOLDERS', show: (posConfig.quickFolders?.length > 0) },
+              ].filter(t => t.show).map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setQuickTab(tab.key)}
@@ -1163,6 +1207,11 @@ export default function POSScreen() {
                   flash('hit');
                 }}
               />
+            </div>
+          )}
+          {quickTab === 'buttons' && hasQuickButtons && (
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <QuickButtonRenderer layout={quickButtonLayout} onAction={handleQuickAction} />
             </div>
           )}
           {quickTab === 'quick' && (
@@ -1818,6 +1867,7 @@ export default function POSScreen() {
         enabledShortcuts={posConfig.shortcuts}
         onPriceCheck={() => setShowPriceCheck(true)}
         onOpenItem={() => setShowOpenItem(true)}
+        onScanCamera={() => setShowCameraScan(true)}
         onHold={() => setShowHold(true)}
         onHistory={() => setShowHistory(true)}
         onReprint={() => lastCompletedTx ? setReprintTx(lastCompletedTx) : setShowHistory(true)}
@@ -2185,6 +2235,19 @@ export default function POSScreen() {
           onClose={() => setAddProductUpc(null)}
         />
       )}
+
+      {/* Camera barcode scanner — for tablets / phones without a handheld
+          scanner. Detected code flows through handleScan like any keyboard
+          wedge scan (age gate, pack-size picker, add-product fallback all fire). */}
+      <BarcodeScannerModal
+        open={showCameraScan}
+        onClose={() => setShowCameraScan(false)}
+        onDetected={(code) => {
+          setShowCameraScan(false);
+          handleScan(code);
+        }}
+        title="Scan product barcode"
+      />
     </div>
   );
 }

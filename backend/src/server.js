@@ -29,6 +29,9 @@ import fuelRoutes        from './routes/fuelRoutes.js';
 import loyaltyRoutes     from './routes/loyaltyRoutes.js';
 import dejavooPaymentRoutes from './routes/dejavooPaymentRoutes.js';
 import adminRoutes       from './routes/adminRoutes.js';
+import priceScenarioRoutes from './routes/priceScenarioRoutes.js';
+import stateRoutes        from './routes/stateRoutes.js';
+import quickButtonRoutes  from './routes/quickButtonRoutes.js';
 import publicRoutes      from './routes/publicRoutes.js';
 import ticketRoutes      from './routes/ticketRoutes.js';
 import billingRoutes     from './routes/billingRoutes.js';
@@ -89,6 +92,12 @@ app.use('/uploads/product-images', express.static(path.join(__dirname, '..', 'up
   immutable: true,
 }));
 
+// Static files — quick-button tile images. Not marked `immutable` because
+// users may overwrite an image with a new upload and expect the new one.
+app.use('/uploads/quick-buttons', express.static(path.join(__dirname, '..', 'uploads', 'quick-buttons'), {
+  maxAge: '1d',
+}));
+
 // API routes
 app.use('/api/auth',         authRoutes);
 app.use('/api/tenants',      tenantRoutes);
@@ -110,6 +119,9 @@ app.use('/api/fuel',         fuelRoutes);
 app.use('/api/loyalty',      loyaltyRoutes);
 app.use('/api/payment/dejavoo', dejavooPaymentRoutes);
 app.use('/api/admin',        adminRoutes);
+app.use('/api/price-scenarios', priceScenarioRoutes);
+app.use('/api/states',          stateRoutes);
+app.use('/api/quick-buttons',   quickButtonRoutes);
 app.use('/api/billing',        billingRoutes);
 app.use('/api/equipment',      equipmentRoutes);
 app.use('/api/vendor-orders',   orderRoutes);

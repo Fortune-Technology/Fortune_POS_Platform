@@ -25,6 +25,8 @@ import AdminMerchants       from './pages/AdminMerchants';
 import AdminBilling         from './pages/AdminBilling';
 import AdminChat            from './pages/AdminChat';
 import AdminRoles           from './pages/AdminRoles';
+import AdminPriceCalculator from './pages/AdminPriceCalculator';
+import AdminStates          from './pages/AdminStates';
 
 import PermissionRoute from './components/PermissionRoute';
 
@@ -60,6 +62,8 @@ function App() {
         <Route path="/billing" element={<ProtectedRoute><AdminLayout><AdminBilling /></AdminLayout></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><AdminLayout><AdminChat /></AdminLayout></ProtectedRoute>} />
         <Route path="/roles" element={<ProtectedRoute><AdminLayout><AdminRoles /></AdminLayout></ProtectedRoute>} />
+        <Route path="/price-calculator" element={<ProtectedRoute><AdminLayout><AdminPriceCalculator /></AdminLayout></ProtectedRoute>} />
+        <Route path="/states" element={<ProtectedRoute><AdminLayout><AdminStates /></AdminLayout></ProtectedRoute>} />
 
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -21,6 +21,8 @@ import {
   Store,
   CreditCard,
   MessageSquare,
+  Calculator,
+  MapPin,
 } from 'lucide-react';
 import api from '../services/api';
 import { getRoutePermission } from '../rbac/routePermissions';
@@ -47,6 +49,7 @@ const adminMenuGroups = [
       { name: 'Users',         icon: <Users size={13} />,     path: '/users' },
       { name: 'Organizations', icon: <Building2 size={13} />, path: '/organizations' },
       { name: 'Stores',        icon: <Store size={13} />,     path: '/stores' },
+      { name: 'States',        icon: <MapPin size={13} />,    path: '/states' },
       { name: 'Roles',         icon: <Shield size={13} />,    path: '/roles' },
     ],
   },
@@ -54,6 +57,12 @@ const adminMenuGroups = [
     label: 'Payments',
     items: [
       { name: 'Merchants (Dejavoo)', icon: <CreditCard size={13} />, path: '/merchants' },
+    ],
+  },
+  {
+    label: 'Sales Tools',
+    items: [
+      { name: 'Price Calculator', icon: <Calculator size={13} />, path: '/price-calculator' },
     ],
   },
   {

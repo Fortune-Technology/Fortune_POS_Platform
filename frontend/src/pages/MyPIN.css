@@ -1,0 +1,313 @@
+/* MyPIN.css — self-service per-store register PIN management. Prefix: mypin-
+   Light theme tokens: --bg-secondary (#fff), --bg-tertiary (#f1f5f9),
+   --text-primary (#0f172a), --border-color, --brand-primary (#3d56b5). */
+
+.mypin-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: var(--text-primary);
+}
+
+.mypin-intro {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem 1.15rem;
+  background: var(--brand-08);
+  border: 1px solid var(--brand-25);
+  border-radius: 10px;
+}
+
+.mypin-intro-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--brand-15);
+  color: var(--brand-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.mypin-intro-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mypin-intro-sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.mypin-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.mypin-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.mypin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.mypin-store-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.mypin-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+.mypin-status--set {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.mypin-status--unset {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.mypin-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.4rem 0.7rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mypin-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.mypin-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mypin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mypin-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+.mypin-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mypin-input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  font-family: 'DM Mono', monospace;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.mypin-input:focus {
+  border-color: var(--brand-primary);
+  background: var(--bg-secondary);
+}
+
+.mypin-eye {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mypin-eye:hover {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.mypin-mismatch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+.mypin-save {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--brand-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.mypin-save:hover:not(:disabled) {
+  background: var(--brand-dark);
+}
+
+.mypin-save:disabled {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.mypin-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.85rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.mypin-hint strong {
+  color: var(--text-primary);
+}
+
+.mypin-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2rem;
+  color: var(--text-muted);
+  justify-content: center;
+}
+
+.mypin-spin {
+  animation: mypin-spin 1s linear infinite;
+}
+
+@keyframes mypin-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.mypin-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1rem 1.25rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 10px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.mypin-retry {
+  margin-left: auto;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  color: #b91c1c;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.mypin-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.mypin-empty-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: 0.5rem;
+}
+
+.mypin-empty-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.35rem;
+}
+
+.mypin-empty-sub {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .mypin-list {
+    grid-template-columns: 1fr;
+  }
+  .mypin-intro {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .mypin-card {
+    padding: 0.85rem;
+  }
+}

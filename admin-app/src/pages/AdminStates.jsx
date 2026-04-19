@@ -1,0 +1,324 @@
+/**
+ * AdminStates — superadmin-managed US-state catalog.
+ *
+ * Each state carries defaults (sales tax rate, bottle-deposit rules,
+ * alcohol/tobacco age limits, lottery commission) that stores inherit
+ * when their stateCode is set in Store Settings. Lottery games tagged
+ * to a state via LotteryGame.state are filtered by this same code.
+ */
+import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'react-toastify';
+import { Plus, Edit2, Trash2, Search, MapPin, Loader, X, Save, Check } from 'lucide-react';
+import {
+  listAdminStates, createAdminState, updateAdminState, deleteAdminState,
+} from '../services/api';
+import './AdminStates.css';
+
+const BLANK = {
+  code: '', name: '', country: 'US',
+  defaultTaxRate: '', defaultLotteryCommission: '',
+  alcoholAgeLimit: 21, tobaccoAgeLimit: 21,
+  bottleDepositRules: [],
+  lotteryGameStubs: [],
+  notes: '', active: true,
+};
+
+const BLANK_DEPOSIT = { containerType: 'bottle', material: 'glass', minVolumeOz: '', maxVolumeOz: '', depositAmount: 0.05 };
+
+export default function AdminStates() {
+  const [states,      setStates]   = useState([]);
+  const [loading,     setLoading]  = useState(true);
+  const [search,      setSearch]   = useState('');
+  const [modalMode,   setModalMode] = useState(null); // 'create' | 'edit' | null
+  const [form,        setForm]     = useState(BLANK);
+  const [saving,      setSaving]   = useState(false);
+
+  const loadStates = async () => {
+    setLoading(true);
+    try {
+      const res = await listAdminStates();
+      setStates(res.states || []);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to load states');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadStates(); }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return states;
+    const s = search.toLowerCase();
+    return states.filter(x =>
+      (x.code || '').toLowerCase().includes(s) ||
+      (x.name || '').toLowerCase().includes(s)
+    );
+  }, [states, search]);
+
+  const openCreate = () => { setForm(BLANK); setModalMode('create'); };
+  const openEdit   = (s) => {
+    setForm({
+      code:                     s.code,
+      name:                     s.name,
+      country:                  s.country || 'US',
+      defaultTaxRate:           s.defaultTaxRate != null ? String(s.defaultTaxRate) : '',
+      defaultLotteryCommission: s.defaultLotteryCommission != null ? String(s.defaultLotteryCommission) : '',
+      alcoholAgeLimit:          s.alcoholAgeLimit || 21,
+      tobaccoAgeLimit:          s.tobaccoAgeLimit || 21,
+      bottleDepositRules:       Array.isArray(s.bottleDepositRules) ? s.bottleDepositRules : [],
+      lotteryGameStubs:         Array.isArray(s.lotteryGameStubs) ? s.lotteryGameStubs : [],
+      notes:                    s.notes || '',
+      active:                   s.active !== false,
+    });
+    setModalMode('edit');
+  };
+  const closeModal = () => setModalMode(null);
+
+  const setField = (patch) => setForm(f => ({ ...f, ...patch }));
+
+  const addDeposit    = () => setField({ bottleDepositRules: [...form.bottleDepositRules, { ...BLANK_DEPOSIT }] });
+  const updateDeposit = (idx, patch) => {
+    const next = [...form.bottleDepositRules];
+    next[idx] = { ...next[idx], ...patch };
+    setField({ bottleDepositRules: next });
+  };
+  const removeDeposit = (idx) => setField({ bottleDepositRules: form.bottleDepositRules.filter((_, i) => i !== idx) });
+
+  const handleSave = async () => {
+    if (!form.code || !/^[A-Z]{2}$/.test(form.code.toUpperCase())) {
+      toast.error('Code must be a 2-letter US state code');
+      return;
+    }
+    if (!form.name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        code:                     form.code.toUpperCase(),
+        name:                     form.name.trim(),
+        country:                  form.country,
+        defaultTaxRate:           form.defaultTaxRate === '' ? null : Number(form.defaultTaxRate),
+        defaultLotteryCommission: form.defaultLotteryCommission === '' ? null : Number(form.defaultLotteryCommission),
+        alcoholAgeLimit:          Number(form.alcoholAgeLimit) || 21,
+        tobaccoAgeLimit:          Number(form.tobaccoAgeLimit) || 21,
+        bottleDepositRules:       form.bottleDepositRules.map(r => ({
+          containerType: r.containerType || 'bottle',
+          material:      r.material || 'glass',
+          minVolumeOz:   r.minVolumeOz === '' ? null : Number(r.minVolumeOz),
+          maxVolumeOz:   r.maxVolumeOz === '' ? null : Number(r.maxVolumeOz),
+          depositAmount: Number(r.depositAmount) || 0,
+        })),
+        lotteryGameStubs:         form.lotteryGameStubs,
+        notes:                    form.notes || null,
+        active:                   !!form.active,
+      };
+      if (modalMode === 'create') {
+        await createAdminState(payload);
+        toast.success('State created');
+      } else {
+        await updateAdminState(form.code, payload);
+        toast.success('State updated');
+      }
+      closeModal();
+      loadStates();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save state');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (s) => {
+    if (!window.confirm(`Delete ${s.name} (${s.code})?`)) return;
+    try {
+      await deleteAdminState(s.code);
+      toast.success('State deleted');
+      loadStates();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete state');
+    }
+  };
+
+  return (
+    <div className="as-page">
+      <div className="as-header">
+        <div className="as-header-left">
+          <div className="as-header-icon"><MapPin size={22} /></div>
+          <div>
+            <h1 className="as-title">US States</h1>
+            <p className="as-subtitle">Manage per-state defaults — stores inherit these when their state is selected.</p>
+          </div>
+        </div>
+        <div className="as-header-actions">
+          <div className="as-search-wrap">
+            <Search size={13} className="as-search-icon" />
+            <input className="as-search" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <button className="as-btn-primary" onClick={openCreate}><Plus size={13} /> Add State</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="as-loading"><Loader size={16} className="as-spin" /> Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="as-empty">
+          <MapPin size={28} className="as-empty-icon" />
+          <p>{search.trim() ? 'No states match your search' : 'No states yet — click "Add State" to get started'}</p>
+        </div>
+      ) : (
+        <div className="as-grid">
+          {filtered.map(s => (
+            <div key={s.code} className={`as-card ${s.active ? '' : 'as-card--inactive'}`}>
+              <div className="as-card-head">
+                <div>
+                  <div className="as-card-code">{s.code}</div>
+                  <div className="as-card-name">{s.name}</div>
+                </div>
+                <div className="as-card-actions">
+                  <button className="as-icon-btn" onClick={() => openEdit(s)} title="Edit"><Edit2 size={13} /></button>
+                  <button className="as-icon-btn as-icon-btn--danger" onClick={() => handleDelete(s)} title="Delete"><Trash2 size={13} /></button>
+                </div>
+              </div>
+              <div className="as-card-stats">
+                <div className="as-stat">
+                  <span className="as-stat-label">Tax</span>
+                  <span className="as-stat-val">{s.defaultTaxRate != null ? `${(Number(s.defaultTaxRate) * 100).toFixed(2)}%` : '—'}</span>
+                </div>
+                <div className="as-stat">
+                  <span className="as-stat-label">Lottery comm</span>
+                  <span className="as-stat-val">{s.defaultLotteryCommission != null ? `${(Number(s.defaultLotteryCommission) * 100).toFixed(2)}%` : '—'}</span>
+                </div>
+                <div className="as-stat">
+                  <span className="as-stat-label">Alcohol</span>
+                  <span className="as-stat-val">{s.alcoholAgeLimit}+</span>
+                </div>
+                <div className="as-stat">
+                  <span className="as-stat-label">Tobacco</span>
+                  <span className="as-stat-val">{s.tobaccoAgeLimit}+</span>
+                </div>
+                <div className="as-stat">
+                  <span className="as-stat-label">Deposit rules</span>
+                  <span className="as-stat-val">{(s.bottleDepositRules || []).length}</span>
+                </div>
+                <div className="as-stat">
+                  <span className="as-stat-label">Status</span>
+                  <span className={`as-stat-val ${s.active ? 'as-stat-val--ok' : 'as-stat-val--muted'}`}>
+                    {s.active ? <><Check size={10} /> Active</> : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+              {s.notes && <div className="as-card-notes">{s.notes}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Create / Edit modal ── */}
+      {modalMode && (
+        <div className="as-modal-backdrop" onClick={closeModal}>
+          <div className="as-modal" onClick={e => e.stopPropagation()}>
+            <div className="as-modal-head">
+              <h2>{modalMode === 'create' ? 'Add State' : `Edit ${form.name || form.code}`}</h2>
+              <button className="as-icon-btn" onClick={closeModal}><X size={16} /></button>
+            </div>
+
+            <div className="as-modal-body">
+              <div className="as-form-grid">
+                <div className="as-field">
+                  <label>State Code (2 letters)</label>
+                  <input
+                    value={form.code}
+                    maxLength={2}
+                    disabled={modalMode === 'edit'}
+                    onChange={e => setField({ code: e.target.value.toUpperCase().replace(/[^A-Z]/g, '') })}
+                    placeholder="MA"
+                  />
+                </div>
+                <div className="as-field">
+                  <label>Name</label>
+                  <input value={form.name} onChange={e => setField({ name: e.target.value })} placeholder="Massachusetts" />
+                </div>
+                <div className="as-field">
+                  <label>Default Sales Tax (decimal)</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={form.defaultTaxRate}
+                    onChange={e => setField({ defaultTaxRate: e.target.value })}
+                    placeholder="0.0625"
+                  />
+                  <span className="as-hint">e.g. 0.0625 = 6.25%</span>
+                </div>
+                <div className="as-field">
+                  <label>Lottery Commission (decimal)</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={form.defaultLotteryCommission}
+                    onChange={e => setField({ defaultLotteryCommission: e.target.value })}
+                    placeholder="0.05"
+                  />
+                  <span className="as-hint">e.g. 0.05 = 5%</span>
+                </div>
+                <div className="as-field">
+                  <label>Alcohol Age Limit</label>
+                  <input type="number" value={form.alcoholAgeLimit} onChange={e => setField({ alcoholAgeLimit: e.target.value })} />
+                </div>
+                <div className="as-field">
+                  <label>Tobacco Age Limit</label>
+                  <input type="number" value={form.tobaccoAgeLimit} onChange={e => setField({ tobaccoAgeLimit: e.target.value })} />
+                </div>
+                <div className="as-field as-field--full">
+                  <label>Notes</label>
+                  <textarea rows={2} value={form.notes} onChange={e => setField({ notes: e.target.value })} placeholder="Internal notes (bottle bill info, exemptions, etc.)" />
+                </div>
+                <div className="as-field">
+                  <label><input type="checkbox" checked={form.active} onChange={e => setField({ active: e.target.checked })} /> Active (shown in store dropdown)</label>
+                </div>
+              </div>
+
+              <div className="as-section">
+                <div className="as-section-head">
+                  <span>Bottle Deposit Rules</span>
+                  <button className="as-btn-ghost" onClick={addDeposit}><Plus size={12} /> Add rule</button>
+                </div>
+                {form.bottleDepositRules.length === 0 ? (
+                  <div className="as-subtle">No deposit rules configured — add tiers if this state has a bottle bill.</div>
+                ) : (
+                  form.bottleDepositRules.map((r, i) => (
+                    <div key={i} className="as-deposit-row">
+                      <select value={r.containerType || 'bottle'} onChange={e => updateDeposit(i, { containerType: e.target.value })}>
+                        <option value="bottle">Bottle</option>
+                        <option value="can">Can</option>
+                        <option value="carton">Carton</option>
+                      </select>
+                      <select value={r.material || 'glass'} onChange={e => updateDeposit(i, { material: e.target.value })}>
+                        <option value="glass">Glass</option>
+                        <option value="plastic">Plastic</option>
+                        <option value="aluminum">Aluminum</option>
+                      </select>
+                      <input type="number" step="0.1" placeholder="Min oz" value={r.minVolumeOz ?? ''} onChange={e => updateDeposit(i, { minVolumeOz: e.target.value })} />
+                      <input type="number" step="0.1" placeholder="Max oz" value={r.maxVolumeOz ?? ''} onChange={e => updateDeposit(i, { maxVolumeOz: e.target.value })} />
+                      <input type="number" step="0.01" placeholder="Deposit $" value={r.depositAmount ?? ''} onChange={e => updateDeposit(i, { depositAmount: e.target.value })} />
+                      <button className="as-icon-btn as-icon-btn--danger" onClick={() => removeDeposit(i)}><Trash2 size={12} /></button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="as-modal-foot">
+              <button className="as-btn-secondary" onClick={closeModal}>Cancel</button>
+              <button className="as-btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? <><Loader size={13} className="as-spin" /> Saving…</> : <><Save size={13} /> {modalMode === 'create' ? 'Create' : 'Save'}</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

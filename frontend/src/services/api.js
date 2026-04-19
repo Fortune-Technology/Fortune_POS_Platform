@@ -307,6 +307,33 @@ export const removeUser      = (id)         => api.delete(`/users/${id}`).then(r
 export const setCashierPin    = (userId, pin) => api.put(`/users/${userId}/pin`, { pin }).then(r => r.data);
 export const removeCashierPin = (userId)      => api.delete(`/users/${userId}/pin`).then(r => r.data);
 
+// ── Self-service per-store POS PIN ────────────────────────────────────────
+// Any authenticated user can set their own register PIN per store they can
+// access. Owners can set a PIN at any store in their org (auto-creates the
+// UserStore row); others can only set PINs at stores they're a member of.
+export const listMyPins   = ()                => api.get ('/users/me/pins').then(r => r.data);
+export const setMyPin     = (storeId, pin)    => api.put ('/users/me/pin', { storeId, pin }).then(r => r.data);
+export const removeMyPin  = (storeId)         => api.delete(`/users/me/pin/${storeId}`).then(r => r.data);
+
+// ── US State catalog (read-only for portal users; superadmin CRUD lives in admin-app) ──
+export const listStatesPublic        = ()            => api.get('/states/public').then(r => r.data);
+export const getStatePublic          = (code)        => api.get(`/states/${code}`).then(r => r.data);
+export const setStoreStateCode       = (storeId, stateCode) => api.put(`/stores/${storeId}/state`, { stateCode }).then(r => r.data);
+export const applyStoreStateDefaults = (storeId)     => api.post(`/stores/${storeId}/apply-state-defaults`).then(r => r.data);
+
+// ── Quick Buttons (cashier home-screen tile layout) ────────────────────
+export const getQuickButtonLayout    = (storeId)     => api.get('/quick-buttons', { params: { storeId } }).then(r => r.data);
+export const saveQuickButtonLayout   = (data)        => api.put('/quick-buttons', data).then(r => r.data);
+export const clearQuickButtonLayout  = (storeId)     => api.delete('/quick-buttons', { data: { storeId } }).then(r => r.data);
+export const listQuickButtonActions  = ()            => api.get('/quick-buttons/actions').then(r => r.data);
+export const uploadQuickButtonImage  = (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/quick-buttons/upload', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data);
+};
+
 // ── Invitations ────────────────────────────────────────────────────────────
 // Portal endpoints (auth-scoped to active org):
 export const getInvitations      = (params)   => api.get('/invitations', { params }).then(r => r.data);

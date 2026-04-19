@@ -4887,3 +4887,333 @@ Estimated size: ~15-20 files, comparable to Phases 1 + 2 combined.
 
 ---
 
+## 📦 Recent Feature Additions (April 2026 — Session 36)
+
+User asked for 8 features in a single prompt. Sessions this size get done in layers — shipped 5/8 cleanly; #6-#8 are each their own session of work (documented below).
+
+### 1. Cashier-app scroll fix on sign-in + clock-in screens
+
+Bug: at 1366×768 Electron (the common Windows POS hardware spec), the PIN login screen's bottom content — "Clock In" submit button and "Reset this register" link — was clipped. Root cause not in the `.pls-page` itself but in the parent chain: `html`, `body`, and `#root` all have `overflow: hidden`, so when `.pls-page` grew beyond the viewport via `min-height: 100vh`, content past the viewport got clipped with no way to scroll.
+
+**Fix** in [`PinLoginScreen.css`](cashier-app/src/screens/PinLoginScreen.css):
+- Changed `.pls-page` from `min-height: 100vh` → `height: 100vh` so it caps at viewport and becomes the scroll container itself (now `overflow-y: auto` actually activates)
+- Dropped `justify-content: safe center` (buggy on some Chromium-Electron builds); replaced with the auto-margin centering pattern — `margin-top: auto` on first child + `margin-bottom: auto` on last child. Content centers vertically when viewport has room; auto margins collapse to 0 and content aligns to top + scrolls when content exceeds viewport height.
+- Added `overflow-x: hidden` + `box-sizing: border-box` defensively
+
+**Verified live** at 1366×768 (no scroll needed, all buttons visible) and 1366×650 (cramped — `.pls-page` scrolls, reset button reachable at bottom).
+
+---
+
+### 2. Owner per-store PIN (self-service, no second account needed)
+
+**Problem**: owners had no way to set their own register PIN. Workaround was to create a separate low-privilege user account with a PIN — duplicating identity. Now any authenticated user can self-serve a per-store PIN.
+
+**Schema** — new nullable field on `UserStore` junction:
+```prisma
+model UserStore {
+  userId  String
+  storeId String
+  posPin  String?  // bcrypt hash, per-store override
+  ...
+}
+```
+
+**Tiered `pinLogin` lookup** in [`stationController.js`](backend/src/controllers/stationController.js):
+- **Tier 1** — `UserStore.posPin` at station's `storeId`. Authoritative for any role.
+- **Tier 2** — `User.posPin` for any active org user (legacy behaviour preserved so existing cashier PINs still work).
+
+The per-store override wins. Owner without a per-store PIN still gets the legacy org-wide fallback (matches the "highest hierarchy" intent the user asked for).
+
+**Three new self-service endpoints** (any authenticated user):
+- `GET    /api/users/me/pins`  — list stores they can manage a PIN at (owner/admin see all org stores; others see UserStore memberships)
+- `PUT    /api/users/me/pin`   — `{ storeId, pin }`. Owners bypass the UserStore membership check — auto-creates the row
+- `DELETE /api/users/me/pin/:storeId`
+
+**Portal UI** — new "My Register PIN" tab in `AccountHub` (`/portal/account?tab=mypin`). Lists every accessible store with hasPin badge; per-store set/update/remove. Show/hide toggle, confirm-match validation. External CSS with `mypin-` prefix.
+
+---
+
+### 3. Admin Price Calculator (superadmin-only, Interchange-plus scenarios)
+
+Ported the user-supplied `calcAll` logic verbatim (D&A constants, GP Schedule A buy rates) — only the UI changed. Hard-coded `PRESETS` (Tower Liquors, Ram Corp, Mahi Corp) replaced with a saved-scenario system backed by a new `PriceScenario` table. All inputs are number fields (no sliders). Superadmin-only — not tenant-scoped.
+
+**Schema** — new `PriceScenario` model with `storeName`, `location`, `mcc`, `notes`, `inputs` (JSON), `results` (JSON cache for list-view summary), `createdById`. Not linked to `Organization` — sales collateral lives at platform level.
+
+**Backend** — [`priceScenarioController.js`](backend/src/controllers/priceScenarioController.js) with full CRUD; `/api/price-scenarios/*` routes (superadmin-only via `authorize('superadmin')`).
+
+**Admin-app page** — [`AdminPriceCalculator.jsx`](admin-app/src/pages/AdminPriceCalculator.jsx) + [`.css`](admin-app/src/pages/AdminPriceCalculator.css) (prefix: `apc-`):
+- Left sidebar: scenario list with search + "New" button
+- Right pane: 4 tabs — Calculator / Rate Breakdown / Earnings / vs Current
+- Three side-by-side panels in Calculator tab: Scenario + Merchant Data / StoreVeu Pricing / Current Processor
+- Save / Save As / Delete actions pinned to the tab bar
+- Live rate chips in header (Processing Rate, All-in Rate, Merchant Saves/mo, SV Earns/mo)
+
+Route: `/price-calculator` under Sales Tools sidebar group. Scenario results cached in `results` JSON so list view can render summary columns without re-running `calcAll`.
+
+---
+
+### 4. US State catalog + auto-populate store defaults
+
+**Problem**: each store was manually configuring sales tax, bottle deposit rules, age limits, and lottery settings. No central place to curate per-state defaults. Onboarding a new store in a new state was always "recreate the tax rule, recreate each deposit rule, set the age limits, pick the lottery state".
+
+**Schema** (additive):
+- New `State` model (`code` PK as 2-letter code, `name`, `defaultTaxRate`, `defaultLotteryCommission`, `alcoholAgeLimit`, `tobaccoAgeLimit`, `bottleDepositRules` JSON, `lotteryGameStubs` JSON, `notes`, `active`) — managed by superadmin
+- New nullable field `Store.stateCode` with FK → `State.code`
+
+**Apply-defaults endpoint** (`POST /api/stores/:id/apply-state-defaults` — idempotent):
+1. Upserts `TaxRule` named "Default Sales Tax" at store level with the state's `defaultTaxRate`
+2. Replaces all `DepositRule` rows for `(orgId, state.code)` with the state's `bottleDepositRules` — org-scoped since existing schema is already keyed that way
+3. Upserts `LotterySettings.state` + `commissionRate` for this store
+4. Merges `{tobacco, alcohol}` into `store.pos.ageLimits` JSON (which `usePOSConfig` already reads)
+
+The endpoint is deliberately separate from `PUT /stores/:id/state` (which just sets the code). This lets the portal UI confirm with the user before overwriting tax/deposit rules that may have been hand-tuned.
+
+**Lottery game filtering** (already wired): `LotteryGame` has a `state` field; `lotteryController.listGames` already filters by `LotterySettings.state`. Once the store's state is set and defaults applied, cashiers only see the games tagged to their state.
+
+**Admin-app page** — [`AdminStates.jsx`](admin-app/src/pages/AdminStates.jsx) + [`.css`](admin-app/src/pages/AdminStates.css) (prefix: `as-`): card grid with inline CRUD modal; per-state bottle-deposit rule editor (container type, material, min/max oz, deposit $).
+
+**Portal integration** — new "State" section at the top of `StoreSettings.jsx` with:
+- State dropdown (from `GET /api/states/public` — active states only)
+- "Save" button (only enables on dirty)
+- "Apply State Defaults" button (with confirmation — warns about overwriting tax/deposit rules). After apply, calls `loadConfig()` so age limits + lottery state refresh in-place
+- Preview block shows the selected state's defaults inline
+
+**New API helpers** — admin-app (`listAdminStates`, `createAdminState`, etc.), frontend (`listStatesPublic`, `setStoreStateCode`, `applyStoreStateDefaults`).
+
+---
+
+### 5. Mobile UPC scanner (browser + cashier-app)
+
+Camera-based barcode scanner for tablets and phones with no handheld scanner hardware. Two-engine strategy:
+
+1. **Native `BarcodeDetector` API** — Chromium-based browsers (Android Chrome, Edge, Chrome desktop). Zero dependencies. Supports 11 symbologies including UPC-A/E, EAN-8/13, Code-128/39/93, QR.
+2. **`@zxing/browser` from esm.sh CDN** — lazy-loaded on first call when native is unavailable (iOS Safari). No npm install needed.
+
+**Shared component** — [`BarcodeScannerModal.jsx`](frontend/src/components/BarcodeScannerModal.jsx) + [`.css`](frontend/src/components/BarcodeScannerModal.css) (prefix: `bsm-`). Copied byte-for-byte into `cashier-app/src/components/` — same UX, same fallback. Features: getUserMedia with rear-camera preference, scanning reticle overlay, pulse animation, torch toggle (when capability available), success beep via Web Audio API, debounce against duplicate reads within 1s.
+
+**Wiring**:
+- **Portal ProductCatalog** — "Scan" button in the search bar. Detected code fills the input + resets to page 1.
+- **Cashier-app ActionBar** — "Scan" button (camera icon, blue) only shown when `shiftOpen`. Detected code flows through `handleScan` so the full POS pipeline fires (age gate, pack-size picker, add-product-on-not-found all continue to work).
+
+Both builds verified clean. Native `BarcodeDetector` not available in Claude Preview's browser, confirming the fallback path will hit on iOS Safari — which is the critical case.
+
+---
+
+### Schema pushes (non-destructive, this session)
+
+All applied via `npx prisma db push` against the live dev DB:
+- `UserStore.posPin String?` — nullable, optional per-store PIN override
+- `PriceScenario` — new table
+- `User.priceScenarios` — reciprocal relation
+- `Store.stateCode String?` + FK to `State.code` — nullable
+- `State` — new table, superadmin-managed catalog
+
+---
+
+### Files shipped (Session 36)
+
+**Backend**:
+- `backend/prisma/schema.prisma` — `UserStore.posPin`, `PriceScenario`, `State` models; `Store.stateCode` + `state` relation; `User.priceScenarios` back-relation
+- `backend/src/controllers/stationController.js` — tiered pinLogin rewrite + `listMyPins`, `setMyPin`, `removeMyPin` self-service endpoints
+- `backend/src/controllers/priceScenarioController.js` — NEW (full CRUD)
+- `backend/src/controllers/stateController.js` — NEW (CRUD + `setStoreState` + `applyStateDefaults`)
+- `backend/src/routes/priceScenarioRoutes.js` — NEW
+- `backend/src/routes/stateRoutes.js` — NEW
+- `backend/src/routes/storeRoutes.js` — +2 routes (setState + applyStateDefaults)
+- `backend/src/routes/userManagementRoutes.js` — +3 self-service PIN routes
+- `backend/src/server.js` — mount `/api/price-scenarios`, `/api/states`
+
+**Admin-app**:
+- `admin-app/src/pages/AdminPriceCalculator.jsx` + `.css` — NEW (prefix `apc-`)
+- `admin-app/src/pages/AdminStates.jsx` + `.css` — NEW (prefix `as-`)
+- `admin-app/src/App.jsx` — +2 routes
+- `admin-app/src/components/AdminSidebar.jsx` — "Sales Tools" group with Price Calculator; "States" nav item in Management
+- `admin-app/src/rbac/routePermissions.js` — +2 entries
+- `admin-app/src/services/api.js` — +10 API helpers (5 price scenarios + 5 states)
+
+**Frontend (portal)**:
+- `frontend/src/pages/MyPIN.jsx` + `.css` — NEW (prefix `mypin-`)
+- `frontend/src/components/BarcodeScannerModal.jsx` + `.css` — NEW (prefix `bsm-`)
+- `frontend/src/pages/AccountHub.jsx` — +"My Register PIN" tab
+- `frontend/src/pages/StoreSettings.jsx` + `.css` — state dropdown + Apply Defaults button + preview
+- `frontend/src/pages/ProductCatalog.jsx` + `.css` — camera scan button in search bar
+- `frontend/src/services/api.js` — +8 API helpers (3 PIN + 5 state + public state catalog)
+
+**Cashier-app**:
+- `cashier-app/src/screens/PinLoginScreen.css` — scroll fix
+- `cashier-app/src/components/BarcodeScannerModal.jsx` + `.css` — NEW (copied from portal)
+- `cashier-app/src/components/pos/ActionBar.jsx` — `onScanCamera` prop + "Scan" button
+- `cashier-app/src/screens/POSScreen.jsx` — mount scanner modal; route detected code through `handleScan`
+
+---
+
+### Deferred to future sessions (each is 1-2 sessions of work on its own)
+
+> The user was briefed up front that #6-#8 are much larger than #1-#5 and accepted the staged delivery.
+
+#### #6 — Quick Buttons WYSIWYG builder (1-2 sessions)
+
+User asked for iPhone-home-screen-style freeform drag-and-drop customization with tile sizing, 2-level folders, image/video uploads, groups, action buttons (void/discount/open-drawer/print-receipt/etc.), text labels.
+
+**Recommended library**: `react-grid-layout` (MIT, used by Grafana) for the drag/resize grid. Covers iPhone-widget-style tiles with minimal code.
+
+**Scope for a dedicated session**:
+- New `QuickButtonLayout` table (`storeId`, `buttons` JSON with `{x, y, w, h, type, payload}` per tile)
+- Extend the existing `store.pos.quickFolders` or supersede it
+- Multer upload endpoint for tile images/videos (user said "S3-like bucket"; start with local `/uploads` then switch to R2/S3)
+- Button types: `product`, `folder`, `group`, `action` (discount/void/lookup/drawer/reprint/etc.), `text_label`, `image_tile`
+- Portal visual builder (drag, resize, edit, nested folder view)
+- Cashier-side renderer with 2-level folder drill-in
+
+#### #7 — Capacitor mobile app (1 session for MVP, 2-3 months for full native POS)
+
+MVP approach (1 session): wrap the existing portal with Capacitor, produce Android + iOS installers. Trimmed to manager-focused screens first (Live Dashboard, Transactions, Chat, Online Orders).
+
+**Scope for a dedicated session**:
+- `npm i @capacitor/cli @capacitor/core @capacitor/android @capacitor/ios` in a new `mobile/` workspace
+- `capacitor.config.json` pointing at the portal's `dist/` build
+- Build scripts for `npx cap sync` + `npx cap open android/ios`
+- Detect `Capacitor.isNativePlatform()` in portal — hide nav items that don't apply on mobile (e.g. table-heavy bulk-import pages)
+- Sync the camera scanner to use `@capacitor-mlkit/barcode-scanning` for native-speed scanning on mobile vs the web fallback
+
+#### #8 — Transaction video POC (2-3 sessions)
+
+Reolink RLC-510WA @ RTSP, 15s clip per transaction, 3-day rolling storage, $20/mo/store budget.
+
+**Architecture decided**: per-station ffmpeg child-process in the Electron main process pulls the RTSP stream, maintains a ~30s circular buffer on disk, and on every `POST /api/pos-terminal/transactions` (detected via IPC) extracts 5s-before + 10s-after clip, uploads to Cloudflare R2 (no egress fees, ~$0.015/GB — well under $20/mo budget).
+
+**Scope for a dedicated session**:
+- Schema: `CameraConfig` (per-station RTSP URL, creds, enabled), `TransactionVideo` (txId, storageKey, duration, expiresAt)
+- Electron main-process ffmpeg worker ([`cashier-app/electron/videoRecorder.cjs`](cashier-app/electron/videoRecorder.cjs))
+- Backend upload endpoint (signed URL from R2)
+- Portal Transactions page: "▶ Video" button per row that opens modal player hitting a time-limited signed R2 URL
+- Retention cron — daily cleanup of rows past `expiresAt`
+
+---
+
+*Last updated: April 2026 — Session 36: Cashier scroll fix, Owner per-store PIN, Admin Price Calculator, US State catalog with auto-populate defaults, Mobile UPC scanner (portal + cashier-app)*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 37)
+
+### Quick Buttons WYSIWYG — freeform drag-and-drop cashier home screen
+
+Shipped the full #6 deferred item from Session 36. Store admins can now lay out the POS home screen like an iPhone home screen: drag-and-drop tiles, resize, 1-level folders, image uploads, and action tiles that fire POS handlers (discount, void, open drawer, cash drop, lottery sale, fuel sale, bottle return, etc.).
+
+#### Architecture
+
+Runs **alongside** the legacy `store.pos.quickFolders` system — existing setups keep working, and the cashier-app auto-adds a **BUTTONS** tab when the new layout has content. The `POSScreen` tab bar now shows CATALOG / BUTTONS / FOLDERS; each filters in/out based on what's configured.
+
+**Schema** — new `QuickButtonLayout` model (one row per store):
+```prisma
+model QuickButtonLayout {
+  id        String   @id @default(cuid())
+  orgId     String
+  storeId   String   @unique
+  name      String   @default("Main Screen")
+  gridCols  Int      @default(6)  // 3-12 columns, configurable per layout
+  tree      Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([orgId, storeId])
+  @@map("quick_button_layouts")
+}
+```
+
+**Tile types** (5):
+- `product` — tap adds to cart (productId, name, price, upc)
+- `folder` — tap drills into children (label, emoji, color, children[])
+- `action` — tap fires a POS handler (actionKey from a server-side whitelist)
+- `text` — display-only label
+- `image` — picture tile with optional `targetProductId` or `targetActionKey`
+
+Every tile carries `{ id, x, y, w, h, backgroundColor?, textColor?, imageUrl? }`. The save handler enforces **1-level folder depth** (a folder's `children[]` may NOT contain another folder) — backend validation rejects deeper nesting with 400 so the cashier-side back button only needs to handle a single drill-in.
+
+**Action key whitelist** (server-side `VALID_ACTIONS` set): `discount`, `void`, `refund`, `open_drawer`, `no_sale`, `print_last_receipt`, `customer_lookup`, `customer_add`, `price_check`, `hold`, `recall`, `cash_drop`, `payout`, `end_of_day`, `lottery_sale`, `fuel_sale`, `bottle_return`, `manual_entry`, `clock_event`. POS admins can only select from this list; the cashier-side dispatcher maps each key to its existing handler.
+
+#### Backend
+
+New files:
+- [`quickButtonController.js`](backend/src/controllers/quickButtonController.js) — GET/PUT/DELETE layout, POST upload, GET actions. Validates tree depth + action keys on save. Multer storage to `uploads/quick-buttons/`, 10 MB per file, image MIME types only.
+- [`quickButtonRoutes.js`](backend/src/routes/quickButtonRoutes.js) — `/api/quick-buttons/*` routes gated on `pos_config.view` (read) and `pos_config.edit` (write).
+
+Modified: `server.js` mounts `/api/quick-buttons` + static serving for `/uploads/quick-buttons` (1-day cache, NOT immutable because admins can replace images).
+
+#### Portal (WYSIWYG builder)
+
+[`QuickButtonBuilder.jsx`](frontend/src/pages/QuickButtonBuilder.jsx) + [`.css`](frontend/src/pages/QuickButtonBuilder.css) (prefix `qbb-`):
+
+**Layout** — 3 columns:
+1. **Palette (left)** — Add buttons for each tile type, grid-column slider (3-12), "Back to root" when drilled into a folder
+2. **Canvas (center)** — react-grid-layout `GridLayout` with freeform placement (`compactType: null`, `preventCollision: true`, `isBounded: true`). Wrapped in a `GridCanvas` sub-component that uses `useContainerWidth()` to auto-size.
+3. **Inspector (right)** — Context-aware property editor for the selected tile (label, colors, image upload, product swap, action-key dropdown)
+
+**Dependency**: `react-grid-layout@2.2.3`. Note: v2.x dropped `WidthProvider` in favour of the `useContainerWidth` hook — the GridCanvas sub-component passes the measured pixel width explicitly to `GridLayout`.
+
+**Features**:
+- Drag tiles around freely (no auto-compact, stays exactly where placed)
+- Resize via SE handle
+- Click to select, double-click folder to drill in
+- Inspector fields: label, emoji, color swatches (12 preset), background/text colours, image upload (with preview)
+- Product picker modal (debounced search via existing `searchCatalogProducts`)
+- Image upload via `POST /api/quick-buttons/upload` — returns static URL, pasted directly onto tile
+- "Save As" / "Save" / "Delete" / "Reset layout" / grid-column count in sidebar
+- Unsaved changes warning (`beforeunload`)
+- Responsive: 3-col shell collapses to 1-col stack at 1024px; palette goes horizontal
+
+**Route**: `/portal/quick-buttons` (permission: `pos_config.view`). Sidebar link "Quick Buttons" added under **Point of Sale** group with the `Layout` Lucide icon.
+
+#### Cashier-app (read-only renderer)
+
+[`QuickButtonRenderer.jsx`](cashier-app/src/components/pos/QuickButtonRenderer.jsx) + [`.css`](cashier-app/src/components/pos/QuickButtonRenderer.css) (prefix `qbr-`):
+
+- Renders the stored tiles at their exact (x,y,w,h) positions via CSS Grid (`gridColumn: "X / span W"`). No drag-library dependency on the cashier side — just read-only display.
+- Tap dispatch:
+  - `product` → `useCartStore.addProduct(...)` with metadata
+  - `folder` → drills into children (local state, no route change)
+  - `action` → calls `onAction(actionKey)` prop → POSScreen dispatcher
+  - `text` → no-op (button is `disabled`)
+  - `image` → fires `targetProductId` or `targetActionKey` if set
+- Breadcrumb with "Back" button when inside a folder
+
+**Hook** — [`useQuickButtonLayout.js`](cashier-app/src/hooks/useQuickButtonLayout.js):
+- Fetches layout via `GET /api/quick-buttons?storeId=...`
+- Polls every 5 min + on tab `visibilitychange` (same pattern as `usePOSConfig`)
+- Returns `{ layout, loading, refresh }`
+
+**POSScreen integration** ([POSScreen.jsx](cashier-app/src/screens/POSScreen.jsx)):
+- Imports the hook + renderer
+- New `handleQuickAction(actionKey)` dispatcher maps every valid action key to the existing handler (requireManager gating preserved for discount/void/refund)
+- Tab bar updated — now shows CATALOG / ▦ BUTTONS / ⚡ FOLDERS depending on what's configured. Empty tabs are filtered out.
+
+#### Verification
+
+Both builds green (portal 15.20s, cashier-app 4.58s). Backend endpoints respond 401 on all three routes (`/actions`, `/?storeId=`, `PUT /`) as expected without auth. Vite dep pre-bundler required a cache bust after the react-grid-layout API correction — documented in the GridCanvas comment so the next maintainer knows WidthProvider was intentionally removed.
+
+#### Files shipped (Session 37)
+
+**Backend**:
+- `backend/prisma/schema.prisma` — `QuickButtonLayout` model
+- `backend/src/controllers/quickButtonController.js` — NEW
+- `backend/src/routes/quickButtonRoutes.js` — NEW
+- `backend/src/server.js` — mount routes + static serving
+
+**Portal**:
+- `frontend/package.json` — +`react-grid-layout` ^2.2.3
+- `frontend/src/pages/QuickButtonBuilder.jsx` + `.css` — NEW (prefix `qbb-`)
+- `frontend/src/App.jsx` — `/portal/quick-buttons` route
+- `frontend/src/components/Sidebar.jsx` — "Quick Buttons" nav item
+- `frontend/src/rbac/routePermissions.js` — route permission entry
+- `frontend/src/services/api.js` — 5 new API helpers
+
+**Cashier-app**:
+- `cashier-app/src/components/pos/QuickButtonRenderer.jsx` + `.css` — NEW (prefix `qbr-`)
+- `cashier-app/src/hooks/useQuickButtonLayout.js` — NEW
+- `cashier-app/src/api/pos.js` — +`getQuickButtonLayout`
+- `cashier-app/src/screens/POSScreen.jsx` — `handleQuickAction` dispatcher, Buttons tab, renderer wiring
+
+---
+
+*Last updated: April 2026 — Session 37: Quick Buttons WYSIWYG — freeform drag/resize tile builder, 1-level folders, image uploads, 19-action whitelist, read-only cashier-app renderer*
+

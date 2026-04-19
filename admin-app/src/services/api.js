@@ -150,4 +150,18 @@ export const deleteRole           = (id)              => api.delete(`/roles/${id
 export const getUserRoles         = (userId)          => api.get(`/roles/users/${userId}/roles`).then(r => r.data);
 export const setUserRoles         = (userId, roleIds) => api.put(`/roles/users/${userId}/roles`, { roleIds }).then(r => r.data);
 
+// ── Price Scenarios (Interchange-plus calculator, superadmin-only) ──────────
+export const listPriceScenarios   = (params)          => api.get('/price-scenarios', { params }).then(r => r.data);
+export const getPriceScenario     = (id)              => api.get(`/price-scenarios/${id}`).then(r => r.data);
+export const createPriceScenario  = (data)            => api.post('/price-scenarios', data).then(r => r.data);
+export const updatePriceScenario  = (id, data)        => api.put(`/price-scenarios/${id}`, data).then(r => r.data);
+export const deletePriceScenario  = (id)              => api.delete(`/price-scenarios/${id}`).then(r => r.data);
+
+// ── State catalog (US states with per-state defaults) ───────────────────
+export const listAdminStates     = (params)           => api.get('/states', { params }).then(r => r.data);
+export const getAdminState       = (code)             => api.get(`/states/${code}`).then(r => r.data);
+export const createAdminState    = (data)             => api.post('/states', data).then(r => r.data);
+export const updateAdminState    = (code, data)       => api.put(`/states/${code}`, data).then(r => r.data);
+export const deleteAdminState    = (code)             => api.delete(`/states/${code}`).then(r => r.data);
+
 export default api;

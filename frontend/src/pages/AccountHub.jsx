@@ -4,18 +4,20 @@
  */
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Building2, Users, Store, Settings2 } from 'lucide-react';
+import { Building2, Users, Store, Settings2, KeyRound } from 'lucide-react';
 import Organisation from './Organisation';
 import UserManagement from './UserManagement';
 import StoreManagement from './StoreManagement';
 import StoreSettings from './StoreSettings';
+import MyPIN from './MyPIN';
 import '../styles/portal.css';
 
 const TABS = [
-  { key: 'organisation', label: 'Organisation',  icon: <Building2 size={14} /> },
-  { key: 'users',        label: 'Users',         icon: <Users size={14} /> },
-  { key: 'stores',       label: 'Stores',        icon: <Store size={14} /> },
+  { key: 'organisation', label: 'Organisation',   icon: <Building2 size={14} /> },
+  { key: 'users',        label: 'Users',          icon: <Users size={14} /> },
+  { key: 'stores',       label: 'Stores',         icon: <Store size={14} /> },
   { key: 'settings',     label: 'Store Settings', icon: <Settings2 size={14} /> },
+  { key: 'mypin',        label: 'My Register PIN', icon: <KeyRound size={14} /> },
 ];
 
 export default function AccountHub() {
@@ -47,6 +49,7 @@ export default function AccountHub() {
       {tab === 'users'        && <UserManagement embedded />}
       {tab === 'stores'       && <StoreManagement embedded />}
       {tab === 'settings'     && <StoreSettings embedded />}
+      {tab === 'mypin'        && <MyPIN />}
     </div>
   );
 }

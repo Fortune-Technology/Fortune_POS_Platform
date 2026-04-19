@@ -144,6 +144,12 @@ export const SYSTEM_ROLES = [
       'reports.view','reports.manage',
       'analytics.view','predictions.view',
       'users.view','users.create','users.edit',
+      // Managers need to see stores to scope POS config / reports / etc. to
+      // the right location — without stores.view the StoreSwitcher is empty
+      // and every store-scoped endpoint returns 403. Create/edit/delete
+      // remain owner-only.
+      'stores.view',
+      'organization.view',
       'pos_config.view','pos_config.edit',
       'rules_fees.view','rules_fees.edit',
       'support.view','support.create','support.edit',
