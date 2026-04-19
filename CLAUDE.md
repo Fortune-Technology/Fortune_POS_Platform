@@ -5318,6 +5318,78 @@ Initial builder had `getStores().catch(() => {})` — if the fetch failed or ret
   2. 0 stores in org → instruction + link to `/portal/account?tab=stores`
   3. Stores present but none selected → "Select a store above" prompt
 
+### 10. Back Office PIN-SSO from cashier-app into portal
+
+Real security fix, not a polish item. The previous implementation only opened the portal URL in the browser — whoever's localStorage session happened to be there is what loaded. A manager clicking Back Office could silently inherit yesterday's admin session with full admin access. Now fixed: whoever enters the manager PIN lands in the portal **as themselves** with their actual role's permissions.
+
+No new backend endpoint. The existing `/pos-terminal/pin-login` already returns `{ token, id, name, email, role, orgId, storeId }` after validating against `UserStore.posPin` (Session 36 tiered lookup). The fix threads that response through the manager-PIN flow so the Back Office handler can build a `/impersonate?token=X&user=Y` URL and reuse the `ImpersonateLanding` component from Session 8.
+
+Changes:
+- **[`useManagerStore.js`](cashier-app/src/stores/useManagerStore.js)** — added `managerAuth` field to the store (full `{ token, id, name, ... }` response). Populated by `onPinSuccess`'s new optional third arg; cleared on `endSession()` so the token doesn't linger past the 10-minute manager session.
+- **[`ManagerPinModal.jsx`](cashier-app/src/components/modals/ManagerPinModal.jsx)** — passes `res.data` as the third arg to `onPinSuccess(user.id, user.name, user)`. Existing callers unchanged (ignore the extra arg).
+- **[`POSScreen.jsx`](cashier-app/src/screens/POSScreen.jsx) `onAdminPortal`** — reads `managerAuth` from the store, builds a `/impersonate?token=X&user=Y` URL, opens it via Electron's default browser (or `window.open` as fallback). If `managerAuth` is null (shouldn't happen but just in case), falls back to the old plain-URL behaviour with a `console.warn`.
+
+Flow after the fix:
+1. Cashier taps Back Office
+2. `requireManager('Back Office', onAdminPortal)` opens the PIN modal (or skips it if a valid manager session already exists within the 10-min window)
+3. Manager enters PIN → cashier-app POSTs to `/pos-terminal/pin-login` → backend does the tiered lookup (UserStore.posPin first, then User.posPin org-wide fallback), issues 24h JWT for that user
+4. `onPinSuccess(id, name, fullUser)` stores the full auth in the manager store
+5. `onAdminPortal` reads `managerAuth.token` + user fields, opens `${VITE_PORTAL_URL}/impersonate?token=JWT&user=BASE64_JSON`
+6. Portal's `ImpersonateLanding` (already built Session 8) reads the URL, writes `localStorage.user`, redirects to `/portal/realtime`
+7. Portal loads with THAT manager's permissions via `usePermissions` hook which re-fetches from `/api/roles/me/permissions`
+
+Security improvement: stale localStorage sessions in the browser no longer determine who's "logged in" at the portal. The manager PIN is the source of truth for every Back Office click.
+
+Cashier-app vite build confirmed clean after changes (5.17s). Portal and backend untouched — no schema push, no Prisma regen, no backend restart needed for this feature.
+
+### 11. Sidebar "signed in as" user card
+
+Portal had NO visible indication of which user was logged in — the sidebar just listed nav items + a Logout button. Users couldn't verify their session identity after PIN-SSO (or at any point). Fixed via [`Sidebar.jsx`](frontend/src/components/Sidebar.jsx) + [`index.css`](frontend/src/index.css):
+
+- Reads `localStorage.user` on mount; skips rendering when no session
+- Circular avatar with user initials (first letter of first + last token in name/email) on `--brand-primary` background
+- Name line (bold) + role chip + email (subtle), all single-line with ellipsis on narrow sidebars
+- `title={currentUser.email}` tooltip for truncated emails
+- Role-label map: `superadmin → "Super Admin"`, `admin → "Admin"`, `owner → "Owner"`, `manager → "Manager"`, `cashier → "Cashier"`, `staff → "Staff"`
+- Pinned to sidebar bottom via `margin-top: auto` on `.sidebar-user-card`; Logout button sits directly beneath
+- Light-theme tokens: `--bg-tertiary` card bg, `--text-primary` name, `--text-muted` role line, `--brand-primary` avatar
+
+Appears on every portal page since Sidebar is part of the shared Layout (Session 16 refactor).
+
+Verified: Manager session → sidebar shows "NK · Nishant Kumar · Manager · nishant@future.com"; colors resolve to correct light-theme tokens.
+
+### 12. My Profile — self-service for every user (no permission gate)
+
+Discovered while debugging the sidebar card: staff/cashiers can't reach Account Settings at all (requires `organization.view`), so they had **no way to update their own name, phone, or password** without admin intervention. Shipped a dedicated self-service page.
+
+**Backend** — three new endpoints in [`userManagementController.js`](backend/src/controllers/userManagementController.js), registered in [`userManagementRoutes.js`](backend/src/routes/userManagementRoutes.js) BEFORE the `/:id` routes so they're not shadowed:
+
+- `GET /api/users/me` — returns own profile + `orgs[]` (every UserOrg membership with role + org name). Never leaks `posPin` hash or `password` hash.
+- `PUT /api/users/me` — updates `name` / `phone` only. Email/role/orgId deliberately excluded (those require admin).
+- `PUT /api/users/me/password` — requires current password (even a stolen session can't pivot to password rotation). Enforces the same policy as signup (8+ chars, upper + lower + digit + special). Rejects no-op rotations (new must differ from current).
+
+None have a `requirePermission` gate — any authenticated user can manage their own profile. Reuses the existing `validatePhone` + `validatePassword` helpers from [`validators.js`](backend/src/utils/validators.js) (caveat: validatePhone returns `null` on success / error string on failure — initial wiring had inverted logic, fixed after live test).
+
+**Frontend** — new [`MyProfile.jsx`](frontend/src/pages/MyProfile.jsx) + [`.css`](frontend/src/pages/MyProfile.css) (prefix `mp-`) page at route `/portal/my-profile`. No permission mapping → authenticated-only.
+
+Page sections:
+1. **Identity card** — big avatar with initials, name + email + role chip + org chip, brand-gradient background
+2. **Profile details form** — editable name + phone, read-only email + role with explanatory hints ("Contact your admin to change your email")
+3. **Password change form** — current + new + confirm, native show/hide toggle, **live password-strength checklist** (5 rules matching backend validator), disabled until all rules pass + both fields match
+
+**Sidebar user card is now clickable** — `<NavLink to="/portal/my-profile">` with hover/active states. Click the card anywhere in the portal → land on your own profile page. Title attr still shows full email for narrow sidebars.
+
+Tested:
+- `GET /api/users/me` → full profile with orgs array
+- `PUT /api/users/me` with `{ phone: '+1-555-0123' }` → 200, saves with dashes
+- `PUT /api/users/me` with `{ phone: 'not-a-phone' }` → 400 "Invalid phone format"
+- `PUT /api/users/me` with `{ phone: '123' }` → 400 (too few digits)
+- `PUT /api/users/me/password` with wrong current → 400 "Current password is incorrect"
+- Sidebar card href → `/portal/my-profile` ✓
+- Page renders on route with all 7 expected labels + both form cards ✓
+
+**Closes a real UX gap** — staff managing inventory, cashiers, any non-admin role can now update their own details (including password) without needing admin to do it for them. No schema change, no seed, no env var.
+
 ### Files touched (Session 37b)
 
 **Backend**:
@@ -5331,10 +5403,23 @@ Initial builder had `getStores().catch(() => {})` — if the fetch failed or ret
 - `frontend/src/pages/MyPIN.css` — full light-theme rewrite
 - `frontend/src/pages/POSConfig.jsx` — removed Quick Keys tab + import
 - `frontend/src/App.jsx` — `/portal/quick-access` redirect updated
+- `frontend/src/components/Sidebar.jsx` — "signed in as" user card above Logout, now clickable → `/portal/my-profile`
+- `frontend/src/index.css` — `.sidebar-user-card` (now `NavLink`), `.sidebar-user-avatar`, `.sidebar-user-meta` styles, hover/active on clickable card
+- `frontend/src/pages/MyProfile.jsx` + `.css` — NEW self-service profile page (prefix `mp-`)
+- `frontend/src/App.jsx` — `/portal/my-profile` route (authenticated-only, no permission gate)
+- `frontend/src/services/api.js` — `getMyProfile`, `updateMyProfile`, `changeMyPassword` helpers
+
+**Backend additions**:
+- `backend/src/controllers/userManagementController.js` — `getMe`, `updateMe`, `changeMyPassword` handlers
+- `backend/src/routes/userManagementRoutes.js` — three `/me` routes registered BEFORE `/:id` so they aren't shadowed
 
 **Cashier-app**:
 - `cashier-app/src/hooks/useQuickButtonLayout.js` — rowHeight in returned shape, default 56
 - `cashier-app/src/components/pos/QuickButtonRenderer.jsx` — honour per-store rowHeight + proportional gap
+- `cashier-app/src/stores/useManagerStore.js` — added `managerAuth` field, third-arg support on `onPinSuccess`, cleared on `endSession`
+- `cashier-app/src/components/modals/ManagerPinModal.jsx` — passes full response to `onPinSuccess`
+- `cashier-app/src/screens/POSScreen.jsx` — `onAdminPortal` uses `managerAuth` to build `/impersonate` URL
+- `cashier-app/src/components/modals/RefundModal.css` — fixed `borderRadius` camelCase typo (was a no-op but caused vite warning)
 
 **Admin-app**:
 - `admin-app/src/pages/AdminUsers.jsx` — `resolvePortalBase()` helper with 3-tier fallback
@@ -5351,7 +5436,7 @@ User confirmed: Sessions 36, 37, 37b done. Next session tackles a grab-bag of sm
 - [ ] "New Exchange update" voice rename — locate exchange notification text in [`ExchangeNotifier.jsx`](frontend/src/components/ExchangeNotifier.jsx), update phrase
 - [ ] Offline scan blinking fix — diagnose POSScreen re-render when offline (user reported: products load now, just screen blinks)
 - [ ] Product export CSV/XLSX — new `GET /api/catalog/products/export` + button in Products page, reuse [`exportUtils.js`](frontend/src/utils/exportUtils.js)
-- [ ] **Back Office button visibility** — button already exists at [ActionBar.jsx:189](cashier-app/src/components/pos/ActionBar.jsx:189), purple ExternalLink icon, gated on manager PIN. Session 37b user report suggests they couldn't find it. Next session: verify it's rebuilt + visible, consider removing the manager-PIN gate (it's just "open portal in new tab", not a privileged action), or pin it to the left of the scroll container so it doesn't get pushed off-screen at 1366×768
+- [x] ~~Back Office → true PIN-SSO into portal~~ **Shipped in Session 37b (see below).**
 
 ### Wave 2 — Notification dots + Sante templates (~2h)
 
@@ -5388,6 +5473,6 @@ Unchanged — Reolink RTSP → ffmpeg rolling buffer → 15s clip on TX → Clou
 
 ---
 
-*Last updated: April 2026 — Session 37b: RBAC manager-role fix, SSO portal URL fallback, light-theme CSS rewrite, react-grid-layout legacy adapter, tile-size + custom-color UX polish, one-entry Quick Buttons consolidation*
+*Last updated: April 2026 — Session 37b: RBAC manager-role fix, SSO portal URL fallback, light-theme CSS rewrite, react-grid-layout legacy adapter, tile-size + custom-color UX polish, one-entry Quick Buttons consolidation, **PIN-SSO from cashier-app Back Office → portal**, **sidebar "signed in as" card**, **My Profile self-service page***
 
 
