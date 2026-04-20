@@ -58,7 +58,7 @@
 .ii-filters { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
 
 .ii-filter-btn {
-  padding: 5px 14px; border-radius: 999px; font-size: 0.8rem;
+  padding: 5px 14px; border-radius: 6px; font-size: 0.8rem;
   cursor: pointer; border: 1px solid var(--border-color);
   background: var(--bg-secondary); color: var(--text-secondary);
   transition: all 0.15s; font-weight: 400;
@@ -99,7 +99,7 @@
 }
 
 .ii-card-badge {
-  padding: 2px 8px; border-radius: 999px; font-size: 0.68rem;
+  padding: 2px 8px; border-radius: 6px; font-size: 0.68rem;
   font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
 }
 
@@ -411,7 +411,7 @@
 .ii-synced-badge {
   font-size: 0.8rem; color: #10b981;
   background: rgba(16,185,129,0.1);
-  padding: 4px 12px; border-radius: 999px;
+  padding: 4px 12px; border-radius: 6px;
 }
 
 .ii-match-status { font-size: 0.8rem; }
@@ -652,7 +652,7 @@
   padding: 4px 10px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 0.75rem;
   color: #10b981;
   font-weight: 600;

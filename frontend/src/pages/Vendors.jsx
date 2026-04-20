@@ -16,7 +16,7 @@ import {
 import {
   Plus, Edit2, X, Check, Search, Truck, Phone,
   Mail, Globe, ExternalLink, ToggleLeft, ToggleRight,
-  Building2, ChevronRight, Package, Copy,
+  Building2, Eye, Package, Copy,
 } from 'lucide-react';
 import './Vendors.css';
 
@@ -465,17 +465,17 @@ function VendorRow({ vendor, onEdit, onToggleActive, onViewDetail }) {
 
       {/* Email */}
       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #9ca3af)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-        {vendor.email ? <><Mail size={10} /> {vendor.email}</> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+        {vendor.email ? <><Mail size={10} /> {vendor.email}</> : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
       </div>
 
       {/* Phone */}
       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #9ca3af)', display: 'flex', alignItems: 'center', gap: 5 }}>
-        {vendor.phone ? <><Phone size={10} /> {vendor.phone}</> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+        {vendor.phone ? <><Phone size={10} /> {vendor.phone}</> : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
       </div>
 
       {/* Terms */}
       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {vendor.terms || '—'}
+        {vendor.terms || 'N/A'}
       </div>
 
       {/* Active toggle */}
@@ -505,14 +505,14 @@ function VendorRow({ vendor, onEdit, onToggleActive, onViewDetail }) {
         >
           <Edit2 size={13} />
         </button>
-        <button onClick={() => onViewDetail(vendor.id)} title="View detail" style={{
+        <button onClick={() => onViewDetail(vendor.id)} title="View Details" style={{
           padding: 6, borderRadius: 6, border: 'none', background: 'rgba(255,255,255,.04)',
           cursor: 'pointer', color: 'var(--text-muted, #6b7280)', display: 'flex', alignItems: 'center',
         }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,.12)'; e.currentTarget.style.color = '#3b82f6'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,.04)'; e.currentTarget.style.color = 'var(--text-muted, #6b7280)'; }}
         >
-          <ChevronRight size={13} />
+          <Eye size={13} />
         </button>
       </div>
     </div>
@@ -590,8 +590,11 @@ export default function Vendors() {
   const cardStyle = {
     background: 'var(--bg-secondary, #111827)',
     border: '1px solid var(--border-color, #1f2937)',
-    borderRadius: 12, overflow: 'hidden',
+    borderRadius: 12,
+    overflowX: 'auto',
+    overflowY: 'hidden',
   };
+  const tableMinWidth = { minWidth: 960 };
 
   return (
       <div className="p-page ven-content">
@@ -619,7 +622,7 @@ export default function Vendors() {
             </button>
             <button onClick={() => setPanelVendor(null)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '0.55rem 1.1rem', borderRadius: 8, border: 'none',
-              background: 'var(--accent-primary)', color: '#0f1117', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+              background: 'var(--accent-primary)', color: '#ffffff', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
             }}>
               <Plus size={15} /> New Vendor
             </button>
@@ -658,6 +661,7 @@ export default function Vendors() {
 
         {/* Table */}
         <div style={cardStyle}>
+         <div style={tableMinWidth}>
           {/* Header row */}
           <div style={{
             display: 'grid', gridTemplateColumns: '64px 2fr 1fr 1fr 1fr 60px 80px 100px',
@@ -673,7 +677,7 @@ export default function Vendors() {
             <span>TERMS</span>
             <span>ACTIVE</span>
             <span>STATUS</span>
-            <span />
+            <span style={{ textAlign: 'right' }}>ACTIONS</span>
           </div>
 
           {loading ? (
@@ -682,7 +686,7 @@ export default function Vendors() {
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <Truck size={36} color="var(--text-muted, #6b7280)" style={{ opacity: 0.3, marginBottom: 10 }} />
               <div style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 600 }}>
-                {search ? 'No vendors match your search.' : 'No vendors yet — add your first supplier!'}
+                {search ? 'N/A — no vendors match your search.' : 'N/A — no vendors found. Add your first supplier!'}
               </div>
             </div>
           ) : (
@@ -696,6 +700,7 @@ export default function Vendors() {
               />
             ))
           )}
+         </div>
         </div>
 
       {/* Form panel */}

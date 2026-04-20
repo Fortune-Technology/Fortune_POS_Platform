@@ -39,7 +39,7 @@ function TypeBadge({ type }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '0.2rem 0.6rem',
-      borderRadius: 20,
+      borderRadius: 6,
       fontSize: '0.7rem', fontWeight: 700,
       letterSpacing: '0.04em',
       background: isMerch ? 'rgba(168,85,247,.12)' : 'rgba(245,158,11,.12)',

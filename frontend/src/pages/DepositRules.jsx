@@ -84,7 +84,7 @@ function ContainerTypeToggle({ value, onChange }) {
             onClick={() => toggle(opt)}
             style={{
               padding: '0.3rem 0.7rem',
-              borderRadius: 20,
+              borderRadius: 6,
               border: `1px solid ${on ? 'rgba(52,211,153,.4)' : 'var(--border-color, #2a2a3a)'}`,
               background: on ? 'rgba(52,211,153,.12)' : 'var(--bg-card, #1a1a2a)',
               color: on ? '#34d399' : 'var(--text-muted, #6b7280)',
@@ -457,7 +457,7 @@ export default function DepositRules({ embedded }) {
           ) : rules.length === 0 ? (
             <div className="dr-empty">
               <Recycle size={32} className="dr-empty-icon" /><br />
-              No active deposit rules yet.<br />
+              N/A — no active deposit rules configured.<br />
               <span style={{ fontSize: '0.8rem' }}>Click <strong style={{ color: 'var(--text-secondary, #9ca3af)' }}>Add Rule</strong> to create your first one.</span>
             </div>
           ) : (

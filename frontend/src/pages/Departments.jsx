@@ -124,7 +124,7 @@ const EMPTY_FORM = {
 
 function TaxBadge({ tc }) {
   const color = TAX_COLORS[tc] || TAX_COLORS[''];
-  const label = tc ? prettyCategory(tc) : '—';
+  const label = tc ? prettyCategory(tc) : 'N/A';
   return (
     <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: color + '22', color }}>
       {label}
@@ -441,7 +441,7 @@ function DeptRow({ dept, index, onDragStart, onDragOver, onDrop, onDragEnd, drag
 
       {/* Description truncated */}
       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #6b7280)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {dept.description || '—'}
+        {dept.description || 'N/A'}
       </div>
 
       {/* Show in POS toggle */}
@@ -650,8 +650,12 @@ export default function Departments() {
   const cardStyle = {
     background: 'var(--bg-secondary, #111827)',
     border: '1px solid var(--border-color, #1f2937)',
-    borderRadius: 12, overflow: 'hidden',
+    borderRadius: 12,
+    overflowX: 'auto',    // enable horizontal scroll for small viewports
+    overflowY: 'hidden',
   };
+  // Inner width floor: columns sum ≈ 28+60+(2fr)+(1fr)+80+60+80+90+gaps ≈ 650px min.
+  const tableMinWidth = { minWidth: 860 };
 
   return (
       <div className="p-page">
@@ -671,7 +675,7 @@ export default function Departments() {
             {orderDirty && (
               <button onClick={saveOrder} disabled={savingOrder} style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.875rem', borderRadius: 8, border: 'none',
-                background: '#f59e0b', color: '#0f1117', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                background: '#f59e0b', color: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
               }}>
                 <Check size={13} />
                 {savingOrder ? 'Saving…' : 'Save Order'}
@@ -688,7 +692,7 @@ export default function Departments() {
             </button>
             <button onClick={() => setPanelDept(null)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '0.55rem 1.1rem', borderRadius: 8, border: 'none',
-              background: 'var(--accent-primary)', color: '#0f1117', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+              background: 'var(--accent-primary)', color: '#ffffff', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
             }}>
               <Plus size={15} /> New Department
             </button>
@@ -727,6 +731,7 @@ export default function Departments() {
 
         {/* Table */}
         <div style={cardStyle}>
+         <div style={tableMinWidth}>
           {/* Header row */}
           <div style={{
             display: 'grid', gridTemplateColumns: '28px 60px 2fr 1fr 80px 60px 80px 90px',
@@ -753,7 +758,7 @@ export default function Departments() {
             <div style={{ padding: '3rem', textAlign: 'center' }}>
               <Package size={36} color="var(--text-muted, #6b7280)" style={{ opacity: 0.3, marginBottom: 10 }} />
               <div style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 600 }}>
-                {search ? 'No departments match your search.' : 'No departments yet — create your first one!'}
+                {search ? 'N/A — no departments match your search.' : 'N/A — no departments found. Create your first one!'}
               </div>
             </div>
           ) : (
@@ -775,6 +780,7 @@ export default function Departments() {
               />
             ))
           )}
+         </div>
         </div>
 
         {/* Drag hint */}

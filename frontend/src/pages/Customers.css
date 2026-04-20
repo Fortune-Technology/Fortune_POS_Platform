@@ -186,12 +186,12 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-x: scroll;
 }
 
 .cust-table-header {
   display: grid;
-  grid-template-columns: 220px 1fr 120px 90px 100px 110px auto;
+  grid-template-columns: 220px 1fr 120px 90px 100px 110px 130px;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.65rem;
@@ -199,11 +199,17 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.07em;
+  align-items: center;
+}
+
+/* All non-action column headers left-align with their data */
+.cust-table-header>span {
+  text-align: left;
 }
 
 .cust-table-row {
   display: grid;
-  grid-template-columns: 220px 1fr 120px 90px 100px 110px auto;
+  grid-template-columns: 220px 1fr 120px 90px 100px 110px 130px;
   padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--border-color);
   align-items: center;
@@ -253,6 +259,7 @@
 .cust-pts {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.3rem;
   font-size: 0.8rem;
   font-weight: 700;
@@ -261,6 +268,7 @@
 
 .cust-discount {
   font-size: 0.82rem;
+  text-align: left;
 }
 
 .cust-badge-green {
@@ -275,10 +283,12 @@
 
 .cust-balance {
   font-size: 0.82rem;
+  text-align: left;
 }
 
 .cust-card {
   font-size: 0.78rem;
+  text-align: left;
 }
 
 .cust-mono {

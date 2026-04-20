@@ -59,13 +59,13 @@
   position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
   color: #fff; font-size: 0.65rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 0.2rem 0.65rem; border-radius: 9999px; white-space: nowrap;
+  padding: 0.2rem 0.65rem; border-radius: 6px; white-space: nowrap;
 }
 
 .org-plan-current {
   position: absolute; top: 10px; right: 10px;
   color: #fff; font-size: 0.6rem; font-weight: 700;
-  padding: 0.1rem 0.45rem; border-radius: 9999px;
+  padding: 0.1rem 0.45rem; border-radius: 6px;
 }
 
 .org-plan-price { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }

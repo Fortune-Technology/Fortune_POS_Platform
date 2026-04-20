@@ -272,7 +272,7 @@ export default function VendorPayouts() {
                       {payments.map((p, i) => (
                         <tr key={p.id || i} className="vp-tr">
                           <td className="vp-td">{fmtDate(p.paymentDate || p.createdAt)}</td>
-                          <td className="vp-td vp-td--primary">{p.vendorName || '—'}</td>
+                          <td className="vp-td vp-td--primary">{p.vendorName || 'N/A'}</td>
                           <td className="vp-td">
                             <span className={`vp-type-badge${p.paymentType === 'merchandise' ? ' vp-type-badge--merch' : ' vp-type-badge--expense'}`}>
                               {p.paymentType === 'merchandise' ? <ShoppingCart size={10} /> : <DollarSign size={10} />}
@@ -281,9 +281,9 @@ export default function VendorPayouts() {
                           </td>
                           <td className="vp-td">{p.tenderMethod || 'cash'}</td>
                           <td className="vp-td" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {p.notes || <em style={{ opacity: 0.5 }}>—</em>}
+                            {p.notes || <em style={{ opacity: 0.5 }}>N/A</em>}
                           </td>
-                          <td className="vp-td">{p.createdByName || '—'}</td>
+                          <td className="vp-td">{p.createdByName || 'N/A'}</td>
                           <td className="vp-td vp-td--amount">-{fmt$(p.amount)}</td>
                         </tr>
                       ))}

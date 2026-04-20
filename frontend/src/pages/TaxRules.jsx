@@ -88,7 +88,7 @@ function ToggleChip({ checked, onChange, label }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '0.35rem 0.85rem',
-        borderRadius: 20,
+        borderRadius: 6,
         border: `1px solid ${checked ? 'rgba(52,211,153,.4)' : 'var(--border-color, #2a2a3a)'}`,
         background: checked ? 'rgba(52,211,153,.1)' : 'var(--bg-card, #1a1a2a)',
         color: checked ? '#34d399' : 'var(--text-muted, #6b7280)',
@@ -510,7 +510,7 @@ export default function TaxRules({ embedded }) {
           borderRadius: 12, color: 'var(--text-muted, #6b7280)', fontSize: '0.875rem',
         }}>
           <Percent size={32} style={{ marginBottom: 10, opacity: 0.25 }} /><br />
-          No active tax rules yet.<br />
+          N/A — no active tax rules configured.<br />
           <span style={{ fontSize: '0.8rem' }}>Click <strong style={{ color: 'var(--text-secondary, #9ca3af)' }}>Add Tax Rule</strong> to create your first slab.</span>
         </div>
       ) : (

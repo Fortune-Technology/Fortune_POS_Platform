@@ -28,33 +28,33 @@ const ORG_ID = process.argv[2] || 'default';
 // DEPARTMENTS
 // ─────────────────────────────────────────────────────────
 const DEPARTMENTS = [
-  { code: 'BEER',    name: 'Beer & Malt',          taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 10,  color: '#f59e0b' },
-  { code: 'WINE',    name: 'Wine',                 taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 20,  color: '#8b5cf6' },
-  { code: 'SPIRITS', name: 'Spirits & Liquor',     taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 30,  color: '#ec4899' },
-  { code: 'CIDER',   name: 'Cider & Hard Seltzer', taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 40,  color: '#10b981' },
-  { code: 'TOBAC',   name: 'Tobacco',              taxClass: 'tobacco',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 50,  color: '#6b7280' },
-  { code: 'VAPE',    name: 'Vape & E-Cig',         taxClass: 'tobacco',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 60,  color: '#374151' },
-  { code: 'LOTTERY', name: 'Lottery',              taxClass: 'none',     ageRequired: 18,   ebtEligible: false, bottleDeposit: false, sortOrder: 70,  color: '#fbbf24' },
-  { code: 'GROC',    name: 'Grocery',              taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 80,  color: '#22c55e' },
-  { code: 'DAIRY',   name: 'Dairy & Eggs',         taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 90,  color: '#60a5fa' },
-  { code: 'PRODUCE', name: 'Produce',              taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 100, color: '#4ade80' },
-  { code: 'MEAT',    name: 'Meat & Seafood',       taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 110, color: '#f87171' },
-  { code: 'DELI',    name: 'Deli',                 taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 120, color: '#fb923c' },
-  { code: 'FROZEN',  name: 'Frozen Foods',         taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 130, color: '#93c5fd' },
-  { code: 'BAKED',   name: 'Bakery',               taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 140, color: '#fde68a' },
-  { code: 'SNACKS',  name: 'Snacks & Candy',       taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 150, color: '#f9a8d4' },
-  { code: 'BVNALC',  name: 'Beverages (Non-Alc)',  taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: true,  sortOrder: 160, color: '#34d399' },
-  { code: 'WATER',   name: 'Water & Sparkling',    taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: true,  sortOrder: 170, color: '#7dd3fc' },
-  { code: 'HOTFOOD', name: 'Hot Food / Prepared',  taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 180, color: '#f97316' },
-  { code: 'COFFEE',  name: 'Coffee & Hot Drinks',  taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 190, color: '#92400e' },
-  { code: 'HBA',     name: 'Health & Beauty',      taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 200, color: '#c084fc' },
-  { code: 'PHARMA',  name: 'Pharmacy / OTC',       taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 210, color: '#a78bfa' },
-  { code: 'MERCH',   name: 'General Merchandise',  taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 220, color: '#d1d5db' },
-  { code: 'AUTO',    name: 'Automotive',           taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 230, color: '#9ca3af' },
-  { code: 'GIFT',    name: 'Gift Cards',           taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 240, color: '#fcd34d' },
-  { code: 'FOOD_RX', name: 'Food (Restaurant)',    taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 250, color: '#fb923c' },
-  { code: 'DRINK_RX',name: 'Drinks (Restaurant)',  taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 260, color: '#38bdf8' },
-  { code: 'ALCO_RX', name: 'Bar / Alcohol Service',taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 270, color: '#818cf8' },
+  { code: 'BEER',    name: 'Beer & Malt',          description: 'Domestic and imported beer, malt beverages, and hard seltzers served in cans, bottles, and multi-packs.', taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 10,  color: '#f59e0b' },
+  { code: 'WINE',    name: 'Wine',                 description: 'Red, white, rosé, and sparkling wines including table wine, sommelier selections, and gift-worthy bottles.',  taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 20,  color: '#8b5cf6' },
+  { code: 'SPIRITS', name: 'Spirits & Liquor',     description: 'Vodka, whiskey, rum, gin, tequila, and premium craft spirits for shelf and cooler display.',                  taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 30,  color: '#ec4899' },
+  { code: 'CIDER',   name: 'Cider & Hard Seltzer', description: 'Hard ciders, flavoured seltzers, and RTD (ready-to-drink) cocktails sold in multi-pack formats.',              taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: true,  sortOrder: 40,  color: '#10b981' },
+  { code: 'TOBAC',   name: 'Tobacco',              description: 'Cigarettes, cigars, roll-your-own tobacco, smokeless tobacco, and accessories. 21+ age verified at POS.',      taxClass: 'tobacco',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 50,  color: '#6b7280' },
+  { code: 'VAPE',    name: 'Vape & E-Cig',         description: 'Electronic cigarettes, disposable vapes, pods, e-liquids, and vape accessories. 21+ only.',                    taxClass: 'tobacco',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 60,  color: '#374151' },
+  { code: 'LOTTERY', name: 'Lottery',              description: 'Scratch tickets, instant games, and draw-game sales integrated with the lottery module.',                      taxClass: 'none',     ageRequired: 18,   ebtEligible: false, bottleDeposit: false, sortOrder: 70,  color: '#fbbf24' },
+  { code: 'GROC',    name: 'Grocery',              description: 'Shelf-stable grocery staples including canned goods, dry goods, condiments, and cooking ingredients.',        taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 80,  color: '#22c55e' },
+  { code: 'DAIRY',   name: 'Dairy & Eggs',         description: 'Milk, cream, yogurt, cheese, butter, eggs, and refrigerated dairy alternatives.',                              taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 90,  color: '#60a5fa' },
+  { code: 'PRODUCE', name: 'Produce',              description: 'Fresh fruits, vegetables, herbs, and packaged salads. Priced by PLU or weight.',                               taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 100, color: '#4ade80' },
+  { code: 'MEAT',    name: 'Meat & Seafood',       description: 'Fresh and frozen meat, poultry, and seafood. Often sold by weight with department scale integration.',         taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 110, color: '#f87171' },
+  { code: 'DELI',    name: 'Deli',                 description: 'Sliced meats, cheeses, prepared salads, and deli sandwiches made fresh in-store.',                             taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 120, color: '#fb923c' },
+  { code: 'FROZEN',  name: 'Frozen Foods',         description: 'Frozen entrées, vegetables, ice cream, pizza, and family meals stored in the freezer section.',                taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 130, color: '#93c5fd' },
+  { code: 'BAKED',   name: 'Bakery',               description: 'Fresh bread, rolls, pastries, cookies, cakes, and bakery-packaged sweet goods.',                               taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 140, color: '#fde68a' },
+  { code: 'SNACKS',  name: 'Snacks & Candy',       description: 'Chips, chocolate bars, gummies, crackers, nuts, jerky, and impulse-aisle candy.',                              taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: false, sortOrder: 150, color: '#f9a8d4' },
+  { code: 'BVNALC',  name: 'Beverages (Non-Alc)',  description: 'Sodas, juices, energy drinks, sports drinks, and ready-to-drink teas in single bottles and multi-packs.',     taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: true,  sortOrder: 160, color: '#34d399' },
+  { code: 'WATER',   name: 'Water & Sparkling',    description: 'Bottled still water, sparkling water, flavoured waters, and enhanced hydration drinks.',                       taxClass: 'grocery',  ageRequired: null, ebtEligible: true,  bottleDeposit: true,  sortOrder: 170, color: '#7dd3fc' },
+  { code: 'HOTFOOD', name: 'Hot Food / Prepared',  description: 'Pizza slices, taquitos, breakfast burritos, hot dogs, and rotisserie items from the hot-food case.',           taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 180, color: '#f97316' },
+  { code: 'COFFEE',  name: 'Coffee & Hot Drinks',  description: 'Brewed coffee, espresso drinks, hot chocolate, tea, and seasonal hot beverages.',                              taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 190, color: '#92400e' },
+  { code: 'HBA',     name: 'Health & Beauty',      description: 'Personal-care items: deodorant, shampoo, toothpaste, lotions, and grooming accessories.',                      taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 200, color: '#c084fc' },
+  { code: 'PHARMA',  name: 'Pharmacy / OTC',       description: 'Over-the-counter medications, vitamins, first-aid supplies, and convenience-pharmacy items.',                  taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 210, color: '#a78bfa' },
+  { code: 'MERCH',   name: 'General Merchandise',  description: 'Batteries, lighters, phone accessories, reusable bags, and non-food convenience goods.',                       taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 220, color: '#d1d5db' },
+  { code: 'AUTO',    name: 'Automotive',           description: 'Motor oil, washer fluid, car-care wipes, air fresheners, and roadside-assistance essentials.',                 taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 230, color: '#9ca3af' },
+  { code: 'GIFT',    name: 'Gift Cards',           description: 'Third-party and in-store gift cards activated at the POS. Non-taxable, non-refundable.',                        taxClass: 'none',     ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 240, color: '#fcd34d' },
+  { code: 'FOOD_RX', name: 'Food (Restaurant)',    description: 'Plated meals and à-la-carte entrées served at the in-store restaurant counter.',                               taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 250, color: '#fb923c' },
+  { code: 'DRINK_RX',name: 'Drinks (Restaurant)',  description: 'Fountain drinks, juices, and hot beverages served at the restaurant counter.',                                 taxClass: 'hot_food', ageRequired: null, ebtEligible: false, bottleDeposit: false, sortOrder: 260, color: '#38bdf8' },
+  { code: 'ALCO_RX', name: 'Bar / Alcohol Service',description: 'Draft and bottled alcoholic beverages served at the bar. 21+ age verified per transaction.',                   taxClass: 'alcohol',  ageRequired: 21,   ebtEligible: false, bottleDeposit: false, sortOrder: 270, color: '#818cf8' },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ async function main() {
     await prisma.department.upsert({
       where:  { orgId_code: { orgId: ORG_ID, code: dept.code } },
       update: {
-        name: dept.name, taxClass: dept.taxClass,
+        name: dept.name, description: dept.description ?? null, taxClass: dept.taxClass,
         ageRequired: dept.ageRequired ?? null,
         ebtEligible: dept.ebtEligible, bottleDeposit: dept.bottleDeposit,
         sortOrder: dept.sortOrder, color: dept.color,
@@ -307,6 +307,21 @@ async function main() {
     deptCount++;
   }
   console.log(`  ✓ ${deptCount} departments seeded`);
+
+  // Backfill descriptions on ALL orgs' matching departments (for orgs created
+  // before seed descriptions existed, e.g. via onboarding wizard).
+  let descBackfilled = 0;
+  for (const dept of DEPARTMENTS) {
+    const missing = await prisma.department.findMany({
+      where: { code: dept.code, OR: [{ description: null }, { description: '' }] },
+      select: { id: true },
+    });
+    for (const m of missing) {
+      await prisma.department.update({ where: { id: m.id }, data: { description: dept.description } });
+      descBackfilled++;
+    }
+  }
+  if (descBackfilled > 0) console.log(`  ✓ Backfilled descriptions on ${descBackfilled} existing department rows`);
 
   // Build dept code → id map
   const deptRows = await prisma.department.findMany({ where: { orgId: ORG_ID }, select: { id: true, code: true } });
@@ -432,7 +447,40 @@ async function main() {
       await prisma.userStore.create({ data: { userId: user.id, storeId } }).catch(() => {});
     }
 
+    // UserOrg junction — Phase 1 multi-org access.
+    // Every user gets a UserOrg row for their home org. For non-superadmin
+    // users, the effective role in the org matches the legacy User.role.
+    // Superadmin gets a row in the system org so cross-org tools work.
+    await prisma.userOrg.upsert({
+      where:  { userId_orgId: { userId: user.id, orgId: u.orgId } },
+      update: { role: u.role, isPrimary: true },
+      create: {
+        userId:    user.id,
+        orgId:     u.orgId,
+        role:      u.role,
+        isPrimary: true,
+      },
+    }).catch(() => {});
+
     userCount++;
+  }
+
+  // Backfill UserOrg rows for ALL seed users (idempotent — covers re-runs
+  // where the user already existed but the UserOrg row was never created,
+  // e.g. pre-Phase-1 seed runs).
+  for (const u of SEED_USERS) {
+    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    if (!existing) continue;
+    await prisma.userOrg.upsert({
+      where:  { userId_orgId: { userId: existing.id, orgId: u.orgId } },
+      update: {},
+      create: {
+        userId:    existing.id,
+        orgId:     u.orgId,
+        role:      u.role,
+        isPrimary: true,
+      },
+    }).catch(() => {});
   }
 
   if (userCount > 0) {
@@ -455,6 +503,63 @@ async function main() {
   } else {
     console.log(`  ✓ All seed users already exist`);
   }
+
+  // ── Lottery Settings (store-level) ────────────────────────
+  // Required for lottery game visibility filtering (games with state=null
+  // show to all stores; games with a state only show to stores whose
+  // LotterySettings.state matches).
+  await prisma.lotterySettings.upsert({
+    where:  { storeId },
+    update: {},
+    create: {
+      orgId:                  ORG_ID,
+      storeId,
+      enabled:                true,
+      cashOnly:               false,
+      state:                  'ON',
+      commissionRate:         0.0540, // 5.4% — typical Ontario commission
+      scanRequiredAtShiftEnd: false,
+    },
+  });
+  console.log(`  ✓ Lottery settings (store-level) seeded`);
+
+  // ── Fuel Settings + default Fuel Type ─────────────────────
+  // Disabled by default — store admin flips the flag in Store Settings
+  // when the site actually pumps fuel. One demo type seeded so the UI
+  // isn't empty on first open.
+  await prisma.fuelSettings.upsert({
+    where:  { storeId },
+    update: {},
+    create: {
+      orgId:            ORG_ID,
+      storeId,
+      enabled:          false,
+      cashOnly:         false,
+      allowRefunds:     true,
+      defaultEntryMode: 'amount',
+    },
+  });
+
+  const existingFuelType = await prisma.fuelType.findFirst({
+    where: { orgId: ORG_ID, storeId, name: 'Regular' },
+  });
+  if (!existingFuelType) {
+    await prisma.fuelType.create({
+      data: {
+        orgId:          ORG_ID,
+        storeId,
+        name:           'Regular',
+        gradeLabel:     '87 Octane',
+        pricePerGallon: 3.999,
+        color:          '#16a34a',
+        isDefault:      true,
+        isTaxable:      true,
+        sortOrder:      0,
+        active:         true,
+      },
+    });
+  }
+  console.log(`  ✓ Fuel settings + 1 demo fuel type (Regular 87) seeded`);
 
   // ── Lottery Games & Data ──────────────────────────────────
   await seedLottery(ORG_ID, storeId);

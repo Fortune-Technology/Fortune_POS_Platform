@@ -392,15 +392,15 @@ function ProductsTab({ vendorId }) {
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
             <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku || p.upc || '—'}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku || p.upc || 'N/A'}</div>
             <div style={{ fontSize: '0.75rem' }}>
               {p.department ? (
                 <span style={{ padding: '2px 7px', borderRadius: 4, background: (p.department.color || '#475569') + '22', color: p.department.color || '#475569', fontSize: '0.7rem', fontWeight: 700 }}>
                   {p.department.name}
                 </span>
-              ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+              ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
             </div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.defaultRetailPrice != null ? fmt(p.defaultRetailPrice) : '—'}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.defaultRetailPrice != null ? fmt(p.defaultRetailPrice) : 'N/A'}</div>
             <div>
               <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: p.active ? 'var(--brand-12)' : 'rgba(100,116,139,.1)', color: p.active ? 'var(--accent-primary)' : '#64748b' }}>
                 {p.active ? 'Active' : 'Inactive'}
@@ -483,13 +483,13 @@ function PayoutsTab({ vendorId }) {
                   }}>
                     {p.payoutType === 'merchandise' ? 'Merchandise' : 'Expense'}
                   </span>
-                ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>}
+                ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>N/A</span>}
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                {p.shift ? `#${p.shift.id.slice(0, 8)}` : '—'}
+                {p.shift ? `#${p.shift.id.slice(0, 8)}` : 'N/A'}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.note || '—'}
+                {p.note || 'N/A'}
               </div>
             </div>
           ))}

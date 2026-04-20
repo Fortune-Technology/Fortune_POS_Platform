@@ -23,7 +23,7 @@ import './Transactions.css';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmt$ = (v) => {
-  if (v == null || v === '') return '—';
+  if (v == null || v === '') return 'N/A';
   const n = Number(v);
   return (n < 0 ? '-$' : '$') + Math.abs(n).toFixed(2);
 };
@@ -118,7 +118,7 @@ function TxReceipt({ tx, storeInfo }) {
       </div>
       <div className="txn-receipt-two-col">
         <span className="txn-receipt-label">Cashier</span>
-        <span className="txn-receipt-val">{tx.cashierName || '—'}</span>
+        <span className="txn-receipt-val">{tx.cashierName || 'N/A'}</span>
       </div>
       {tx.stationId && (
         <div className="txn-receipt-two-col">
@@ -277,11 +277,11 @@ function TxDetail({ tx, onClose, storeInfo }) {
               </div>
               <div className="txn-detail-item">
                 <div className="txn-detail-lbl">Cashier</div>
-                <div className="txn-detail-val">{tx.cashierName || '—'}</div>
+                <div className="txn-detail-val">{tx.cashierName || 'N/A'}</div>
               </div>
               <div className="txn-detail-item">
                 <div className="txn-detail-lbl">Lane / Station</div>
-                <div className="txn-detail-val">{tx.stationId || '—'}</div>
+                <div className="txn-detail-val">{tx.stationId || 'N/A'}</div>
               </div>
               <div className="txn-detail-item">
                 <div className="txn-detail-lbl">Items Sold</div>
@@ -884,7 +884,7 @@ export default function Transactions({ embedded }) {
           </div>
           <div className="txn-summary-card">
             <div className="txn-summary-label">Avg Sale</div>
-            <div className="txn-summary-value">{stats.avg ? fmt$(stats.avg) : '—'}</div>
+            <div className="txn-summary-value">{stats.avg ? fmt$(stats.avg) : 'N/A'}</div>
           </div>
           <div className="txn-summary-card">
             <div className="txn-summary-label">Cash</div>
@@ -958,8 +958,8 @@ export default function Transactions({ embedded }) {
                       </span>
                     )}
                   </div>
-                  <div className="txn-cell-cashier">{tx.cashierName || '—'}</div>
-                  <div className="txn-cell-station">{tx.stationId || '—'}</div>
+                  <div className="txn-cell-cashier">{tx.cashierName || 'N/A'}</div>
+                  <div className="txn-cell-station">{tx.stationId || 'N/A'}</div>
                   <div className="txn-cell-items">{itemCount(tx)}</div>
                   <div className="txn-cell-payment">
                     {[...new Set((tx.tenderLines || []).map(t => t.method))].map(m => (

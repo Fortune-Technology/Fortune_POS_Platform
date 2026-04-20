@@ -30,7 +30,7 @@ import './InventoryCount.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n) {
-  return n == null ? '—' : Number(n).toFixed(2);
+  return n == null ? 'N/A' : Number(n).toFixed(2);
 }
 
 // ─── ProductCard ──────────────────────────────────────────────────────────────

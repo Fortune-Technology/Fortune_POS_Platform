@@ -36,7 +36,7 @@ import './ProductCatalog.css';
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const fmt$ = (v) => (v == null || v === '' ? '—' : '$' + Number(v).toFixed(2));
+const fmt$ = (v) => (v == null || v === '' ? 'N/A' : '$' + Number(v).toFixed(2));
 
 const calcMargin = (cost, retail) => {
   const c = parseFloat(cost), r = parseFloat(retail);
@@ -552,7 +552,7 @@ export default function ProductCatalog() {
                   {visibleCols.includes('onHand')     && <th>On Hand</th>}
                   {visibleCols.includes('vendor')     && <th>Vendor</th>}
                   <th>Flags</th>
-                  <th></th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -620,7 +620,7 @@ export default function ProductCatalog() {
                             <span className="pc-dept-badge" style={{ background:(dept.color||'var(--accent-primary)')+'20', color:dept.color||'var(--accent-primary)' }}>
                               {dept.name}
                             </span>
-                          ) : <span className="pc-pack-muted">—</span>}
+                          ) : <span className="pc-pack-muted">N/A</span>}
                         </td>
                       )}
 
@@ -635,7 +635,7 @@ export default function ProductCatalog() {
                         <td onClick={() => navigate(`/portal/catalog/edit/${p.id}`)}>
                           {p.vendor ? (
                             <span className="pc-pack-text">{p.vendor.name}</span>
-                          ) : <span className="pc-pack-muted">—</span>}
+                          ) : <span className="pc-pack-muted">N/A</span>}
                         </td>
                       )}
 
@@ -942,7 +942,7 @@ const Flag = ({ color, children }) => (
 
 const MarginBadge = ({ cost, retail }) => {
   const m = calcMargin(cost, retail);
-  if (m === null) return <span className="pc-pack-muted">—</span>;
+  if (m === null) return <span className="pc-pack-muted">N/A</span>;
   const color = m >= 30 ? '#10b981' : m >= 20 ? '#f59e0b' : '#ef4444';
   return (
     <span className="pc-margin-badge" style={{ background:color+'18', color }}>
@@ -962,10 +962,10 @@ const TaxBadge = ({ tc }) => {
 
 const OnHandCell = ({ qty, hasStore }) => {
   if (!hasStore) {
-    return <span className="pc-pack-muted" title="Select a store to see stock">—</span>;
+    return <span className="pc-pack-muted" title="Select a store to see stock">N/A</span>;
   }
   if (qty == null) {
-    return <span className="pc-pack-muted" title="Not yet stocked at this store">—</span>;
+    return <span className="pc-pack-muted" title="Not yet stocked at this store">N/A</span>;
   }
   const n = Number(qty);
   let color = '#10b981'; // green

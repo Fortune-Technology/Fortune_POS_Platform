@@ -250,12 +250,12 @@ function GroupForm({ group, departments, vendors, onSave, onClose, saving }) {
             </div>
             <div>
               <label className="pg-label">Start</label>
-              <input className="pg-input" type="date" value={form.saleStart}
+              <input className="pg-input" type="date" value={form.saleStart} min="1900-01-01" max="2100-12-31"
                 onChange={e => set('saleStart', e.target.value)} />
             </div>
             <div>
               <label className="pg-label">End</label>
-              <input className="pg-input" type="date" value={form.saleEnd}
+              <input className="pg-input" type="date" value={form.saleEnd} min="1900-01-01" max="2100-12-31"
                 onChange={e => set('saleEnd', e.target.value)} />
             </div>
           </div>
@@ -418,7 +418,7 @@ export default function ProductGroups() {
                 <th>Sale</th>
                 <th>Members</th>
                 <th>Sync</th>
-                <th></th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -431,18 +431,18 @@ export default function ProductGroups() {
                     </div>
                     {g.description && <div className="pg-desc">{g.description}</div>}
                   </td>
-                  <td>{g.department?.name || '—'}</td>
+                  <td>{g.department?.name || 'N/A'}</td>
                   <td>
-                    {g.taxClass ? <span className="pg-badge">{g.taxClass}</span> : '—'}
+                    {g.taxClass ? <span className="pg-badge">{g.taxClass}</span> : 'N/A'}
                     {g.ageRequired && <span className="pg-badge pg-badge-warn">{g.ageRequired}+</span>}
                   </td>
                   <td className="pg-td-mono">
-                    {g.defaultRetailPrice != null ? `$${Number(g.defaultRetailPrice).toFixed(2)}` : '—'}
+                    {g.defaultRetailPrice != null ? `$${Number(g.defaultRetailPrice).toFixed(2)}` : 'N/A'}
                   </td>
                   <td className="pg-td-mono">
                     {g.salePrice != null ? (
                       <span className="pg-sale"><DollarSign size={10} />{Number(g.salePrice).toFixed(2)}</span>
-                    ) : '—'}
+                    ) : 'N/A'}
                   </td>
                   <td>
                     <span className="pg-member-count">{g._count?.products || 0}</span>

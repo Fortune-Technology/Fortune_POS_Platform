@@ -297,7 +297,7 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.22rem 0.55rem;
-  border-radius: 99px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
   color: var(--accent-primary);
@@ -371,7 +371,7 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-x: auto; overflow-y: hidden;
 }
 
 .txn-table-header {
@@ -804,14 +804,14 @@
   flex: 1;
   height: 5px;
   background: var(--bg-tertiary);
-  border-radius: 99px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .txn-dept-bar {
   height: 100%;
   background: var(--accent-primary);
-  border-radius: 99px;
+  border-radius: 6px;
   transition: width 0.3s ease;
 }
 

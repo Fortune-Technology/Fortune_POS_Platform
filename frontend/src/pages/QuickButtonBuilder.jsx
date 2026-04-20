@@ -804,7 +804,7 @@ function GridCanvas({
       {tiles.length === 0 ? (
         <div className="qbb-grid-empty">
           <Layout size={32} />
-          <p>{inFolder ? 'This folder is empty.' : 'No tiles yet.'} Click a button on the left to add one.</p>
+          <p>{inFolder ? 'This folder is empty.' : 'N/A — no tiles added yet.'} Click a button on the left to add one.</p>
         </div>
       ) : (
         <GridLayoutWithWidth

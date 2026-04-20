@@ -34,7 +34,7 @@ export default function BillingPortal() {
   }, []);
 
   const fmt     = fmtMoney;
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString() : '—';
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString() : 'N/A';
 
   return (
     <div className="p-page">
@@ -90,7 +90,7 @@ export default function BillingPortal() {
                 {[
                   { label: 'Status',          value: <StatusBadge status={sub.status} /> },
                   { label: 'Trial Ends',       value: fmtDate(sub.trialEndsAt) },
-                  { label: 'Current Period',   value: sub.currentPeriodStart ? `${fmtDate(sub.currentPeriodStart)} – ${fmtDate(sub.currentPeriodEnd)}` : '—' },
+                  { label: 'Current Period',   value: sub.currentPeriodStart ? `${fmtDate(sub.currentPeriodStart)} – ${fmtDate(sub.currentPeriodEnd)}` : 'N/A' },
                   { label: 'Payment Method',   value: sub.paymentMasked ? `${(sub.paymentMethod || '').toUpperCase()} ···${sub.paymentMasked}` : 'Not set' },
                 ].map(({ label, value }) => (
                   <div key={label}>
@@ -133,7 +133,7 @@ export default function BillingPortal() {
                 <h3 className="bp-invoice-title">Invoice History</h3>
               </div>
               {invoices.length === 0 ? (
-                <div className="bp-invoice-empty">No invoices yet.</div>
+                <div className="bp-invoice-empty">N/A — no invoices issued yet.</div>
               ) : (
                 <div className="bp-invoice-scroll">
                   <table className="bp-invoice-table">

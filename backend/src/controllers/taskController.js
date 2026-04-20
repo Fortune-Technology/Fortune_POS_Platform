@@ -5,6 +5,7 @@
 
 import prisma from '../config/postgres.js';
 import { logAudit } from '../services/auditService.js';
+import { tryParseDate } from '../utils/safeDate.js';
 
 // ── Recurring schedule helpers ───────────────────────────────────────────────
 
@@ -140,6 +141,8 @@ export const createTask = async (req, res, next) => {
     const { title, description, priority, category, assignedTo, storeId, dueDate, checklist, isRecurring, recurType, recurDays, recurDayOfMonth, recurTime, stationId } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title required' });
 
+    const dd = tryParseDate(res, dueDate, 'dueDate'); if (!dd.ok) return;
+
     // Resolve assignee name
     let assigneeName = null;
     if (assignedTo) {
@@ -175,7 +178,7 @@ export const createTask = async (req, res, next) => {
         assignerName:   req.user.name || req.user.email,
         stationId:      stationId || null,
         stationName,
-        dueDate:        dueDate ? new Date(dueDate) : null,
+        dueDate:        dd.value,
         checklist:      Array.isArray(checklist) ? checklist : [],
         isRecurring:    !!isRecurring,
         recurType:      recurType || null,
@@ -201,7 +204,10 @@ export const updateTask = async (req, res, next) => {
     if (description !== undefined) data.description = description?.trim() || null;
     if (priority) data.priority = priority;
     if (category !== undefined) data.category = category;
-    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate !== undefined) {
+      const r = tryParseDate(res, dueDate, 'dueDate'); if (!r.ok) return;
+      data.dueDate = r.value;
+    }
     if (checklist !== undefined) data.checklist = Array.isArray(checklist) ? checklist : [];
     if (isRecurring !== undefined) {
       data.isRecurring = !!isRecurring;

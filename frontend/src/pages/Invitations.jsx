@@ -21,7 +21,7 @@ const STATUS_BADGE = {
 };
 
 function formatDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return 'N/A';
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

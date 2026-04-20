@@ -190,7 +190,7 @@ const TaskModal = ({ task, onClose, onSaved, employees }) => {
             </div>
             <div className="p-field">
               <label className="p-field-label">Due Date</label>
-              <input className="p-input" type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+              <input className="p-input" type="date" value={form.dueDate} min="1900-01-01" max="2100-12-31" onChange={e => set('dueDate', e.target.value)} />
             </div>
           </div>
 
@@ -459,7 +459,7 @@ const TasksPage = () => {
       ) : displayTasks.length === 0 ? (
         <div className="p-empty">
           <CheckSquare size={36} />
-          {showTemplates ? 'No recurring templates found.' : 'No tasks found. Create one to get started.'}
+          {showTemplates ? 'N/A — no recurring templates found.' : 'N/A — no tasks found. Create one to get started.'}
         </div>
       ) : (
         <div className="tk-task-list">

@@ -94,12 +94,13 @@
 
 ### 10. **Secure by Design**
 
-- ✅ **JWT authentication** — 2-hour access tokens (Session 18 / C-6), configurable via `JWT_ACCESS_TTL`
+- ✅ **JWT authentication** — 8-hour access tokens (raised from 2h in Session 29 after premature-lockout reports), configurable via `JWT_ACCESS_TTL`
 - ✅ **Password hashing** with bcrypt (12 rounds for user passwords, 10 rounds for POS PINs)
 - ✅ **Server-enforced password policy** — 8+ chars, upper/lower/digit/special (Session 18 / H-1)
-- ✅ **Role-based access control** — 5 tiers (cashier < manager < owner < admin < superadmin); financial routes require owner+
+- ✅ **RBAC via permission keys** — 133-key catalog in `backend/src/rbac/permissionCatalog.js`; routes gated with `requirePermission('module.action')` (Sessions 30–31). Legacy `authorize(...roles)` still works for back-compat, but new code uses permissions. Superadmin auto-passes every check.
+- ✅ **Multi-org access** — `UserOrg` junction + active-store-derived `req.orgId` (Sessions 32–35). Permissions resolved per-org.
 - ✅ **Input validation** — shared validators (`validateEmail`, `validatePassword`, `validatePhone`, `parsePrice`) in `backend/src/utils/validators.js`
-- ✅ **Rate limiting** — 5-tier in-memory limiter on all auth + PIN endpoints (Session 18 / H-2, C-7)
+- ✅ **Rate limiting** — 7-tier in-memory limiter on auth + PIN + public invitation endpoints (Sessions 18, 35)
 - ✅ **SQL injection prevention** — Prisma parameterized queries throughout; zero raw SQL
 - ✅ **XSS prevention** — DOMPurify sanitization on all CMS + Career HTML rendering (Session 18 / C-2)
 - ✅ **Global 401 interceptor** — stale tokens auto-clear and redirect to `/login?session=expired` (Session 18 / H-8)
@@ -140,22 +141,27 @@
 ✅ Component composition
 ```
 
-## 🔒 Security Implementation (Session 18 Hardening)
+## 🔒 Security Implementation (Sessions 18 + 29–37b Hardening)
 
 ### Authentication
-- ✅ JWT with **2-hour access token TTL** (`JWT_ACCESS_TTL` env var, default `2h`)
+- ✅ JWT with **8-hour access token TTL** (`JWT_ACCESS_TTL` env var, default `8h`; was `2h` through Session 28)
 - ✅ Bcrypt password hashing (12 rounds for users, 10 for PINs)
 - ✅ Random 16-char crypto-generated temp passwords for admin-created users (no hardcoded defaults)
 - ✅ Forgot/reset password flow end-to-end with token expiry + strength meter UI
+- ✅ Portal inactivity lock — 60s idle → password re-verify overlay (`POST /auth/verify-password`)
+- ✅ PIN tiered lookup — per-store `UserStore.posPin` wins over org-wide `User.posPin` (Session 36)
+- ✅ Back Office PIN-SSO — cashier-app → portal via `/impersonate?token=JWT` using the manager PIN's JWT, not the browser's stale localStorage session (Session 37b)
 
 ### Rate Limiting (`backend/src/middleware/rateLimit.js`)
 | Limiter | Window | Max | Applied To |
 |---|---|---|---|
-| `loginLimiter` | 15 min | 5 | `/auth/login`, `/auth/phone-lookup` |
+| `loginLimiter` | 15 min | 5 | `/auth/login`, `/auth/phone-lookup`, `/auth/verify-password` |
 | `signupLimiter` | 60 min | 10 | `/auth/signup` |
 | `forgotPasswordLimiter` | 60 min | 3 | `/auth/forgot-password` |
 | `resetPasswordLimiter` | 15 min | 20 | `/auth/reset-password` |
 | `pinLimiter` | 5 min | 15 | `/pos-terminal/clock`, `/pos-terminal/pin-login` |
+| `invitationLookupLimiter` | 10 min | 20 | `GET /invitations/:token` |
+| `invitationAcceptLimiter` | 10 min | 10 | `POST /invitations/:token/accept` |
 
 ### Input Validation (`backend/src/utils/validators.js`)
 - ✅ `validateEmail` — regex + length check, applied to all email fields
@@ -163,11 +169,22 @@
 - ✅ `validatePhone` — 7-15 digits, E.164-ish normalization
 - ✅ `parsePrice` — rejects NaN/Infinity/scientific/negatives, rounds to 4 decimals for Prisma `Decimal(10,4)`
 
-### RBAC Tiers
-- ✅ Read roles: manager+ (most read endpoints)
-- ✅ Write roles: manager+ (routine mutations)
-- ✅ Owner+ roles: financial sign-off (PO approve/reject, vendor credit, delete operations)
-- ✅ Tenant isolation enforced at middleware level (`scopeToTenant`)
+### RBAC (Sessions 30–31)
+Five-layer defence:
+1. **Sidebar filter** — nav items hidden when `routePermissions.js` map key fails `can(...)` check
+2. **Route guard** — `<PermissionRoute>` wraps every portal + admin route; renders `<Unauthorized />` on missing perm
+3. **Backend API enforcement** — `requirePermission('module.action')` on every mutating route (critical layer — all others can be bypassed; this one is load-bearing)
+4. **Per-button CRUD gating** — `usePermissions()` + `<Can>` hide Add/Edit/Delete affordances
+5. **JWT permissions** — `POST /auth/login` response includes `permissions: string[]`; stored in `localStorage.user`; `/api/roles/me/permissions` refresh endpoint available
+
+Built-in system roles: superadmin (133), owner/admin (90), manager (67), cashier (16), staff (1).
+Custom per-org roles created via portal `/portal/roles`.
+**Deployment requirement:** run `node prisma/seedRbac.js` on every deploy to sync the role-permission junction. Missing this is the #1 cause of "works locally, 403 in prod" regressions.
+
+### Tenant Isolation
+- ✅ `scopeToTenant` middleware derives `req.orgId` from the active store (`X-Store-Id` header), NOT from the JWT — supports multi-org access via `UserOrg` memberships (Sessions 32–35)
+- ✅ `User.orgId` is nullable — a user between orgs (mid-onboarding, post-transfer) is a legitimate state
+- ✅ Every Prisma query scoped to `req.orgId` (+ optional `req.storeId`)
 
 ### Network Security
 - ✅ CORS with origin whitelist (comma-separated in `CORS_ORIGIN`)
@@ -185,6 +202,43 @@
 - ⏳ **M-6** httpOnly cookie migration (1-2 sprint refactor affecting all 4 apps + CSRF tokens)
 - ⏳ **M-7** Stripe Elements iFrame for CVV capture (requires merchant onboarding)
 - ⏳ Redis-backed rate limiter for horizontal scaling (current in-memory limiter resets on backend restart)
+- ⏳ **Phase 4** Multi-org `Group`/`Brand` rollup reporting for franchisees with multiple LLCs (see CLAUDE.md deferred-work section)
+
+## 🎨 UI Conventions
+
+### External CSS (hard rule for all new code)
+Every new React component or page **must** have a dedicated `.css` file with a **unique class-name prefix**. **Zero inline `style={{}}` objects in new JSX.** Examples: `vpm-`, `brm-`, `qbb-`, `ar-`, `rl-`, `mp-`, `bsm-`, `fm-`, `eod-`, `pos-`, `fuel-`.
+
+**Acceptable exceptions:**
+- Recharts props (`contentStyle`, `fill`, `stroke`) — library API requires inline objects
+- Dynamic data-driven values (status badge colors from DB, chart legend dots)
+- CSS custom property injection pattern: `style={{ '--tpl-hero-bg': section.bg }}` consumed by `var(--tpl-hero-bg)` in the stylesheet
+- POS layout config presets (dynamic widths/order computed at runtime)
+
+### Centralized CSS Variables
+| Variable | Value | Defined in |
+|----------|-------|-----------|
+| `--content-max-width` | `1400px` | `frontend/src/index.css`, `admin-app/src/styles/global.css` |
+| `--mkt-max-width` | `1200px` | `frontend/src/index.css` |
+| `--modal-overlay` | `rgba(0, 0, 0, 0.55)` | `frontend/src/index.css` |
+| `--modal-overlay-strong` | `rgba(0, 0, 0, 0.7)` | `frontend/src/index.css` |
+| `--modal-shadow` | `0 24px 64px rgba(0, 0, 0, 0.4)` | `frontend/src/index.css` |
+| `--brand-primary` | `#3d56b5` | Portal brand blue |
+
+No hardcoded `max-width: 1400px` or `rgba(0,0,0,0.55)` overlay values in new CSS — use the tokens.
+
+### Transaction Status Convention
+`Transaction.status` in the backend has exactly three values:
+- `complete` — normal completed sale (includes net-negative carts from bottle returns)
+- `refund` — refund transaction (stored as POSITIVE `grandTotal`; summaries subtract via `-Math.abs(...)`)
+- `voided` — voided transaction (excluded from Gross/Net; counted separately)
+
+All sales-summary surfaces (Live Dashboard, Sales Analytics, Department Analytics, Top Products, Back-office Transactions page, EoD Report) use `status: { in: ['complete', 'refund'] }` with the refund-subtract sign convention. Unified in Session 27. **Cashier-app `batchCreateTransactions` forces `status: 'complete'` on every write** (Session 28 — was previously honoring the client's local offline-sync flag `'pending'` and hiding cash sales from reports).
+
+### Horizontal-Scroll Prevention
+- `.main-content` has `overflow-x: hidden` + `min-width: 0` in both portal and admin
+- Tables scroll horizontally inside `.p-table-wrap` / `.admin-table-wrap`; page never scrolls sideways
+- `.main-content` uses `flex: 1 1 0; min-height: 0` pattern (not `height: 100vh`) to avoid double-scroll inside flex containers
 
 ## ⚡ Performance Optimizations
 

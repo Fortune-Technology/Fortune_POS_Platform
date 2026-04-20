@@ -711,7 +711,7 @@ function PurchaseOrdersTab() {
                                   <span style={{ color: item.varianceFlag === 'major' ? '#ef4444' : '#f59e0b', fontWeight: 700, fontSize: '0.78rem' }}>
                                     {Number(item.costVariance) > 0 ? '+' : ''}{fmtCurrency(item.costVariance)}
                                   </span>
-                                ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>}
+                                ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>N/A</span>}
                               </td>
                             )}
                           </tr>

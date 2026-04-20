@@ -33,6 +33,7 @@ function toPrice(value, field) {
 import { normalizeUPC, upcVariants, stripUpc } from '../utils/upc.js';
 import { batchResolveProductImages } from '../services/globalImageService.js';
 import { queueLabelForPriceChange, queueLabelForNewProduct, queueLabelForSale } from '../services/labelQueueService.js';
+import { tryParseDate } from '../utils/safeDate.js';
 
 // E-commerce sync — optional. If Redis / @storv/queue is not installed, all emit
 // functions are silent no-ops. POS operations are never blocked.
@@ -518,6 +519,9 @@ export const createRebateProgram = async (req, res) => {
       return res.status(400).json({ success: false, error: 'name, manufacturer, rebateType, rebateAmount are required' });
     }
 
+    const sd = tryParseDate(res, startDate, 'startDate'); if (!sd.ok) return;
+    const ed = tryParseDate(res, endDate,   'endDate');   if (!ed.ok) return;
+
     const program = await prisma.rebateProgram.create({
       data: {
         orgId,
@@ -529,8 +533,8 @@ export const createRebateProgram = async (req, res) => {
         rebateAmount,
         minQtyPerMonth: minQtyPerMonth ? parseInt(minQtyPerMonth) : null,
         maxQtyPerMonth: maxQtyPerMonth ? parseInt(maxQtyPerMonth) : null,
-        startDate:      startDate ? new Date(startDate) : null,
-        endDate:        endDate   ? new Date(endDate)   : null,
+        startDate:      sd.value,
+        endDate:        ed.value,
       },
     });
 
@@ -1298,14 +1302,25 @@ export const upsertStoreProduct = async (req, res) => {
       select: { retailPrice: true, salePrice: true },
     });
 
+    // Safe-parse dates (400 on out-of-range years instead of 500)
+    let saleStartParsed, saleEndParsed;
+    if (saleStart != null) {
+      const r = tryParseDate(res, saleStart, 'saleStart'); if (!r.ok) return;
+      saleStartParsed = r.value;
+    }
+    if (saleEnd != null) {
+      const r = tryParseDate(res, saleEnd, 'saleEnd'); if (!r.ok) return;
+      saleEndParsed = r.value;
+    }
+
     const data = {
       orgId,
       ...(retailPrice       != null && { retailPrice:       parseFloat(retailPrice) }),
       ...(costPrice         != null && { costPrice:         parseFloat(costPrice) }),
       ...(casePrice         != null && { casePrice:         parseFloat(casePrice) }),
       ...(salePrice         != null && { salePrice:         parseFloat(salePrice) }),
-      ...(saleStart         != null && { saleStart:         new Date(saleStart) }),
-      ...(saleEnd           != null && { saleEnd:           new Date(saleEnd) }),
+      ...(saleStart         != null && { saleStart:         saleStartParsed }),
+      ...(saleEnd           != null && { saleEnd:           saleEndParsed }),
       ...(quantityOnHand    != null && { quantityOnHand:    parseFloat(quantityOnHand), lastStockUpdate: new Date() }),
       ...(quantityOnOrder   != null && { quantityOnOrder:   parseFloat(quantityOnOrder) }),
       ...(active            != null && { active:            Boolean(active) }),
@@ -1533,6 +1548,9 @@ export const createPromotion = async (req, res) => {
       return res.status(400).json({ error: 'name and promoType are required.' });
     }
 
+    const sd = tryParseDate(res, startDate, 'startDate'); if (!sd.ok) return;
+    const ed = tryParseDate(res, endDate,   'endDate');   if (!ed.ok) return;
+
     const promo = await prisma.promotion.create({
       data: {
         orgId,
@@ -1544,8 +1562,8 @@ export const createPromotion = async (req, res) => {
         dealConfig:    dealConfig    ?? {},
         badgeLabel:    badgeLabel    ?? null,
         badgeColor:    badgeColor    ?? null,
-        startDate:     startDate     ? new Date(startDate) : null,
-        endDate:       endDate       ? new Date(endDate)   : null,
+        startDate:     sd.value,
+        endDate:       ed.value,
         active:        active        ?? true,
       },
     });
@@ -1583,11 +1601,19 @@ export const updatePromotion = async (req, res) => {
         ...(dealConfig    != null && { dealConfig }),
         ...(badgeLabel    != null && { badgeLabel }),
         ...(badgeColor    != null && { badgeColor }),
-        ...(startDate     != null && { startDate: startDate ? new Date(startDate) : null }),
-        ...(endDate       != null && { endDate:   endDate   ? new Date(endDate)   : null }),
         ...(active        != null && { active }),
       },
     });
+
+    // Date updates are applied separately after safe-parsing
+    if (startDate !== undefined) {
+      const r = tryParseDate(res, startDate, 'startDate'); if (!r.ok) return;
+      await prisma.promotion.update({ where: { id }, data: { startDate: r.value } });
+    }
+    if (endDate !== undefined) {
+      const r = tryParseDate(res, endDate, 'endDate'); if (!r.ok) return;
+      await prisma.promotion.update({ where: { id }, data: { endDate: r.value } });
+    }
 
     res.json({ success: true, data: updated });
   } catch (err) {

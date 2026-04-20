@@ -18,7 +18,12 @@
     "db:push": "npm run db:push --prefix backend",
     "db:push:ecom": "npm run db:push --prefix ecom-backend",
     "db:seed": "npm run db:seed --prefix backend",
-    "seed:all": "npm run db:generate && npm run db:push && npm run db:seed",
+    "db:seed:all": "npm run db:seed:all --prefix backend",
+    "seed:all": "npm run db:generate && npm run db:push && npm run db:seed:all",
+    "seed:all:fast": "npm run db:seed:all --prefix backend && node ecom-backend/prisma/seedEcom.js",
+    "seed:ecom:data": "node ecom-backend/prisma/seedEcom.js",
+    "test:crud": "npm run test:crud --prefix backend",
+    "test:crud:auto": "node scripts/test-crud.js",
     "reset:all": "node scripts/reset-and-seed.js",
     "seed:ecom": "node ecom-backend/prisma/seed.js"
   },

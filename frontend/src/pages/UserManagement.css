@@ -5,7 +5,7 @@
 
 /* ── Role badge ──────────────────────────────────────── */
 .um-role-badge {
-  padding: 0.2rem 0.65rem; border-radius: 9999px;
+  padding: 0.2rem 0.65rem; border-radius: 6px;
   font-size: 0.72rem; font-weight: 700;
 }
 

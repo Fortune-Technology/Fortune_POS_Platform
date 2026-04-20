@@ -90,47 +90,47 @@ const BLANK_FORM = {
   active: true,
 };
 
-const BLANK_SALE_CONFIG    = { discountType: 'percent', discountValue: '', minQty: 1 };
-const BLANK_BOGO_CONFIG    = { buyQty: 1, getQty: 1, getDiscount: 100, maxSets: '' };
-const BLANK_VOLUME_CONFIG  = { tiers: [{ minQty: 2, discountType: 'percent', discountValue: '' }] };
-const BLANK_MIXMATCH_CONFIG= { groupSize: 2, bundlePrice: '' };
-const BLANK_COMBO_CONFIG   = {
+const BLANK_SALE_CONFIG = { discountType: 'percent', discountValue: '', minQty: 1 };
+const BLANK_BOGO_CONFIG = { buyQty: 1, getQty: 1, getDiscount: 100, maxSets: '' };
+const BLANK_VOLUME_CONFIG = { tiers: [{ minQty: 2, discountType: 'percent', discountValue: '' }] };
+const BLANK_MIXMATCH_CONFIG = { groupSize: 2, bundlePrice: '' };
+const BLANK_COMBO_CONFIG = {
   requiredGroups: [{ productIds: [], minQty: 1 }, { productIds: [], minQty: 1 }],
   discountType: 'percent',
   discountValue: '',
 };
 
 function defaultConfig(type) {
-  if (type === 'sale')      return { ...BLANK_SALE_CONFIG };
-  if (type === 'bogo')      return { ...BLANK_BOGO_CONFIG };
-  if (type === 'volume')    return { ...BLANK_VOLUME_CONFIG };
+  if (type === 'sale') return { ...BLANK_SALE_CONFIG };
+  if (type === 'bogo') return { ...BLANK_BOGO_CONFIG };
+  if (type === 'volume') return { ...BLANK_VOLUME_CONFIG };
   if (type === 'mix_match') return { ...BLANK_MIXMATCH_CONFIG };
-  if (type === 'combo')     return JSON.parse(JSON.stringify(BLANK_COMBO_CONFIG));
+  if (type === 'combo') return JSON.parse(JSON.stringify(BLANK_COMBO_CONFIG));
   return {};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Promotions() {
-  const [promos,    setPromos]    = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [search,    setSearch]    = useState('');
+  const [promos, setPromos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterActive, setFilterActive] = useState('all');
 
   // Panel
   const [panelOpen, setPanelOpen] = useState(false);
-  const [editing,   setEditing]   = useState(null); // promo object or null
-  const [saving,    setSaving]    = useState(false);
-  const [deleting,  setDeleting]  = useState(null);
+  const [editing, setEditing] = useState(null); // promo object or null
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   // Form
-  const [form,      setForm]      = useState(BLANK_FORM);
-  const [cfg,       setCfg]       = useState(BLANK_SALE_CONFIG);
-  const [formTab,   setFormTab]   = useState('basic'); // basic | scope | deal | display
+  const [form, setForm] = useState(BLANK_FORM);
+  const [cfg, setCfg] = useState(BLANK_SALE_CONFIG);
+  const [formTab, setFormTab] = useState('basic'); // basic | scope | deal | display
 
   // Scope selectors
-  const [products,  setProducts]  = useState([]);
-  const [depts,     setDepts]     = useState([]);
+  const [products, setProducts] = useState([]);
+  const [depts, setDepts] = useState([]);
   const [prodSearch, setProdSearch] = useState('');
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export default function Promotions() {
       const res = await getCatalogPromotions();
       setPromos(Array.isArray(res) ? res : (res?.data || []));
     } catch { toast.error('Failed to load promotions'); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -149,10 +149,10 @@ export default function Promotions() {
   useEffect(() => {
     getMasterProducts({ limit: 500, active: true })
       .then(r => setProducts(Array.isArray(r) ? r : (r?.data || [])))
-      .catch(() => {});
+      .catch(() => { });
     getDepartments()
       .then(r => setDepts(Array.isArray(r) ? r : (r?.data || [])))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // ── Panel helpers ───────────────────────────────────────────────────────────
@@ -168,22 +168,22 @@ export default function Promotions() {
   const openEdit = (p) => {
     setEditing(p);
     setForm({
-      name:          p.name         || '',
-      promoType:     p.promoType    || 'sale',
-      description:   p.description  || '',
-      productIds:    p.productIds   || [],
-      departmentIds: p.departmentIds|| [],
-      dealConfig:    p.dealConfig   || {},
-      badgeLabel:    p.badgeLabel   || '',
-      badgeColor:    p.badgeColor   || '#f59e0b',
-      startDate:     p.startDate    ? p.startDate.slice(0,10) : '',
-      endDate:       p.endDate      ? p.endDate.slice(0,10)   : '',
-      active:        p.active       ?? true,
+      name: p.name || '',
+      promoType: p.promoType || 'sale',
+      description: p.description || '',
+      productIds: p.productIds || [],
+      departmentIds: p.departmentIds || [],
+      dealConfig: p.dealConfig || {},
+      badgeLabel: p.badgeLabel || '',
+      badgeColor: p.badgeColor || '#f59e0b',
+      startDate: p.startDate ? p.startDate.slice(0, 10) : '',
+      endDate: p.endDate ? p.endDate.slice(0, 10) : '',
+      active: p.active ?? true,
     });
     // Populate cfg from saved dealConfig, merging with blank defaults
     const dc = p.dealConfig || {};
-    if (p.promoType === 'sale')      setCfg({ ...BLANK_SALE_CONFIG,     ...dc });
-    else if (p.promoType === 'bogo') setCfg({ ...BLANK_BOGO_CONFIG,     ...dc });
+    if (p.promoType === 'sale') setCfg({ ...BLANK_SALE_CONFIG, ...dc });
+    else if (p.promoType === 'bogo') setCfg({ ...BLANK_BOGO_CONFIG, ...dc });
     else if (p.promoType === 'volume') setCfg({ ...BLANK_VOLUME_CONFIG, ...dc });
     else if (p.promoType === 'mix_match') setCfg({ ...BLANK_MIXMATCH_CONFIG, ...dc });
     else if (p.promoType === 'combo')
@@ -213,7 +213,7 @@ export default function Promotions() {
       ...form,
       dealConfig: cfg,
       startDate: form.startDate || null,
-      endDate:   form.endDate   || null,
+      endDate: form.endDate || null,
     };
     try {
       if (editing) {
@@ -257,467 +257,468 @@ export default function Promotions() {
     const q = search.toLowerCase();
     if (q && !p.name?.toLowerCase().includes(q) && !p.badgeLabel?.toLowerCase().includes(q)) return false;
     if (filterType !== 'all' && p.promoType !== filterType) return false;
-    if (filterActive === 'active' && !p.active)   return false;
-    if (filterActive === 'inactive' && p.active)  return false;
+    if (filterActive === 'active' && !p.active) return false;
+    if (filterActive === 'inactive' && p.active) return false;
     return true;
   });
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   const stats = {
-    total:    promos.length,
-    active:   promos.filter(p => p.active).length,
-    sale:     promos.filter(p => p.promoType === 'sale').length,
-    bogo:     promos.filter(p => p.promoType === 'bogo').length,
-    volume:   promos.filter(p => p.promoType === 'volume').length,
-    mix:      promos.filter(p => p.promoType === 'mix_match').length,
-    combo:    promos.filter(p => p.promoType === 'combo').length,
+    total: promos.length,
+    active: promos.filter(p => p.active).length,
+    sale: promos.filter(p => p.promoType === 'sale').length,
+    bogo: promos.filter(p => p.promoType === 'bogo').length,
+    volume: promos.filter(p => p.promoType === 'volume').length,
+    mix: promos.filter(p => p.promoType === 'mix_match').length,
+    combo: promos.filter(p => p.promoType === 'combo').length,
   };
 
   const now = new Date();
   const isExpired = (p) => p.endDate && new Date(p.endDate) < now;
-  const isUpcoming= (p) => p.startDate && new Date(p.startDate) > now;
+  const isUpcoming = (p) => p.startDate && new Date(p.startDate) > now;
 
   return (
-      <div className="p-page">
+    <div className="p-page">
 
-        {/* Header */}
-        <div className="p-header">
-          <div className="p-header-left">
-            <div className="p-header-icon">
-              <Tag size={22} />
-            </div>
-            <div>
-              <h1 className="p-title">Offers & Promotions</h1>
-              <p className="p-subtitle">Create deals that auto-apply at the register</p>
-            </div>
+      {/* Header */}
+      <div className="p-header">
+        <div className="p-header-left">
+          <div className="p-header-icon">
+            <Tag size={22} />
           </div>
-          <div className="p-header-actions">
-            <button className="p-btn" onClick={load}>
-              <RefreshCw size={13} /> Refresh
-            </button>
-            <button className="p-btn p-btn-primary" onClick={openNew}>
-              <Plus size={15} /> New Promotion
-            </button>
+          <div>
+            <h1 className="p-title">Offers & Promotions</h1>
+            <p className="p-subtitle">Create deals that auto-apply at the register</p>
           </div>
         </div>
+        <div className="p-header-actions">
+          <button className="p-btn" onClick={load}>
+            <RefreshCw size={13} /> Refresh
+          </button>
+          <button className="p-btn p-btn-primary" onClick={openNew}>
+            <Plus size={15} /> New Promotion
+          </button>
+        </div>
+      </div>
 
-        {/* Stats row */}
-        <div className="p-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
-          {[
-            { label: 'Total',     val: stats.total,  color: 'var(--text-primary)' },
-            { label: 'Active',    val: stats.active, color: '#10b981' },
-            { label: 'Sale',      val: stats.sale,   color: '#f59e0b' },
-            { label: 'BOGO',      val: stats.bogo,   color: '#ec4899' },
-            { label: 'Volume',    val: stats.volume, color: '#8b5cf6' },
-            { label: 'Mix & Match',val: stats.mix,   color: '#06b6d4' },
-            { label: 'Combo',     val: stats.combo,  color: '#f97316' },
-          ].map(s => (
-            <div key={s.label} className="p-stat-card" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '1rem', fontWeight: 800, color: s.color }}>{s.val}</span>
-              <span className="p-stat-label" style={{ marginBottom: 0 }}>{s.label}</span>
-            </div>
+      {/* Stats row */}
+      <div className="p-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
+        {[
+          { label: 'Total', val: stats.total, color: 'var(--text-primary)' },
+          { label: 'Active', val: stats.active, color: '#10b981' },
+          { label: 'Sale', val: stats.sale, color: '#f59e0b' },
+          { label: 'BOGO', val: stats.bogo, color: '#ec4899' },
+          { label: 'Volume', val: stats.volume, color: '#8b5cf6' },
+          { label: 'Mix & Match', val: stats.mix, color: '#06b6d4' },
+          { label: 'Combo', val: stats.combo, color: '#f97316' },
+        ].map(s => (
+          <div key={s.label} className="p-stat-card" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '1rem', fontWeight: 800, color: s.color }}>{s.val}</span>
+            <span className="p-stat-label" style={{ marginBottom: 0 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        marginBottom: '1rem',
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }}>
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search promotions…"
+            style={{ width: '100%', paddingLeft: '2rem', height: 34, fontSize: '0.82rem', borderRadius: 7, border: '1px solid var(--border-color)', background: 'var(--bg-input,var(--bg-secondary))', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+          />
+        </div>
+        {/* Type filter */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {['all', 'sale', 'bogo', 'volume', 'mix_match', 'combo'].map(t => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              style={{
+                padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700,
+                border: filterType === t ? 'none' : '1px solid var(--border-color)',
+                background: filterType === t ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                color: filterType === t ? '#fff' : 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              {t === 'all' ? 'All Types' : t === 'mix_match' ? 'Mix & Match' : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
           ))}
         </div>
+        {/* Active filter */}
+        <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
+          {['all', 'active', 'inactive'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilterActive(f)}
+              style={{
+                padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700,
+                border: filterActive === f ? 'none' : '1px solid var(--border-color)',
+                background: filterActive === f ? '#10b981' : 'var(--bg-secondary)',
+                color: filterActive === f ? '#fff' : 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* Filter bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          marginBottom: '1rem',
-        }}>
-          {/* Search */}
-          <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search promotions…"
-              style={{ width: '100%', paddingLeft: '2rem', height: 34, fontSize: '0.82rem', borderRadius: 7, border: '1px solid var(--border-color)', background: 'var(--bg-input,var(--bg-secondary))', color: 'var(--text-primary)', boxSizing: 'border-box' }}
-            />
+      {/* Table */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+            <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: 12 }}>Loading promotions…</p>
           </div>
-          {/* Type filter */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {['all', 'sale', 'bogo', 'volume', 'mix_match', 'combo'].map(t => (
-              <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                style={{
-                  padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700,
-                  border: filterType === t ? 'none' : '1px solid var(--border-color)',
-                  background: filterType === t ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                  color: filterType === t ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                {t === 'all' ? 'All Types' : t === 'mix_match' ? 'Mix & Match' : t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+            <Tag size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+            <p style={{ fontSize: '1rem', fontWeight: 600 }}>N/A — no promotions found</p>
+            <p style={{ fontSize: '0.85rem' }}>Create your first promotion to offer deals at the register</p>
+            <button onClick={openNew} style={{ marginTop: 16, background: 'var(--accent-primary)', border: 'none', borderRadius: 8, padding: '0.6rem 1.25rem', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={14} /> New Promotion
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filtered.map(p => (
+              <PromoRow
+                key={p.id}
+                promo={p}
+                onEdit={() => openEdit(p)}
+                onDelete={() => handleDelete(p)}
+                onToggle={() => toggleActive(p)}
+                deleting={deleting === p.id}
+                isExpired={isExpired(p)}
+                isUpcoming={isUpcoming(p)}
+                products={products}
+                depts={depts}
+              />
             ))}
           </div>
-          {/* Active filter */}
-          <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
-            {['all', 'active', 'inactive'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilterActive(f)}
-                style={{
-                  padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700,
-                  border: filterActive === f ? 'none' : '1px solid var(--border-color)',
-                  background: filterActive === f ? '#10b981' : 'var(--bg-secondary)',
-                  color: filterActive === f ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-              <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite' }} />
-              <p style={{ marginTop: 12 }}>Loading promotions…</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-              <Tag size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-              <p style={{ fontSize: '1rem', fontWeight: 600 }}>No promotions found</p>
-              <p style={{ fontSize: '0.85rem' }}>Create your first promotion to offer deals at the register</p>
-              <button onClick={openNew} style={{ marginTop: 16, background: 'var(--accent-primary)', border: 'none', borderRadius: 8, padding: '0.6rem 1.25rem', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Plus size={14} /> New Promotion
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {filtered.map(p => (
-                <PromoRow
-                  key={p.id}
-                  promo={p}
-                  onEdit={() => openEdit(p)}
-                  onDelete={() => handleDelete(p)}
-                  onToggle={() => toggleActive(p)}
-                  deleting={deleting === p.id}
-                  isExpired={isExpired(p)}
-                  isUpcoming={isUpcoming(p)}
-                  products={products}
-                  depts={depts}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        )}
+      </div>
 
       {/* ── Slide-in Panel ── */}
-      {panelOpen && (
-        <>
-          <div onClick={closePanel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100 }} />
-          <div style={{
-            position: 'fixed', top: 0, right: 0, bottom: 0,
-            width: '70vw', minWidth: 520, maxWidth: 1100,
-            background: 'var(--bg-secondary)',
-            borderLeft: '1px solid var(--border-color)',
-            zIndex: 101, display: 'flex', flexDirection: 'column',
-            boxShadow: '-8px 0 40px rgba(0,0,0,0.35)',
-          }}>
+      {
+        panelOpen && (
+          <>
+            <div onClick={closePanel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100 }} />
+            <div className="prm-panel" style={{
+              position: 'fixed', top: 0, right: 0, bottom: 0,
+              background: 'var(--bg-secondary)',
+              borderLeft: '1px solid var(--border-color)',
+              zIndex: 101, display: 'flex', flexDirection: 'column',
+              boxShadow: '-8px 0 40px rgba(0,0,0,0.35)',
+            }}>
 
-            {/* ── Header ── */}
-            <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                  {editing ? 'EDIT PROMOTION' : 'NEW PROMOTION'}
+              {/* ── Header ── */}
+              <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                    {editing ? 'EDIT PROMOTION' : 'NEW PROMOTION'}
+                  </div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {form.name || 'Untitled Promotion'}
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {form.name || 'Untitled Promotion'}
-                </div>
-              </div>
-              {/* Active toggle in header */}
-              <button
-                onClick={() => setF('active', !form.active)}
-                title={form.active ? 'Active — click to deactivate' : 'Inactive — click to activate'}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0.3rem 0.75rem', borderRadius: 20,
-                  background: form.active ? 'rgba(16,185,129,0.12)' : 'rgba(100,100,120,0.12)',
-                  border: `1px solid ${form.active ? 'rgba(16,185,129,0.35)' : 'var(--border-color)'}`,
-                  color: form.active ? '#10b981' : 'var(--text-muted)',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
-                }}
-              >
-                {form.active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                {form.active ? 'Active' : 'Inactive'}
-              </button>
-              <button onClick={closePanel} style={{ width: 30, height: 30, borderRadius: 7, background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* ── Tabs: Details | Scope ── */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
-              {[
-                { id: 'details', label: 'Details' },
-                { id: 'scope',   label: `Scope${form.productIds.length + form.departmentIds.length > 0 ? ` (${form.productIds.length + form.departmentIds.length})` : ''}` },
-              ].map(t => (
-                <button key={t.id} onClick={() => setFormTab(t.id)} style={{
-                  flex: 1, padding: '0.65rem 0.5rem',
-                  background: 'none', border: 'none',
-                  borderBottom: formTab === t.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                  color: formTab === t.id ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
-                }}>
-                  {t.label}
+                {/* Active toggle in header */}
+                <button
+                  onClick={() => setF('active', !form.active)}
+                  title={form.active ? 'Active — click to deactivate' : 'Inactive — click to activate'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '0.3rem 0.75rem', borderRadius: 6,
+                    background: form.active ? 'rgba(16,185,129,0.12)' : 'rgba(100,100,120,0.12)',
+                    border: `1px solid ${form.active ? 'rgba(16,185,129,0.35)' : 'var(--border-color)'}`,
+                    color: form.active ? '#10b981' : 'var(--text-muted)',
+                    cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
+                  }}
+                >
+                  {form.active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                  {form.active ? 'Active' : 'Inactive'}
                 </button>
-              ))}
-            </div>
+                <button onClick={closePanel} style={{ width: 30, height: 30, borderRadius: 7, background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  <X size={15} />
+                </button>
+              </div>
 
-            {/* ── Tab body ── */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {/* ── Tabs: Details | Scope ── */}
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+                {[
+                  { id: 'details', label: 'Details' },
+                  { id: 'scope', label: `Scope${form.productIds.length + form.departmentIds.length > 0 ? ` (${form.productIds.length + form.departmentIds.length})` : ''}` },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setFormTab(t.id)} style={{
+                    flex: 1, padding: '0.65rem 0.5rem',
+                    background: 'none', border: 'none',
+                    borderBottom: formTab === t.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                    color: formTab === t.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                  }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-              {/* ════ DETAILS TAB — Basic + Deal Config + Display merged ════ */}
-              {formTab === 'details' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, height: '100%' }}>
+              {/* ── Tab body ── */}
+              <div style={{ flex: 1, overflowY: 'auto' }}>
 
-                  {/* Left column: name / type / display */}
-                  <div style={{ padding: '1.125rem 1rem 1.125rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 14, borderRight: '1px solid var(--border-color)', overflowY: 'auto' }}>
+                {/* ════ DETAILS TAB — Basic + Deal Config + Display merged ════ */}
+                {formTab === 'details' && (
+                  <div className="prm-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, height: '100%' }}>
 
-                    {/* Name + Description */}
-                    <Field label="Promotion Name *">
-                      <input
-                        value={form.name}
-                        onChange={e => setF('name', e.target.value)}
-                        placeholder="e.g. Weekend Sale, BOGO Beer, 3 for $10"
-                        style={inputStyle}
-                      />
-                    </Field>
+                    {/* Left column: name / type / display */}
+                    <div style={{ padding: '1.125rem 1rem 1.125rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 14, borderRight: '1px solid var(--border-color)', overflowY: 'auto' }}>
 
-                    <Field label="Description">
-                      <textarea
-                        value={form.description}
-                        onChange={e => setF('description', e.target.value)}
-                        placeholder="Internal notes…"
-                        rows={2}
-                        style={{ ...inputStyle, resize: 'vertical', minHeight: 52, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}
-                      />
-                    </Field>
-
-                    {/* Promotion Type */}
-                    <Field label="Promotion Type *">
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                        {PROMO_TYPES.map(pt => {
-                          const Icon = pt.icon;
-                          const sel  = form.promoType === pt.value;
-                          return (
-                            <button key={pt.value} onClick={() => handleTypeChange(pt.value)} style={{
-                              padding: '0.6rem 0.75rem', borderRadius: 9, textAlign: 'left',
-                              background: sel ? pt.bg : 'var(--bg-card,var(--bg-secondary))',
-                              border: `1.5px solid ${sel ? pt.color : 'var(--border-color)'}`,
-                              cursor: 'pointer', transition: 'all .1s',
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                                <Icon size={13} color={pt.color} />
-                                <span style={{ fontSize: '0.79rem', fontWeight: 700, color: sel ? pt.color : 'var(--text-primary)' }}>{pt.label}</span>
-                              </div>
-                              <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{pt.desc}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </Field>
-
-                    {/* ── Display section ── */}
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DISPLAY & SCHEDULE</div>
-
-                      <Field label="Badge Label (shown on POS & receipt)">
+                      {/* Name + Description */}
+                      <Field label="Promotion Name *">
                         <input
-                          value={form.badgeLabel}
-                          onChange={e => setF('badgeLabel', e.target.value)}
-                          placeholder="e.g. 2 FOR $5 · BOGO · BUY 6 SAVE 15%"
+                          value={form.name}
+                          onChange={e => setF('name', e.target.value)}
+                          placeholder="e.g. Weekend Sale, BOGO Beer, 3 for $10"
                           style={inputStyle}
                         />
                       </Field>
 
-                      <Field label="Badge Color">
-                        <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {['#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#f97316','#06b6d4','#ef4444'].map(c => (
-                            <button key={c} onClick={() => setF('badgeColor', c)} style={{
-                              width: 24, height: 24, borderRadius: '50%', background: c, border: 'none',
-                              cursor: 'pointer', outline: form.badgeColor === c ? `2.5px solid ${c}` : 'none',
-                              outlineOffset: 2, transition: 'outline .1s', flexShrink: 0,
-                            }} />
-                          ))}
-                          <input type="color" value={form.badgeColor} onChange={e => setF('badgeColor', e.target.value)}
-                            style={{ width: 28, height: 24, border: '1px solid var(--border-color)', borderRadius: 5, cursor: 'pointer', background: 'none' }} />
+                      <Field label="Description">
+                        <textarea
+                          value={form.description}
+                          onChange={e => setF('description', e.target.value)}
+                          placeholder="Internal notes…"
+                          rows={2}
+                          style={{ ...inputStyle, resize: 'vertical', minHeight: 52, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}
+                        />
+                      </Field>
+
+                      {/* Promotion Type */}
+                      <Field label="Promotion Type *">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                          {PROMO_TYPES.map(pt => {
+                            const Icon = pt.icon;
+                            const sel = form.promoType === pt.value;
+                            return (
+                              <button key={pt.value} onClick={() => handleTypeChange(pt.value)} style={{
+                                padding: '0.6rem 0.75rem', borderRadius: 9, textAlign: 'left',
+                                background: sel ? pt.bg : 'var(--bg-card,var(--bg-secondary))',
+                                border: `1.5px solid ${sel ? pt.color : 'var(--border-color)'}`,
+                                cursor: 'pointer', transition: 'all .1s',
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                  <Icon size={13} color={pt.color} />
+                                  <span style={{ fontSize: '0.79rem', fontWeight: 700, color: sel ? pt.color : 'var(--text-primary)' }}>{pt.label}</span>
+                                </div>
+                                <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{pt.desc}</div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </Field>
 
-                      {/* Live badge preview */}
-                      {(form.badgeLabel || form.name) && (
-                        <div style={{ padding: '0.65rem 0.875rem', background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', borderRadius: 8 }}>
-                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 6 }}>LIVE PREVIEW</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4, background: form.badgeColor + '22', color: form.badgeColor, letterSpacing: '0.04em', border: `1px solid ${form.badgeColor}44`, whiteSpace: 'nowrap' }}>
-                              {form.badgeLabel || form.name.toUpperCase()}
-                            </span>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>Product Name</span>
-                            <span style={{ marginLeft: 'auto', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>$4.99</span>
+                      {/* ── Display section ── */}
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DISPLAY & SCHEDULE</div>
+
+                        <Field label="Badge Label (shown on POS & receipt)">
+                          <input
+                            value={form.badgeLabel}
+                            onChange={e => setF('badgeLabel', e.target.value)}
+                            placeholder="e.g. 2 FOR $5 · BOGO · BUY 6 SAVE 15%"
+                            style={inputStyle}
+                          />
+                        </Field>
+
+                        <Field label="Badge Color">
+                          <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#f97316', '#06b6d4', '#ef4444'].map(c => (
+                              <button key={c} onClick={() => setF('badgeColor', c)} style={{
+                                width: 24, height: 24, borderRadius: '50%', background: c, border: 'none',
+                                cursor: 'pointer', outline: form.badgeColor === c ? `2.5px solid ${c}` : 'none',
+                                outlineOffset: 2, transition: 'outline .1s', flexShrink: 0,
+                              }} />
+                            ))}
+                            <input type="color" value={form.badgeColor} onChange={e => setF('badgeColor', e.target.value)}
+                              style={{ width: 28, height: 24, border: '1px solid var(--border-color)', borderRadius: 5, cursor: 'pointer', background: 'none' }} />
                           </div>
-                        </div>
-                      )}
+                        </Field>
 
+                        {/* Live badge preview */}
+                        {(form.badgeLabel || form.name) && (
+                          <div style={{ padding: '0.65rem 0.875rem', background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', borderRadius: 8 }}>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 6 }}>LIVE PREVIEW</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4, background: form.badgeColor + '22', color: form.badgeColor, letterSpacing: '0.04em', border: `1px solid ${form.badgeColor}44`, whiteSpace: 'nowrap' }}>
+                                {form.badgeLabel || form.name.toUpperCase()}
+                              </span>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>Product Name</span>
+                              <span style={{ marginLeft: 'auto', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>$4.99</span>
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+
+                    {/* Right column: Deal Config */}
+                    <div style={{ padding: '1.125rem 1.25rem 1.125rem 1rem', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DEAL CONFIGURATION</div>
+                      <DealConfigForm
+                        promoType={form.promoType}
+                        cfg={cfg}
+                        setCfg={setCfg}
+                        products={products}
+                      />
+
+                      {/* Date range — lives in the Deal Config column */}
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DATE RANGE (OPTIONAL)</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <Field label="Start Date">
+                            <input type="date" value={form.startDate} min="1900-01-01" max="2100-12-31" onChange={e => setF('startDate', e.target.value)} style={inputStyle} />
+                          </Field>
+                          <Field label="End Date">
+                            <input type="date" value={form.endDate} min="1900-01-01" max="2100-12-31" onChange={e => setF('endDate', e.target.value)} style={inputStyle} />
+                          </Field>
+                        </div>
+                        {form.startDate && form.endDate && new Date(form.endDate) < new Date(form.startDate) && (
+                          <div style={{ display: 'flex', gap: 5, color: '#ef4444', fontSize: '0.75rem', fontWeight: 600 }}>
+                            <AlertCircle size={13} /> End date is before start date
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Right column: Deal Config */}
-                  <div style={{ padding: '1.125rem 1.25rem 1.125rem 1rem', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DEAL CONFIGURATION</div>
-                    <DealConfigForm
-                      promoType={form.promoType}
-                      cfg={cfg}
-                      setCfg={setCfg}
-                      products={products}
-                    />
-
-                    {/* Date range — lives in the Deal Config column */}
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>DATE RANGE (OPTIONAL)</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                        <Field label="Start Date">
-                          <input type="date" value={form.startDate} onChange={e => setF('startDate', e.target.value)} style={inputStyle} />
-                        </Field>
-                        <Field label="End Date">
-                          <input type="date" value={form.endDate} onChange={e => setF('endDate', e.target.value)} style={inputStyle} />
-                        </Field>
-                      </div>
-                      {form.startDate && form.endDate && new Date(form.endDate) < new Date(form.startDate) && (
-                        <div style={{ display: 'flex', gap: 5, color: '#ef4444', fontSize: '0.75rem', fontWeight: 600 }}>
-                          <AlertCircle size={13} /> End date is before start date
-                        </div>
-                      )}
+                {/* ════ SCOPE TAB ════ */}
+                {formTab === 'scope' && (
+                  <div style={{ padding: '1.125rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{
+                      padding: '0.65rem 0.875rem', borderRadius: 9, background: 'rgba(245,158,11,0.06)',
+                      border: '1px solid rgba(245,158,11,0.2)', display: 'flex', gap: 8,
+                    }}>
+                      <AlertCircle size={13} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Leave both empty to apply to <strong>all items</strong>.
+                        Select departments and/or specific products to narrow scope.
+                      </p>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* ════ SCOPE TAB ════ */}
-              {formTab === 'scope' && (
-                <div style={{ padding: '1.125rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{
-                    padding: '0.65rem 0.875rem', borderRadius: 9, background: 'rgba(245,158,11,0.06)',
-                    border: '1px solid rgba(245,158,11,0.2)', display: 'flex', gap: 8,
-                  }}>
-                    <AlertCircle size={13} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      Leave both empty to apply to <strong>all items</strong>.
-                      Select departments and/or specific products to narrow scope.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, alignItems: 'start' }}>
-                    {/* Departments */}
-                    <Field label={`Departments (${form.departmentIds.length} selected)`}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 420, overflowY: 'auto', padding: 2 }}>
-                        {depts.map(d => {
-                          const sel = form.departmentIds.includes(d.id);
-                          return (
-                            <button key={d.id}
-                              onClick={() => setF('departmentIds', sel
-                                ? form.departmentIds.filter(x => x !== d.id)
-                                : [...form.departmentIds, d.id]
-                              )}
-                              style={{
-                                padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600,
-                                background: sel ? 'rgba(16,185,129,0.12)' : 'var(--bg-card,var(--bg-secondary))',
-                                border: `1px solid ${sel ? '#10b981' : 'var(--border-color)'}`,
-                                color: sel ? '#10b981' : 'var(--text-muted)', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: 4,
-                              }}>
-                              {sel && <Check size={10} />}
-                              {d.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </Field>
-
-                    {/* Products */}
-                    <Field label={`Products (${form.productIds.length} selected)`}>
-                      <input value={prodSearch} onChange={e => setProdSearch(e.target.value)}
-                        placeholder="Filter products…" style={{ ...inputStyle, marginBottom: 8 }} />
-                      <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {products
-                          .filter(p => !prodSearch || p.name?.toLowerCase().includes(prodSearch.toLowerCase()) || p.upc?.includes(prodSearch))
-                          .slice(0, 200)
-                          .map(p => {
-                            const sel = form.productIds.includes(p.id);
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, alignItems: 'start' }}>
+                      {/* Departments */}
+                      <Field label={`Departments (${form.departmentIds.length} selected)`}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 420, overflowY: 'auto', padding: 2 }}>
+                          {depts.map(d => {
+                            const sel = form.departmentIds.includes(d.id);
                             return (
-                              <button key={p.id}
-                                onClick={() => setF('productIds', sel
-                                  ? form.productIds.filter(x => x !== p.id)
-                                  : [...form.productIds, p.id]
+                              <button key={d.id}
+                                onClick={() => setF('departmentIds', sel
+                                  ? form.departmentIds.filter(x => x !== d.id)
+                                  : [...form.departmentIds, d.id]
                                 )}
                                 style={{
-                                  padding: '0.35rem 0.75rem', borderRadius: 6, textAlign: 'left',
-                                  background: sel ? 'rgba(16,185,129,0.08)' : 'transparent',
-                                  border: `1px solid ${sel ? 'rgba(16,185,129,0.3)' : 'transparent'}`,
-                                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                                  padding: '0.3rem 0.7rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600,
+                                  background: sel ? 'rgba(16,185,129,0.12)' : 'var(--bg-card,var(--bg-secondary))',
+                                  border: `1px solid ${sel ? '#10b981' : 'var(--border-color)'}`,
+                                  color: sel ? '#10b981' : 'var(--text-muted)', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: 4,
                                 }}>
-                                <div style={{ width: 13, height: 13, borderRadius: 3, border: `1.5px solid ${sel ? '#10b981' : 'var(--border-color)'}`, background: sel ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  {sel && <Check size={8} color="#fff" />}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                                  {p.upc && <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>UPC: {p.upc}</div>}
-                                </div>
-                                {p.defaultRetailPrice && (
-                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>
-                                    ${parseFloat(p.defaultRetailPrice).toFixed(2)}
-                                  </span>
-                                )}
+                                {sel && <Check size={10} />}
+                                {d.name}
                               </button>
                             );
-                          })
-                        }
-                      </div>
-                    </Field>
-                  </div>
-                </div>
-              )}
-            </div>
+                          })}
+                        </div>
+                      </Field>
 
-            {/* ── Footer ── */}
-            <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: 8, flexShrink: 0 }}>
-              <button onClick={closePanel} style={{ flex: 1, height: 40, borderRadius: 8, background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !form.name.trim()}
-                style={{
-                  flex: 2, height: 40, borderRadius: 8, border: 'none',
-                  background: saving || !form.name.trim() ? 'var(--bg-card,var(--bg-secondary))' : 'var(--accent-primary)',
-                  color: saving || !form.name.trim() ? 'var(--text-muted)' : '#fff',
-                  fontWeight: 800, fontSize: '0.88rem',
-                  cursor: saving || !form.name.trim() ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}
-              >
-                {saving ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={13} />}
-                {saving ? 'Saving…' : editing ? 'Update Promotion' : 'Create Promotion'}
-              </button>
+                      {/* Products */}
+                      <Field label={`Products (${form.productIds.length} selected)`}>
+                        <input value={prodSearch} onChange={e => setProdSearch(e.target.value)}
+                          placeholder="Filter products…" style={{ ...inputStyle, marginBottom: 8 }} />
+                        <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {products
+                            .filter(p => !prodSearch || p.name?.toLowerCase().includes(prodSearch.toLowerCase()) || p.upc?.includes(prodSearch))
+                            .slice(0, 200)
+                            .map(p => {
+                              const sel = form.productIds.includes(p.id);
+                              return (
+                                <button key={p.id}
+                                  onClick={() => setF('productIds', sel
+                                    ? form.productIds.filter(x => x !== p.id)
+                                    : [...form.productIds, p.id]
+                                  )}
+                                  style={{
+                                    padding: '0.35rem 0.75rem', borderRadius: 6, textAlign: 'left',
+                                    background: sel ? 'rgba(16,185,129,0.08)' : 'transparent',
+                                    border: `1px solid ${sel ? 'rgba(16,185,129,0.3)' : 'transparent'}`,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                                  }}>
+                                  <div style={{ width: 13, height: 13, borderRadius: 3, border: `1.5px solid ${sel ? '#10b981' : 'var(--border-color)'}`, background: sel ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {sel && <Check size={8} color="#fff" />}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                                    {p.upc && <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>UPC: {p.upc}</div>}
+                                  </div>
+                                  {p.defaultRetailPrice && (
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>
+                                      ${parseFloat(p.defaultRetailPrice).toFixed(2)}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })
+                          }
+                        </div>
+                      </Field>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Footer ── */}
+              <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button onClick={closePanel} style={{ flex: 1, height: 40, borderRadius: 8, background: 'var(--bg-card,var(--bg-secondary))', border: '1px solid var(--border-color)', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !form.name.trim()}
+                  style={{
+                    flex: 2, height: 40, borderRadius: 8, border: 'none',
+                    background: saving || !form.name.trim() ? 'var(--bg-card,var(--bg-secondary))' : 'var(--accent-primary)',
+                    color: saving || !form.name.trim() ? 'var(--text-muted)' : '#fff',
+                    fontWeight: 800, fontSize: '0.88rem',
+                    cursor: saving || !form.name.trim() ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  {saving ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={13} />}
+                  {saving ? 'Saving…' : editing ? 'Update Promotion' : 'Create Promotion'}
+                </button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
-    </div>
+          </>
+        )
+      }
+    </div >
   );
 }
 
 // ─── PromoRow ─────────────────────────────────────────────────────────────────
 function PromoRow({ promo, onEdit, onDelete, onToggle, deleting, isExpired, isUpcoming, products, depts }) {
-  const tp   = PROMO_TYPES.find(t => t.value === promo.promoType) || PROMO_TYPES[0];
+  const tp = PROMO_TYPES.find(t => t.value === promo.promoType) || PROMO_TYPES[0];
   const Icon = tp.icon;
-  const now  = new Date();
+  const now = new Date();
   const days = promo.endDate
     ? Math.ceil((new Date(promo.endDate) - now) / 86400000)
     : null;
@@ -811,12 +812,13 @@ function DealConfigForm({ promoType, cfg, setCfg, products }) {
       <Field label="Discount Type">
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { val: 'percent', label: '% Off',       color: '#f59e0b' },
-            { val: 'amount',  label: '$ Off',        color: '#10b981' },
-            { val: 'fixed',   label: 'Fixed Price',  color: '#3b82f6' },
+            { val: 'percent', label: '% Off', color: '#f59e0b' },
+            { val: 'amount', label: '$ Off', color: '#10b981' },
+            { val: 'fixed', label: 'Fixed Price', color: '#3b82f6' },
           ].map(t => (
             <button key={t.val} onClick={() => setC('discountType', t.val)}
-              style={{ flex: 1, padding: '0.6rem', borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+              style={{
+                flex: 1, padding: '0.6rem', borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
                 background: cfg.discountType === t.val ? t.color + '18' : 'var(--bg-card,var(--bg-secondary))',
                 border: `1.5px solid ${cfg.discountType === t.val ? t.color : 'var(--border-color)'}`,
                 color: cfg.discountType === t.val ? t.color : 'var(--text-muted)',
@@ -964,7 +966,8 @@ function DealConfigForm({ promoType, cfg, setCfg, products }) {
                     ...g,
                     productIds: sel ? g.productIds.filter(x => x !== p.id) : [...(g.productIds || []), p.id],
                   } : g))}
-                  style={{ padding: '0.3rem 0.6rem', borderRadius: 5, textAlign: 'left', cursor: 'pointer',
+                  style={{
+                    padding: '0.3rem 0.6rem', borderRadius: 5, textAlign: 'left', cursor: 'pointer',
                     background: sel ? 'rgba(16,185,129,0.08)' : 'transparent',
                     border: `1px solid ${sel ? 'rgba(16,185,129,0.3)' : 'transparent'}`,
                     display: 'flex', alignItems: 'center', gap: 7,

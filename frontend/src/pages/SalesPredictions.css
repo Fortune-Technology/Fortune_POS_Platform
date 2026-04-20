@@ -94,7 +94,7 @@
 /* ── Prediction table ────────────────────────────────── */
 .sp-table-card {
   background: var(--bg-secondary); border: 1px solid var(--border-color);
-  border-radius: var(--radius-md); overflow: hidden;
+  border-radius: var(--radius-md); overflow-x: auto; overflow-y: hidden;
 }
 
 .sp-table-header {

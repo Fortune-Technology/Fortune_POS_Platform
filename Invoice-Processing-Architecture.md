@@ -48,8 +48,10 @@ The **Invoice Import & Processing System** is designed to automatically ingest, 
 6. **Business Logic Application**: Deposits, credits, and totals are validated and calculated.
 7. **Database Storage**: The stub is updated to **status: 'draft'** with all extracted line items.
 8. **User Review**: The user verifies data in the split-pane review UI.
-9. **POS Synchronization**: On "Confirm", the system upserts the validated products into the native PostgreSQL **MasterProduct** and **StoreProduct** tables (via Prisma), while also bulk-pushing updates to the IT Retail backend (`PUT /pos/products/:id/details`). The invoice status is then marked as **'synced'**.
-10. **Learning Feedback**: Confirmed matches are recorded in `VendorProductMap` to improve future OCR accuracy.
+9. **User Review (Session 21 UX)**: Totals recompute live — `totalInvoiceAmount = Σ (caseCost × quantity)` updates on every line edit; per-line `totalAmount` auto-recalculates unless the user manually overrides (`_totalLocked` flag). A top-bar chip shows aggregate received units (`+1,248 units · 23 products`) across all lines.
+10. **Cases/Units toggle (Session 21)**: Each line has a `receivedAs: 'cases' | 'units'` segmented control. Live preview strip: *"On confirm, inventory will increase by +240 units (5 cases × 48/case)"*. On confirm, `adjustStoreStock` uses `receivedAs === 'cases' ? qty × packUnits : qty` — fixes the long-standing bug where a 5-case × 24-pack delivery added only 5 units to QOH instead of 120.
+11. **POS Synchronization**: On "Confirm", the system upserts the validated products into the native PostgreSQL **MasterProduct** and **StoreProduct** tables (via Prisma). Legacy IT Retail bulk-push (`PUT /pos/products/:id/details`) remains available but native PostgreSQL is now the primary catalog. Invoice status → **'synced'**.
+12. **Learning Feedback**: Confirmed matches are recorded in `VendorProductMap` to improve future OCR accuracy.
 
 ---
 
@@ -107,15 +109,27 @@ The **Invoice Import & Processing System** is designed to automatically ingest, 
 - **Output**: Separated deposit fees vs product costs.
 - **Key Logic**: Identifies keywords like "CRV", "Deposit", "Bottle Tax" and applies them to a separate ledger field instead of total product cost.
 
-### Priority Matching Engine
+### Priority Matching Engine (rewritten in Session 21 — vendor-scoped)
+
 - **Purpose**: Bridge the gap between invoice identifiers and internal POS records.
-- **Tier 1 (UPC)**: Normalizes extracted barcode strings and performs exact lookup.
-- **Tier 2 (Vendor Map)**: Checks `VendorProductMap` for previously confirmed matches.
-- **Tier 3 (SKU / Item Code)**: Fallback search on vendor's internal code or PLU.
-- **Tier 4 (Fuzzy Description)**: Jaccard similarity matching on product names (threshold ≥ 0.70).
-- **Tier 5 (AI Batch Match)**: GPT-4o-mini recommendation using top-8 fuzzy candidates per item.
-- **Tier 6 (Manual)**: User-link via live POS global search.
-- **Visualization**: Matches display status badges (High/Medium/Low confidence) and source tier indicators.
+- **7-tier cascade** (see [`backend/src/services/matchingService.js`](backend/src/services/matchingService.js)):
+
+| # | Tier | Key | Confidence |
+|---|------|-----|-----------|
+| 1 | UPC (+ variants) | UPC exact | high |
+| 2 | **Distributor ItemCode, vendor-scoped** ★ PRIMARY | `vendorId::itemCode` | high |
+| 3 | VendorProductMap (learned) | vendor + code / fuzzy desc | high / medium |
+| 4 | PLU exact (produce) | `plu` | high |
+| 5 | Cross-store GlobalProductMatch | vendor + code | medium |
+| 6 | Cost-proximity + composite fuzzy | multiple signals | medium / low |
+| 7 | AI batch (gpt-4o-mini) | LLM using top fuzzy candidates | medium only |
+
+- **Internal `MasterProduct.sku` tier removed** — vendor invoices never reference our internal SKU, so this tier caused false positives without ever helping (Session 21).
+- **Vendor scoping**: index keyed as `${vendorId}::${itemCode}` prevents Hershey's `2468231329` colliding with Utz's `27149` or Coca-Cola's `115583`. When `invoice.vendorId` is known, fuzzy / cost / AI tiers also narrow to that vendor's products (cutting AI token cost).
+- **Org-wide fallback**: when `invoice.vendorId` is null, itemCode lookup falls back at medium confidence (flagged for review, never high).
+- **Vendor resolution on upload**: the upload UI has a "Vendor (optional)" dropdown; unresolved vendors get resolved via `resolveVendorId(orgId, vendorName)` (exact name → alias → fuzzy contains → reverse contains). Resolved `vendorId` persisted on the `Invoice` row.
+- **Re-match endpoint**: `POST /api/invoice/:id/rematch { vendorId?, force? }` — safe mode preserves manual + high-confidence matches; force mode re-matches everything.
+- **Manual tier**: user-link via live POS global search with status badges (High/Medium/Low confidence) and source tier indicators.
 
 ### Mapping Engine
 - **Purpose**: Finalize structure for POS ingestion and audit.
@@ -131,7 +145,7 @@ The **Invoice Import & Processing System** is designed to automatically ingest, 
 ```javascript
 {
   invoiceNumber: String,
-  vendor: ObjectId(Vendor),
+  vendorId: Int?,       // Session 21 — resolved Vendor FK, powers vendor-scoped matching
   date: Date,
   type: Enum['SALE', 'CREDIT'],
   status: Enum['PENDING', 'PROCESSED', 'FAILED'],
@@ -139,10 +153,11 @@ The **Invoice Import & Processing System** is designed to automatically ingest, 
     subtotal: Number,
     tax: Number,
     deposits: Number,
-    grandTotal: Number
+    grandTotal: Number   // recomputed live on edit; Σ(caseCost × qty) per line
   },
   aiConfidenceScore: Number
 }
+// Session 21 index: @@index([orgId, vendorId])
 ```
 
 ### Line Items (`lineItems` in `Invoice`)
@@ -154,7 +169,9 @@ The **Invoice Import & Processing System** is designed to automatically ingest, 
   plu: String,
   description: String,
   quantity: Number,
-  unitType: String, // 'case' | 'unit'
+  receivedAs: String, // 'cases' | 'units' (Session 21) — drives QOH increment
+  packUnits: Number,  // units per case, used when receivedAs === 'cases'
+  unitType: String,   // 'case' | 'unit' (legacy)
   caseCost: Number,
   unitCost: Number,
   suggestedRetailPrice: Number,

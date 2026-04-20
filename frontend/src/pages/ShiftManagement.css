@@ -170,7 +170,7 @@
 /* ── Sessions table ──────────────────────────────────────────────────────── */
 
 .sm-table-wrap {
-  overflow: hidden;
+  overflow-x: auto; overflow-y: hidden;
   padding: 0;
 }
 

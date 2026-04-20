@@ -10,6 +10,7 @@
 
 import prisma from '../config/postgres.js';
 import { queueLabelForPriceChange } from '../services/labelQueueService.js';
+import { tryParseDate } from '../utils/safeDate.js';
 
 // Fields on ProductGroup that can be cascaded to MasterProduct
 const CASCADE_FIELDS = [
@@ -96,6 +97,10 @@ export const createProductGroup = async (req, res) => {
 
     if (!name) return res.status(400).json({ success: false, error: 'name is required' });
 
+    // Safe-parse dates (reject out-of-range years like 20001 with 400 instead of 500)
+    const ss = tryParseDate(res, saleStart, 'saleStart'); if (!ss.ok) return;
+    const se = tryParseDate(res, saleEnd,   'saleEnd');   if (!se.ok) return;
+
     const group = await prisma.productGroup.create({
       data: {
         orgId, name, description, color,
@@ -114,8 +119,8 @@ export const createProductGroup = async (req, res) => {
         defaultRetailPrice: defaultRetailPrice != null ? parseFloat(defaultRetailPrice) : null,
         defaultCasePrice: defaultCasePrice != null ? parseFloat(defaultCasePrice) : null,
         salePrice: salePrice != null ? parseFloat(salePrice) : null,
-        saleStart: saleStart ? new Date(saleStart) : null,
-        saleEnd: saleEnd ? new Date(saleEnd) : null,
+        saleStart: ss.value,
+        saleEnd:   se.value,
         autoSync, active,
       },
     });
@@ -175,8 +180,14 @@ export const updateProductGroup = async (req, res) => {
     if (defaultRetailPrice !== undefined) updateData.defaultRetailPrice = defaultRetailPrice != null ? parseFloat(defaultRetailPrice) : null;
     if (defaultCasePrice !== undefined) updateData.defaultCasePrice = defaultCasePrice != null ? parseFloat(defaultCasePrice) : null;
     if (salePrice !== undefined) updateData.salePrice = salePrice != null ? parseFloat(salePrice) : null;
-    if (saleStart !== undefined) updateData.saleStart = saleStart ? new Date(saleStart) : null;
-    if (saleEnd !== undefined) updateData.saleEnd = saleEnd ? new Date(saleEnd) : null;
+    if (saleStart !== undefined) {
+      const r = tryParseDate(res, saleStart, 'saleStart'); if (!r.ok) return;
+      updateData.saleStart = r.value;
+    }
+    if (saleEnd !== undefined) {
+      const r = tryParseDate(res, saleEnd, 'saleEnd'); if (!r.ok) return;
+      updateData.saleEnd = r.value;
+    }
     if (autoSync !== undefined) updateData.autoSync = autoSync;
     if (active !== undefined) updateData.active = active;
 
