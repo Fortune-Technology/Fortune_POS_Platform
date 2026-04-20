@@ -16,6 +16,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/postgres.js';
 import { validateEmail, validatePhone, parsePrice } from '../utils/validators.js';
+import { tryParseDate } from '../utils/safeDate.js';
 
 /**
  * Normalize a phone number to an E.164-ish canonical form for storage.
@@ -135,6 +136,9 @@ export const createCustomer = async (req, res, next) => {
     const balanceLimitP = parsePrice(balanceLimit, { min: 0, max: 999999 });
     if (!balanceLimitP.ok) return res.status(400).json({ error: `balanceLimit: ${balanceLimitP.error}` });
 
+    const bd = tryParseDate(res, birthDate,      'birthDate');      if (!bd.ok) return;
+    const ed = tryParseDate(res, expirationDate, 'expirationDate'); if (!ed.ok) return;
+
     const displayName = buildName({ name, firstName, lastName });
 
     // Hash password if provided (enables storefront login)
@@ -160,8 +164,8 @@ export const createCustomer = async (req, res, next) => {
         balanceLimit:        balanceLimitP.value,
         instoreChargeEnabled:
           instoreChargeEnabled === true || instoreChargeEnabled === 'true',
-        birthDate:           birthDate       ? new Date(birthDate)       : null,
-        expirationDate:      expirationDate  ? new Date(expirationDate)  : null,
+        birthDate:           bd.value,
+        expirationDate:      ed.value,
       },
     });
 
@@ -242,10 +246,14 @@ export const updateCustomer = async (req, res, next) => {
     if (instoreChargeEnabled !== undefined)
       data.instoreChargeEnabled =
         instoreChargeEnabled === true || instoreChargeEnabled === 'true';
-    if (birthDate           !== undefined)
-      data.birthDate = birthDate ? new Date(birthDate) : null;
-    if (expirationDate      !== undefined)
-      data.expirationDate = expirationDate ? new Date(expirationDate) : null;
+    if (birthDate !== undefined) {
+      const r = tryParseDate(res, birthDate, 'birthDate'); if (!r.ok) return;
+      data.birthDate = r.value;
+    }
+    if (expirationDate !== undefined) {
+      const r = tryParseDate(res, expirationDate, 'expirationDate'); if (!r.ok) return;
+      data.expirationDate = r.value;
+    }
 
     // Hash new password if provided (enables/updates storefront login)
     if (password && password.length >= 6) {

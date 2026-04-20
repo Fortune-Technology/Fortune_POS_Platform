@@ -24,9 +24,9 @@ import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import './EndOfDayReport.css';
 
 const fmt$ = (n) => {
-  if (n == null) return '—';
+  if (n == null) return 'N/A';
   const v = Number(n);
-  if (!Number.isFinite(v)) return '—';
+  if (!Number.isFinite(v)) return 'N/A';
   const sign = v < 0 ? '-' : '';
   return `${sign}$${Math.abs(v).toFixed(2)}`;
 };
@@ -228,7 +228,7 @@ export default function EndOfDayReport() {
           <div className="eod-report-header">
             <h2 className="eod-report-title">END OF DAY REPORT</h2>
             <div className="eod-header-grid">
-              <div className="eod-header-row"><span className="eod-header-label">Store:</span> <span>{header.storeName || '—'}</span></div>
+              <div className="eod-header-row"><span className="eod-header-label">Store:</span> <span>{header.storeName || 'N/A'}</span></div>
               {header.stationName && <div className="eod-header-row"><span className="eod-header-label">Register:</span> <Monitor size={12} /> <span>{header.stationName}</span></div>}
               {header.cashierName && <div className="eod-header-row"><span className="eod-header-label">Cashier:</span> <User size={12} /> <span>{header.cashierName}</span></div>}
               <div className="eod-header-row">
@@ -376,7 +376,7 @@ function EoDSection({ title, rows, totalLabel, total }) {
           {totalLabel && (
             <tr className="eod-row-strong">
               <td>{totalLabel}</td>
-              <td className="eod-num">—</td>
+              <td className="eod-num">N/A</td>
               <td className="eod-num">{fmt$(total)}</td>
             </tr>
           )}

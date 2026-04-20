@@ -327,7 +327,7 @@ const SupportTickets = ({ embedded } = {}) => {
         ) : tickets.length === 0 ? (
           <div className="p-empty">
             <MessageSquare size={40} />
-            <p>No tickets yet</p>
+            <p>N/A — no support tickets yet</p>
             <p>Submit a ticket and our support team will get back to you</p>
             <button className="p-btn p-btn-primary" onClick={() => setShowCreate(true)}>
               <Plus size={14} /> Submit your first ticket

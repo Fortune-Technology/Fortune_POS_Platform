@@ -263,10 +263,10 @@ export default function PosEventLog({ embedded }) {
                       {EVENT_LABELS[ev.eventType] || ev.eventType}
                     </span>
                   </div>
-                  <div className="pel-cell-text">{ev.storeName || ev.storeId || '—'}</div>
-                  <div className="pel-cell-text">{ev.cashierName || '—'}</div>
-                  <div className="pel-cell-text">{ev.stationName || ev.stationId || '—'}</div>
-                  <div className="pel-cell-note">{ev.note || '—'}</div>
+                  <div className="pel-cell-text">{ev.storeName || ev.storeId || 'N/A'}</div>
+                  <div className="pel-cell-text">{ev.cashierName || 'N/A'}</div>
+                  <div className="pel-cell-text">{ev.stationName || ev.stationId || 'N/A'}</div>
+                  <div className="pel-cell-note">{ev.note || 'N/A'}</div>
                 </div>
               ))}
 

@@ -89,7 +89,15 @@ export const getMessages = async (req, res, next) => {
 // ── POST /api/chat/messages — Send a message ────────────────────────────
 export const sendMessage = async (req, res, next) => {
   try {
-    const { channelId, message, messageType = 'text' } = req.body;
+    let { channelId, recipientId, message, messageType = 'text' } = req.body;
+
+    // If frontend sent `recipientId` instead of `channelId` (e.g. starting a
+    // new DM), build the canonical sorted DM channelId ourselves.
+    if (!channelId && recipientId) {
+      const [a, b] = [req.user.id, recipientId].sort();
+      channelId = `direct:${a}:${b}`;
+    }
+
     if (!channelId || !message?.trim()) return res.status(400).json({ error: 'channelId and message required' });
 
     const storeId = channelId.startsWith('store:') ? channelId.split(':')[1] : null;

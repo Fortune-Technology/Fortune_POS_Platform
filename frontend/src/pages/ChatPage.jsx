@@ -230,7 +230,7 @@ const ChatPage = () => {
 
             <div className="ch-channel-list">
               {channels.length === 0 && (
-                <div className="ch-empty-channels">No channels yet</div>
+                <div className="ch-empty-channels">N/A — no channels found</div>
               )}
               {channels.map(ch => {
                 const id = chId(ch);
@@ -282,7 +282,7 @@ const ChatPage = () => {
 
                 <div className="ch-messages-list">
                   {messages.length === 0 && (
-                    <div className="ch-no-messages">No messages yet. Say hello!</div>
+                    <div className="ch-no-messages">N/A — no messages in this channel</div>
                   )}
                   {messages.map((msg, i) => {
                     const isMine = (msg.senderId || msg.sender_id || msg.userId || msg.user_id)

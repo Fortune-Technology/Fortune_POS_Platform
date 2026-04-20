@@ -736,7 +736,7 @@ export default function POSSettings({ embedded }) {
                           }}
                           style={{
                             padding: '0.4rem 0.85rem',
-                            borderRadius: 20,
+                            borderRadius: 6,
                             border: hidden ? '1px solid rgba(224,63,63,.4)' : '1px solid var(--accent-primary)',
                             background: hidden ? 'rgba(224,63,63,.08)' : 'var(--brand-12)',
                             color: hidden ? 'var(--red, #e03f3f)' : 'var(--accent-primary)',
@@ -1134,7 +1134,7 @@ export default function POSSettings({ embedded }) {
                 </span>
                 <div style={{
                   marginLeft: 'auto', padding: '2px 10px', borderRadius: 4,
-                  background: branding.primaryColor, color: '#0f1117',
+                  background: branding.primaryColor, color: '#ffffff',
                   fontSize: '0.7rem', fontWeight: 800,
                 }}>
                   CHARGE

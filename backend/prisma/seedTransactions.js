@@ -355,11 +355,17 @@ function generateTenderLines(grandTotal, ebtEligibleTotal) {
 async function main() {
   console.log('\nSeed Transactions — Generating 90 days of POS data...\n');
 
-  // Find existing org, store, user
-  const org = await prisma.organization.findFirst({ where: { slug: { not: 'system' } } });
-  if (!org) throw new Error('No organization found. Run seed.js first.');
+  // Find the first non-system org that actually has a store (some stale orgs
+  // in dev DBs have no stores — skip those so the seed works out of the box).
+  const candidates = await prisma.organization.findMany({
+    where: { slug: { not: 'system' } },
+    include: { stores: { take: 1 } },
+    orderBy: { createdAt: 'asc' },
+  });
+  const org = candidates.find(o => o.stores.length > 0);
+  if (!org) throw new Error('No organization with a store found. Run seed.js first.');
 
-  const store = await prisma.store.findFirst({ where: { orgId: org.id } });
+  const store = org.stores[0];
   if (!store) throw new Error('No store found. Run seed.js first.');
 
   const user = await prisma.user.findFirst({ where: { orgId: org.id, role: 'cashier' } });

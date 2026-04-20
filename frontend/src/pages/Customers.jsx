@@ -31,7 +31,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { fmtMoney as fmt, fmtDate as fmtDt, fmtDateTime as fmtTs } from '../utils/formatters';
 
 /* ── Formatters ───────────────────────────────────────────────────────────── */
-const fmtPc = (v) => v != null ? `${parseFloat(v * 100).toFixed(1)}%` : '—';
+const fmtPc = (v) => v != null ? `${parseFloat(v * 100).toFixed(1)}%` : 'N/A';
 
 const displayName = (c) => {
   if (c.name) return c.name;
@@ -52,19 +52,19 @@ const EMPTY_FORM = {
 function CustomerForm({ initial: init, onSave, onClose, saving }) {
   const [showPw, setShowPw] = useState(false);
   const [form, setForm] = useState(() => init ? {
-    firstName:            init.firstName        ?? '',
-    lastName:             init.lastName         ?? '',
-    email:                init.email            ?? '',
-    phone:                init.phone            ?? '',
-    password:             '',
-    cardNo:               init.cardNo           ?? '',
-    loyaltyPoints:        String(init.loyaltyPoints ?? 0),
-    discount:             init.discount != null ? String(parseFloat(init.discount) * 100) : '',
-    balance:              init.balance  != null ? String(parseFloat(init.balance))  : '',
-    balanceLimit:         init.balanceLimit != null ? String(parseFloat(init.balanceLimit)) : '',
+    firstName: init.firstName ?? '',
+    lastName: init.lastName ?? '',
+    email: init.email ?? '',
+    phone: init.phone ?? '',
+    password: '',
+    cardNo: init.cardNo ?? '',
+    loyaltyPoints: String(init.loyaltyPoints ?? 0),
+    discount: init.discount != null ? String(parseFloat(init.discount) * 100) : '',
+    balance: init.balance != null ? String(parseFloat(init.balance)) : '',
+    balanceLimit: init.balanceLimit != null ? String(parseFloat(init.balanceLimit)) : '',
     instoreChargeEnabled: init.instoreChargeEnabled ?? false,
-    birthDate:            init.birthDate ? init.birthDate.slice(0, 10) : '',
-    expirationDate:       init.expirationDate ? init.expirationDate.slice(0, 10) : '',
+    birthDate: init.birthDate ? init.birthDate.slice(0, 10) : '',
+    expirationDate: init.expirationDate ? init.expirationDate.slice(0, 10) : '',
   } : { ...EMPTY_FORM });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -76,20 +76,20 @@ function CustomerForm({ initial: init, onSave, onClose, saving }) {
       return;
     }
     const payload = {
-      firstName:            form.firstName.trim() || undefined,
-      lastName:             form.lastName.trim()  || undefined,
-      email:                form.email.trim()     || undefined,
-      phone:                form.phone.trim()     || undefined,
-      password:             form.password.trim()  || undefined,
-      cardNo:               form.cardNo.trim()    || undefined,
-      loyaltyPoints:        form.loyaltyPoints !== '' ? parseInt(form.loyaltyPoints) : 0,
+      firstName: form.firstName.trim() || undefined,
+      lastName: form.lastName.trim() || undefined,
+      email: form.email.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      password: form.password.trim() || undefined,
+      cardNo: form.cardNo.trim() || undefined,
+      loyaltyPoints: form.loyaltyPoints !== '' ? parseInt(form.loyaltyPoints) : 0,
       // discount stored as decimal (e.g. 0.05 = 5%)
-      discount:             form.discount !== '' ? parseFloat(form.discount) / 100 : null,
-      balance:              form.balance     !== '' ? parseFloat(form.balance)     : null,
-      balanceLimit:         form.balanceLimit !== '' ? parseFloat(form.balanceLimit) : null,
+      discount: form.discount !== '' ? parseFloat(form.discount) / 100 : null,
+      balance: form.balance !== '' ? parseFloat(form.balance) : null,
+      balanceLimit: form.balanceLimit !== '' ? parseFloat(form.balanceLimit) : null,
       instoreChargeEnabled: form.instoreChargeEnabled,
-      birthDate:            form.birthDate       || undefined,
-      expirationDate:       form.expirationDate  || undefined,
+      birthDate: form.birthDate || undefined,
+      expirationDate: form.expirationDate || undefined,
     };
     onSave(payload);
   };
@@ -159,10 +159,10 @@ function CustomerForm({ initial: init, onSave, onClose, saving }) {
           {/* Dates */}
           <div className="cust-form-row">
             <label className="cust-label">Birth Date
-              <input className="cust-input" value={form.birthDate} onChange={e => set('birthDate', e.target.value)} type="date" />
+              <input className="cust-input" value={form.birthDate} min="1900-01-01" max="2100-12-31" onChange={e => set('birthDate', e.target.value)} type="date" />
             </label>
             <label className="cust-label">Expiration Date
-              <input className="cust-input" value={form.expirationDate} onChange={e => set('expirationDate', e.target.value)} type="date" />
+              <input className="cust-input" value={form.expirationDate} min="1900-01-01" max="2100-12-31" onChange={e => set('expirationDate', e.target.value)} type="date" />
             </label>
           </div>
 
@@ -204,8 +204,8 @@ function CustomerProfile({ customer, onClose, onEdit }) {
               <h2 className="cust-modal-title">{displayName(customer)}</h2>
               <div className="cust-profile-tags">
                 {customer.instoreChargeEnabled && <span className="cust-tag cust-tag-green">Charge Account</span>}
-                {customer.posCustomerId        && <span className="cust-tag cust-tag-blue">POS Linked</span>}
-                {customer.cardNo               && <span className="cust-tag cust-tag-amber">Card Holder</span>}
+                {customer.posCustomerId && <span className="cust-tag cust-tag-blue">POS Linked</span>}
+                {customer.cardNo && <span className="cust-tag cust-tag-amber">Card Holder</span>}
               </div>
             </div>
           </div>
@@ -255,9 +255,9 @@ function CustomerProfile({ customer, onClose, onEdit }) {
           <div>
             <div className="cust-section-title"><User size={14} /> Contact & Personal</div>
             <div className="cust-detail-list">
-              <div className="cust-detail-row"><span>Phone</span><span>{customer.phone || '—'}</span></div>
-              <div className="cust-detail-row"><span>Email</span><span>{customer.email || '—'}</span></div>
-              <div className="cust-detail-row"><span>Card #</span><span className="cust-mono">{customer.cardNo || '—'}</span></div>
+              <div className="cust-detail-row"><span>Phone</span><span>{customer.phone || 'N/A'}</span></div>
+              <div className="cust-detail-row"><span>Email</span><span>{customer.email || 'N/A'}</span></div>
+              <div className="cust-detail-row"><span>Card #</span><span className="cust-mono">{customer.cardNo || 'N/A'}</span></div>
               <div className="cust-detail-row"><span>Birth Date</span><span>{fmtDt(customer.birthDate)}</span></div>
               <div className="cust-detail-row"><span>Expiry</span><span>{fmtDt(customer.expirationDate)}</span></div>
             </div>
@@ -271,7 +271,7 @@ function CustomerProfile({ customer, onClose, onEdit }) {
                   {customer.instoreChargeEnabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
-              <div className="cust-detail-row"><span>POS Customer ID</span><span className="cust-muted">{customer.posCustomerId || '—'}</span></div>
+              <div className="cust-detail-row"><span>POS Customer ID</span><span className="cust-muted">{customer.posCustomerId || 'N/A'}</span></div>
               <div className="cust-detail-row"><span>Status</span>
                 <span style={{ color: customer.deleted ? '#ef4444' : '#10b981', fontWeight: 700 }}>
                   {customer.deleted ? 'Deleted' : 'Active'}
@@ -338,22 +338,22 @@ function DeleteConfirm({ customer, onConfirm, onClose, saving }) {
 export default function Customers({ embedded }) {
   const { can } = usePermissions();
   const canCreate = can('customers.create');
-  const canEdit   = can('customers.edit');
+  const canEdit = can('customers.edit');
   const canDelete = can('customers.delete');
-  const [customers,   setCustomers]   = useState([]);
-  const [total,       setTotal]       = useState(0);
-  const [totalPages,  setTotalPages]  = useState(1);
-  const [page,        setPage]        = useState(1);
-  const [search,      setSearch]      = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Modals
-  const [formMode,    setFormMode]    = useState(null); // null | 'create' | 'edit'
-  const [editTarget,  setEditTarget]  = useState(null);
-  const [viewTarget,  setViewTarget]  = useState(null);
-  const [deleteTarget,setDeleteTarget]= useState(null);
-  const [saving,      setSaving]      = useState(false);
+  const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
+  const [editTarget, setEditTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const LIMIT = 20;
   const searchRef = useRef(null);
@@ -532,7 +532,7 @@ export default function Customers({ embedded }) {
           <span>Discount</span>
           <span>Balance</span>
           <span>Card #</span>
-          <span style={{ textAlign: 'right' }}>Actions</span>
+          <span style={{ textAlign: 'left' }}>Actions</span>
         </div>
 
         {loading && customers.length === 0 ? (
@@ -560,7 +560,7 @@ export default function Customers({ embedded }) {
               <div className="cust-contact-cell">
                 {c.phone && <div className="cust-contact-line"><Phone size={11} /> {c.phone}</div>}
                 {c.email && <div className="cust-contact-line"><Mail size={11} /> {c.email}</div>}
-                {!c.phone && !c.email && <span className="cust-muted">—</span>}
+                {!c.phone && !c.email && <span className="cust-muted">N/A</span>}
               </div>
               {/* Loyalty */}
               <div className="cust-pts">
@@ -569,7 +569,7 @@ export default function Customers({ embedded }) {
               </div>
               {/* Discount */}
               <div className="cust-discount">
-                {c.discount != null ? <span className="cust-badge-green">{fmtPc(c.discount)}</span> : <span className="cust-muted">—</span>}
+                {c.discount != null ? <span className="cust-badge-green">{fmtPc(c.discount)}</span> : <span className="cust-muted">N/A</span>}
               </div>
               {/* Balance */}
               <div className="cust-balance">
@@ -577,11 +577,11 @@ export default function Customers({ embedded }) {
                   <span style={{ color: parseFloat(c.balance) >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
                     {fmt(c.balance)}
                   </span>
-                ) : <span className="cust-muted">—</span>}
+                ) : <span className="cust-muted">N/A</span>}
               </div>
               {/* Card */}
               <div className="cust-card">
-                {c.cardNo ? <span className="cust-mono">{c.cardNo}</span> : <span className="cust-muted">—</span>}
+                {c.cardNo ? <span className="cust-mono">{c.cardNo}</span> : <span className="cust-muted">N/A</span>}
               </div>
               {/* Actions */}
               <div className="cust-actions">

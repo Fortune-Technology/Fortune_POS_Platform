@@ -44,7 +44,7 @@ function ageHours(dateStr) {
 }
 
 function fmt(n) {
-  return n == null ? '—' : `$${Number(n).toFixed(2)}`;
+  return n == null ? 'N/A' : `$${Number(n).toFixed(2)}`;
 }
 
 const REASON_META = {
@@ -517,7 +517,7 @@ export default function LabelQueue({ embedded }) {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                        {price ? `$${Number(price).toFixed(2)}` : '—'}
+                        {price ? `$${Number(price).toFixed(2)}` : 'N/A'}
                       </div>
                       {cost && (
                         <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
@@ -603,10 +603,10 @@ export default function LabelQueue({ embedded }) {
                           const id = item._id || item.id;
                           const isSelected = selected.has(id);
                           const product = item.product || item;
-                          const h = ageHours(item.createdAt);
+                          const h = ageHours((item.addedAt || item.createdAt));
 
                           return (
-                            <tr key={id} style={{ background: ageBg(item.createdAt) }}>
+                            <tr key={id} style={{ background: ageBg((item.addedAt || item.createdAt)) }}>
                               {/* Checkbox */}
                               <td style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => toggleSelect(id)}>
                                 {isSelected
@@ -615,16 +615,16 @@ export default function LabelQueue({ embedded }) {
                               </td>
 
                               {/* Product Name */}
-                              <td className="p-td-strong">{product.name || '—'}</td>
+                              <td className="p-td-strong">{product.name || 'N/A'}</td>
 
                               {/* Brand */}
                               <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                                {product.brand || '—'}
+                                {product.brand || 'N/A'}
                               </td>
 
                               {/* UPC */}
                               <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                {product.upc || '—'}
+                                {product.upc || 'N/A'}
                               </td>
 
                               {/* Price — inline editor */}
@@ -636,7 +636,7 @@ export default function LabelQueue({ embedded }) {
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                    {timeAgo(item.createdAt)}
+                                    {timeAgo((item.addedAt || item.createdAt))}
                                   </span>
                                   {h > 48 && (
                                     <AlertCircle size={13} style={{ color: '#ef4444' }} />

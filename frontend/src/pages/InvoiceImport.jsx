@@ -97,7 +97,7 @@ const MAPPING_BADGE = {
 };
 const MAPPING_CONF = {
   high:   { bg: '#10b981', color: '#fff' },
-  medium: { bg: '#f59e0b', color: '#000' },
+  medium: { bg: '#f59e0b', color: '#fff' },
   low:    { bg: '#ef4444', color: '#fff' },
 };
 const TIER_LABEL = { upc: 'UPC', vendorMap: 'MAP', sku: 'SKU', fuzzy: 'FUZZY', ai: 'AI', manual: 'MANUAL', costProx: 'COST', global: 'GLOBAL' };

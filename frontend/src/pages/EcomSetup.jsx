@@ -413,7 +413,7 @@ function CustomersTab() {
           <tbody>
             {customers.map(c => (
               <tr key={c.id} onClick={() => loadCustomerDetail(c.id, setSelected)} className="es-cursor-pointer">
-                <td className="es-td-bold">{c.firstName || c.name || '—'} {c.lastName || ''}</td>
+                <td className="es-td-bold">{c.firstName || c.name || 'N/A'} {c.lastName || ''}</td>
                 <td>{c.email}</td>
                 <td>{c.orderCount}</td>
                 <td>${Number(c.totalSpent).toFixed(2)}</td>

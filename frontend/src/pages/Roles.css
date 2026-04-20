@@ -96,7 +96,7 @@
 .rl-badge {
   font-size: 0.65rem;
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 6px;
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -296,7 +296,7 @@
   padding: 0.1rem 0.35rem;
   background: var(--bg-secondary, #f1f5f9);
   color: var(--text-secondary);
-  border-radius: 999px;
+  border-radius: 6px;
   text-transform: uppercase;
   font-weight: 700;
   min-width: 44px;

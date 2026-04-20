@@ -37,33 +37,33 @@ import {
 import './Lottery.css';
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
-const fmt    = (n) => n == null ? '—' : `$${Number(n).toFixed(2)}`;
-const fmtNum = (n) => n == null ? '—' : Number(n).toLocaleString();
+const fmt = (n) => n == null ? 'N/A' : `$${Number(n).toFixed(2)}`;
+const fmtNum = (n) => n == null ? 'N/A' : Number(n).toLocaleString();
 
-const toDateStr  = (d) => d.toISOString().slice(0, 10);
-const todayStr   = ()  => toDateStr(new Date());
+const toDateStr = (d) => d.toISOString().slice(0, 10);
+const todayStr = () => toDateStr(new Date());
 const daysAgoStr = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return toDateStr(d); };
 
 const statusColor = (s) => ({
   inventory: 'lt-badge-blue',
-  active:    'lt-badge-brand',
-  depleted:  'lt-badge-amber',
-  settled:   'lt-badge-gray',
+  active: 'lt-badge-brand',
+  depleted: 'lt-badge-amber',
+  settled: 'lt-badge-gray',
 }[s] || 'lt-badge-gray');
 
 const requestStatusClass = (s) => ({
-  pending:  'lt-badge-amber',
+  pending: 'lt-badge-amber',
   approved: 'lt-badge-green',
   rejected: 'lt-badge-red',
 }[s] || 'lt-badge-gray');
 
 /* US States + Canadian Provinces */
 const ALL_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-  'VA','WA','WV','WI','WY','DC',
-  'ON','BC','AB','MB','SK','QC','NS','NB','PE','NL','YT','NT','NU',
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
+  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
+  'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
+  'ON', 'BC', 'AB', 'MB', 'SK', 'QC', 'NS', 'NB', 'PE', 'NL', 'YT', 'NT', 'NU',
 ];
 
 /* ── small shared components ──────────────────────────────────────────────── */
@@ -85,19 +85,19 @@ function StatCard({ label, value, sub, color = 'var(--accent-primary)' }) {
 function SimpleBarChart({ data, width = 600, height = 200 }) {
   if (!data?.length) return <div className="lt-empty">No data for selected range</div>;
   const maxVal = Math.max(...data.map(d => Math.max(d.sales || 0, d.payouts || 0)), 1);
-  const barW   = Math.max(8, Math.floor((width - 60) / (data.length * 2 + data.length)));
+  const barW = Math.max(8, Math.floor((width - 60) / (data.length * 2 + data.length)));
   const chartH = height - 40;
   return (
     <div style={{ overflowX: 'auto' }}>
       <svg width={Math.max(width, data.length * (barW * 2 + 10) + 60)} height={height} style={{ fontFamily: 'inherit' }}>
         {data.map((d, i) => {
-          const x     = 40 + i * (barW * 2 + 10);
+          const x = 40 + i * (barW * 2 + 10);
           const saleH = Math.round((d.sales / maxVal) * chartH);
-          const payH  = Math.round((d.payouts / maxVal) * chartH);
+          const payH = Math.round((d.payouts / maxVal) * chartH);
           return (
             <g key={d.date}>
-              <rect x={x}           y={chartH - saleH + 10} width={barW} height={saleH} fill="#16a34a" rx={2} />
-              <rect x={x + barW + 2} y={chartH - payH  + 10} width={barW} height={payH}  fill="#d97706" rx={2} />
+              <rect x={x} y={chartH - saleH + 10} width={barW} height={saleH} fill="#16a34a" rx={2} />
+              <rect x={x + barW + 2} y={chartH - payH + 10} width={barW} height={payH} fill="#d97706" rx={2} />
               <text x={x + barW} y={height - 2} textAnchor="middle" fontSize={9} fill="#9ca3af">
                 {d.date?.slice(5)}
               </text>
@@ -121,16 +121,16 @@ function SimpleBarChart({ data, width = 600, height = 200 }) {
 /* Game Modal */
 function GameModal({ game, onSave, onClose }) {
   const [form, setForm] = useState({
-    name:          game?.name          || '',
-    gameNumber:    game?.gameNumber    || '',
-    ticketPrice:   game?.ticketPrice   || '',
+    name: game?.name || '',
+    gameNumber: game?.gameNumber || '',
+    ticketPrice: game?.ticketPrice || '',
     ticketsPerBox: game?.ticketsPerBox || 300,
-    active:        game?.active        !== false,
-    state:         game?.state         || '',
-    isGlobal:      game?.isGlobal      || false,
+    active: game?.active !== false,
+    state: game?.state || '',
+    isGlobal: game?.isGlobal || false,
   });
   const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
+  const [err, setErr] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const submit = async () => {
@@ -237,11 +237,11 @@ function ActivateBoxModal({ box, onConfirm, onClose }) {
 
 /* Receive Box Modal (manual / local game) */
 function ReceiveBoxModal({ games, onSave, onClose }) {
-  const [gameId,    setGameId]    = useState('');
-  const [quantity,  setQuantity]  = useState(1);
+  const [gameId, setGameId] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [startTicket, setStartTicket] = useState('');
   const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
+  const [err, setErr] = useState('');
   const submit = async () => {
     if (!gameId) { setErr('Select a game.'); return; }
     setSaving(true); setErr('');
@@ -288,22 +288,22 @@ function ReceiveBoxModal({ games, onSave, onClose }) {
 /* Catalog Ticket Form Modal */
 function CatalogTicketModal({ ticket, onSave, onClose }) {
   const [form, setForm] = useState({
-    name:          ticket?.name          || '',
-    gameNumber:    ticket?.gameNumber    || '',
-    ticketPrice:   ticket?.ticketPrice   || '',
+    name: ticket?.name || '',
+    gameNumber: ticket?.gameNumber || '',
+    ticketPrice: ticket?.ticketPrice || '',
     ticketsPerBook: ticket?.ticketsPerBook || 300,
-    state:         ticket?.state         || '',
-    category:      ticket?.category      || '',
-    active:        ticket?.active        !== false,
+    state: ticket?.state || '',
+    category: ticket?.category || '',
+    active: ticket?.active !== false,
   });
   const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
+  const [err, setErr] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const submit = async () => {
-    if (!form.name.trim())      { setErr('Name is required.'); return; }
-    if (!form.ticketPrice)      { setErr('Ticket price is required.'); return; }
-    if (!form.state)            { setErr('State / Province is required.'); return; }
+    if (!form.name.trim()) { setErr('Name is required.'); return; }
+    if (!form.ticketPrice) { setErr('Ticket price is required.'); return; }
+    if (!form.state) { setErr('State / Province is required.'); return; }
     setSaving(true); setErr('');
     try {
       await onSave({ ...form, ticketPrice: Number(form.ticketPrice), ticketsPerBook: Number(form.ticketsPerBook) || 300 });
@@ -369,19 +369,19 @@ function CatalogTicketModal({ ticket, onSave, onClose }) {
 
 /* Review Request Modal (admin) */
 function ReviewRequestModal({ request, onDone, onClose }) {
-  const [action,        setAction]        = useState('approved');
-  const [adminNotes,    setAdminNotes]    = useState('');
-  const [addToCatalog,  setAddToCatalog]  = useState(true);
-  const [catalogForm,   setCatalogForm]   = useState({
-    name:          request.name          || '',
-    gameNumber:    request.gameNumber    || '',
-    ticketPrice:   request.ticketPrice   || '',
+  const [action, setAction] = useState('approved');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [addToCatalog, setAddToCatalog] = useState(true);
+  const [catalogForm, setCatalogForm] = useState({
+    name: request.name || '',
+    gameNumber: request.gameNumber || '',
+    ticketPrice: request.ticketPrice || '',
     ticketsPerBook: request.ticketsPerBook || 300,
-    state:         request.state         || '',
-    category:      '',
+    state: request.state || '',
+    category: '',
   });
   const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
+  const [err, setErr] = useState('');
   const setCF = (k, v) => setCatalogForm(f => ({ ...f, [k]: v }));
 
   const submit = async () => {
@@ -391,7 +391,7 @@ function ReviewRequestModal({ request, onDone, onClose }) {
         status: action,
         adminNotes,
         addToCatalog: action === 'approved' && addToCatalog,
-        catalogData:  action === 'approved' && addToCatalog ? { ...catalogForm, ticketPrice: Number(catalogForm.ticketPrice), ticketsPerBook: Number(catalogForm.ticketsPerBook) } : null,
+        catalogData: action === 'approved' && addToCatalog ? { ...catalogForm, ticketPrice: Number(catalogForm.ticketPrice), ticketsPerBook: Number(catalogForm.ticketsPerBook) } : null,
       });
     } catch (e) { setErr(e.response?.data?.error || e.message); }
     setSaving(false);
@@ -420,7 +420,7 @@ function ReviewRequestModal({ request, onDone, onClose }) {
         <div className="lt-field">
           <label className="lt-field-label">Decision</label>
           <div style={{ display: 'flex', gap: 8 }}>
-            {['approved','rejected'].map(a => (
+            {['approved', 'rejected'].map(a => (
               <button key={a} onClick={() => setAction(a)} className={`lt-btn lt-btn-sm ${action === a ? (a === 'approved' ? 'lt-btn-success' : 'lt-btn-danger') : 'lt-btn-ghost'}`} style={{ flex: 1, textTransform: 'capitalize' }}>
                 {a}
               </button>
@@ -488,7 +488,7 @@ function ReviewRequestModal({ request, onDone, onClose }) {
 function SubmitRequestModal({ storeState, onSave, onClose }) {
   const [form, setForm] = useState({ name: '', gameNumber: '', ticketPrice: '', ticketsPerBook: '', state: storeState || '', notes: '' });
   const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
+  const [err, setErr] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const submit = async () => {
     if (!form.name.trim()) { setErr('Name is required.'); return; }
@@ -555,16 +555,16 @@ function SubmitRequestModal({ storeState, onSave, onClose }) {
    RECEIVE ORDER TAB  — catalog-based inventory receiving
 ══════════════════════════════════════════════════════════════════════════ */
 function ReceiveOrderTab({ storeSettings, onReloadBoxes }) {
-  const [catalog,      setCatalog]      = useState([]);
-  const [requests,     setRequests]     = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [search,       setSearch]       = useState('');
-  const [qtys,         setQtys]         = useState({});   // { [catalogTicketId]: qty }
-  const [receiving,    setReceiving]    = useState({});   // { [catalogTicketId]: bool }
-  const [received,     setReceived]     = useState({});   // { [catalogTicketId]: bool }
+  const [catalog, setCatalog] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [qtys, setQtys] = useState({});   // { [catalogTicketId]: qty }
+  const [receiving, setReceiving] = useState({});   // { [catalogTicketId]: bool }
+  const [received, setReceived] = useState({});   // { [catalogTicketId]: bool }
   const [requestModal, setRequestModal] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
-  const [err,          setErr]          = useState('');
+  const [err, setErr] = useState('');
 
   const storeState = storeSettings?.state;
 
@@ -750,14 +750,14 @@ function ReceiveOrderTab({ storeSettings, onReloadBoxes }) {
    TICKET CATALOG TAB  (admin / superadmin only)
 ══════════════════════════════════════════════════════════════════════════ */
 function TicketCatalogTab() {
-  const [catalog,     setCatalog]     = useState([]);
-  const [requests,    setRequests]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
+  const [catalog, setCatalog] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stateFilter, setStateFilter] = useState('');
-  const [search,      setSearch]      = useState('');
-  const [editTicket,  setEditTicket]  = useState(null);  // null | 'new' | ticketObj
-  const [reviewReq,   setReviewReq]   = useState(null);
-  const [err,         setErr]         = useState('');
+  const [search, setSearch] = useState('');
+  const [editTicket, setEditTicket] = useState(null);  // null | 'new' | ticketObj
+  const [reviewReq, setReviewReq] = useState(null);
+  const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -966,62 +966,62 @@ function LotteryBody() {
     'Settings',
   ];
 
-  const [tab,            setTab]            = useState('Overview');
-  const [games,          setGames]          = useState([]);
-  const [boxes,          setBoxes]          = useState([]);
-  const [shiftReports,   setShiftReports]   = useState([]);
-  const [dashboard,      setDashboard]      = useState(null);
-  const [report,         setReport]         = useState(null);
-  const [reportData,     setReportData]     = useState(null);
-  const [commission,     setCommission]     = useState(null);
-  const [reportPeriod,   setReportPeriod]   = useState('week');
-  const [loading,        setLoading]        = useState(false);
-  const [gameModal,      setGameModal]      = useState(null);
-  const [receiveModal,   setReceiveModal]   = useState(false);
+  const [tab, setTab] = useState('Overview');
+  const [games, setGames] = useState([]);
+  const [boxes, setBoxes] = useState([]);
+  const [shiftReports, setShiftReports] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [report, setReport] = useState(null);
+  const [reportData, setReportData] = useState(null);
+  const [commission, setCommission] = useState(null);
+  const [reportPeriod, setReportPeriod] = useState('week');
+  const [loading, setLoading] = useState(false);
+  const [gameModal, setGameModal] = useState(null);
+  const [receiveModal, setReceiveModal] = useState(false);
   const [activateBoxObj, setActivateBoxObj] = useState(null);
-  const [boxFilter,      setBoxFilter]      = useState('All');
-  const [pendingCount,   setPendingCount]   = useState(0);
+  const [boxFilter, setBoxFilter] = useState('All');
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Date range for reports
-  const [dateFrom,   setDateFrom]   = useState(daysAgoStr(30));
-  const [dateTo,     setDateTo]     = useState(todayStr());
+  const [dateFrom, setDateFrom] = useState(daysAgoStr(30));
+  const [dateTo, setDateTo] = useState(todayStr());
   const [datePreset, setDatePreset] = useState('Custom');
 
   // Settings
-  const [lotterySettings,  setLotterySettings]  = useState(null);
-  const [settingsForm,     setSettingsForm]     = useState({ enabled: true, cashOnly: false, state: '', commissionRate: '', scanRequiredAtShiftEnd: false });
-  const [settingsSaving,   setSettingsSaving]   = useState(false);
-  const [settingsMsg,      setSettingsMsg]      = useState('');
+  const [lotterySettings, setLotterySettings] = useState(null);
+  const [settingsForm, setSettingsForm] = useState({ enabled: true, cashOnly: false, state: '', commissionRate: '', scanRequiredAtShiftEnd: false });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState('');
 
   /* ── Loaders ──────────────────────────────────────────────────────────── */
   const loadGames = useCallback(async () => {
-    try { const r = await getLotteryGames(); setGames(Array.isArray(r) ? r : r?.games || []); } catch {}
+    try { const r = await getLotteryGames(); setGames(Array.isArray(r) ? r : r?.games || []); } catch { }
   }, []);
 
   const loadBoxes = useCallback(async (status) => {
-    try { const r = await getLotteryBoxes(status && status !== 'All' ? { status } : {}); setBoxes(Array.isArray(r) ? r : r?.boxes || []); } catch {}
+    try { const r = await getLotteryBoxes(status && status !== 'All' ? { status } : {}); setBoxes(Array.isArray(r) ? r : r?.boxes || []); } catch { }
   }, []);
 
   const loadShiftReports = useCallback(async () => {
-    try { const r = await getLotteryShiftReports(); setShiftReports(Array.isArray(r) ? r : r?.reports || []); } catch {}
+    try { const r = await getLotteryShiftReports(); setShiftReports(Array.isArray(r) ? r : r?.reports || []); } catch { }
   }, []);
 
   const loadDashboard = useCallback(async () => {
-    try { const r = await getLotteryDashboard(); setDashboard(r); } catch {}
+    try { const r = await getLotteryDashboard(); setDashboard(r); } catch { }
   }, []);
 
   const loadReport = useCallback(async (from, to) => {
     try {
       const params = { period: reportPeriod };
       if (from) params.from = from;
-      if (to)   params.to   = to;
+      if (to) params.to = to;
       const r = await getLotteryReport(params);
       setReport(r); setReportData(r);
-    } catch {}
+    } catch { }
   }, [reportPeriod]);
 
   const loadCommission = useCallback(async () => {
-    try { const r = await getLotteryCommissionReport({ period: reportPeriod }); setCommission(r); } catch {}
+    try { const r = await getLotteryCommissionReport({ period: reportPeriod }); setCommission(r); } catch { }
   }, [reportPeriod]);
 
   const loadSettings = useCallback(async () => {
@@ -1030,19 +1030,19 @@ function LotteryBody() {
       if (r) {
         setLotterySettings(r);
         setSettingsForm({
-          enabled:              r.enabled              ?? true,
-          cashOnly:             r.cashOnly             ?? false,
-          state:                r.state                || '',
-          commissionRate:       r.commissionRate != null ? (Number(r.commissionRate) * 100).toFixed(2) : '',
+          enabled: r.enabled ?? true,
+          cashOnly: r.cashOnly ?? false,
+          state: r.state || '',
+          commissionRate: r.commissionRate != null ? (Number(r.commissionRate) * 100).toFixed(2) : '',
           scanRequiredAtShiftEnd: r.scanRequiredAtShiftEnd ?? false,
         });
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const loadPendingCount = useCallback(async () => {
     if (!isAdmin) return;
-    try { const c = await getLotteryPendingCount(); setPendingCount(c || 0); } catch {}
+    try { const c = await getLotteryPendingCount(); setPendingCount(c || 0); } catch { }
   }, [isAdmin]);
 
   useEffect(() => {
@@ -1052,12 +1052,12 @@ function LotteryBody() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (tab === 'Inventory')      loadBoxes(boxFilter);
+    if (tab === 'Inventory') loadBoxes(boxFilter);
     if (tab === 'Active Tickets') loadBoxes('active');
-    if (tab === 'Shift Reports')  loadShiftReports();
-    if (tab === 'Reports')        loadReport(dateFrom, dateTo);
-    if (tab === 'Commission')     loadCommission();
-    if (tab === 'Settings')       loadSettings();
+    if (tab === 'Shift Reports') loadShiftReports();
+    if (tab === 'Reports') loadReport(dateFrom, dateTo);
+    if (tab === 'Commission') loadCommission();
+    if (tab === 'Settings') loadSettings();
     if (tab === 'Ticket Catalog') loadPendingCount();
   }, [tab, reportPeriod]); // eslint-disable-line
 
@@ -1075,7 +1075,7 @@ function LotteryBody() {
       from = toDateStr(new Date(today.getFullYear(), today.getMonth(), 1)); to = todayStr();
     } else if (preset === 'Last Month') {
       from = toDateStr(new Date(today.getFullYear(), today.getMonth() - 1, 1));
-      to   = toDateStr(new Date(today.getFullYear(), today.getMonth(), 0));
+      to = toDateStr(new Date(today.getFullYear(), today.getMonth(), 0));
     } else { return; }
     setDateFrom(from); setDateTo(to);
     loadReport(from, to);
@@ -1098,7 +1098,7 @@ function LotteryBody() {
   /* ── CSV Download ─────────────────────────────────────────────────────── */
   const downloadReportCSV = () => {
     if (!reportData) return;
-    const rows = [['Date','Sales','Payouts','Net'], ...(reportData.chart || []).map(d => [d.date, d.sales?.toFixed(2), d.payouts?.toFixed(2), d.net?.toFixed(2)])];
+    const rows = [['Date', 'Sales', 'Payouts', 'Net'], ...(reportData.chart || []).map(d => [d.date, d.sales?.toFixed(2), d.payouts?.toFixed(2), d.net?.toFixed(2)])];
     const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `lottery-${dateFrom}-${dateTo}.csv` });
     a.click(); URL.revokeObjectURL(a.href);
@@ -1133,437 +1133,437 @@ function LotteryBody() {
 
   /* ── Render ───────────────────────────────────────────────────────────── */
   return (
-      <div className="p-page lt-page">
+    <div className="p-page lt-page">
 
-        {/* Header */}
-        <div className="p-header">
-          <div className="p-header-left">
-            <div className="p-header-icon"><Ticket size={22} /></div>
-            <div>
-              <h1 className="p-title">Lottery</h1>
-              <p className="p-subtitle">Ticket inventory, sales tracking & commission reports</p>
-            </div>
-          </div>
-          <div className="p-header-actions">
-            {tab === 'Games' && (
-              <button className="lt-btn lt-btn-primary" onClick={() => setGameModal('new')}>
-                <Plus size={15} /> New Game
-              </button>
-            )}
-            {(tab === 'Inventory' || tab === 'Active Tickets') && (
-              <button className="lt-btn lt-btn-primary" onClick={() => setReceiveModal(true)}>
-                <Package size={15} /> Receive (Manual)
-              </button>
-            )}
+      {/* Header */}
+      <div className="p-header">
+        <div className="p-header-left">
+          <div className="p-header-icon"><Ticket size={22} /></div>
+          <div>
+            <h1 className="p-title">Lottery</h1>
+            <p className="p-subtitle">Ticket inventory, sales tracking & commission reports</p>
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="lt-tabs">
-          {TABS.map(t => (
-            <button key={t} className={`lt-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-              {t}
-              {t === 'Ticket Catalog' && pendingCount > 0 && <span className="lt-tab-badge">{pendingCount}</span>}
+        <div className="p-header-actions">
+          {tab === 'Games' && (
+            <button className="lt-btn lt-btn-primary" onClick={() => setGameModal('new')}>
+              <Plus size={15} /> New Game
             </button>
-          ))}
+          )}
+          {(tab === 'Inventory' || tab === 'Active Tickets') && (
+            <button className="lt-btn lt-btn-primary" onClick={() => setReceiveModal(true)}>
+              <Package size={15} /> Receive (Manual)
+            </button>
+          )}
         </div>
+      </div>
 
-        {/* ── OVERVIEW ─────────────────────────────────────────────────── */}
-        {tab === 'Overview' && (
-          <div>
-            <div className="lt-stat-grid">
-              <StatCard label="Total Sales (Month)" value={fmt(dashboard?.totalSales)}    color="var(--accent-primary)" />
-              <StatCard label="Total Payouts"        value={fmt(dashboard?.totalPayouts)}  color="#d97706" />
-              <StatCard label="Net Revenue"          value={fmt(dashboard?.netRevenue)}    color="#2563eb" />
-              <StatCard label="Commission Earned"    value={fmt(dashboard?.commission)}    color="#7c3aed" />
-              <StatCard label="Active Boxes"         value={fmtNum(dashboard?.activeBoxes)}    sub="in machine now" />
-              <StatCard label="Inventory Boxes"      value={fmtNum(dashboard?.inventoryBoxes)} sub="in storage" />
-            </div>
-            <div className="lt-grid-2" style={{ gap: '1.25rem' }}>
-              <div className="lt-card">
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Active Games</div>
-                {games.filter(g => g.active).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No active games.</p>}
-                {games.filter(g => g.active).map(g => (
-                  <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-color)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{g.name}</div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{fmtNum(g.ticketsPerBox)} tickets · {fmt(g.ticketPrice)}</div>
-                    </div>
-                    <Badge label="Active" cls="lt-badge-brand" />
-                  </div>
-                ))}
-              </div>
-              <div className="lt-card">
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Recent Shift Reports</div>
-                {shiftReports.slice(0, 5).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No shift reports yet.</p>}
-                {shiftReports.slice(0, 5).map(r => (
-                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{new Date(r.closedAt || r.createdAt).toLocaleDateString()}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: Math.abs(Number(r.variance || 0)) < 0.01 ? 'var(--success)' : '#d97706' }}>
-                      {r.variance >= 0 ? '+' : ''}{fmt(r.variance)} var
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Tabs */}
+      <div className="lt-tabs">
+        {TABS.map(t => (
+          <button key={t} className={`lt-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            {t}
+            {t === 'Ticket Catalog' && pendingCount > 0 && <span className="lt-tab-badge">{pendingCount}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── OVERVIEW ─────────────────────────────────────────────────── */}
+      {tab === 'Overview' && (
+        <div>
+          <div className="lt-stat-grid">
+            <StatCard label="Total Sales (Month)" value={fmt(dashboard?.totalSales)} color="var(--accent-primary)" />
+            <StatCard label="Total Payouts" value={fmt(dashboard?.totalPayouts)} color="#d97706" />
+            <StatCard label="Net Revenue" value={fmt(dashboard?.netRevenue)} color="#2563eb" />
+            <StatCard label="Commission Earned" value={fmt(dashboard?.commission)} color="#7c3aed" />
+            <StatCard label="Active Boxes" value={fmtNum(dashboard?.activeBoxes)} sub="in machine now" />
+            <StatCard label="Inventory Boxes" value={fmtNum(dashboard?.inventoryBoxes)} sub="in storage" />
           </div>
-        )}
-
-        {/* ── TICKET CATALOG (admin only) ──────────────────────────────── */}
-        {tab === 'Ticket Catalog' && <TicketCatalogTab />}
-
-        {/* ── RECEIVE ORDER ────────────────────────────────────────────── */}
-        {tab === 'Receive Order' && (
-          <ReceiveOrderTab storeSettings={lotterySettings} onReloadBoxes={() => loadBoxes(boxFilter)} />
-        )}
-
-        {/* ── GAMES ────────────────────────────────────────────────────── */}
-        {tab === 'Games' && (
-          <div>
-            {games.length === 0 && (
-              <div className="lt-empty">
-                <Ticket size={40} />
-                <p>No games yet. Click "New Game" to add one.</p>
-              </div>
-            )}
-            <div className="lt-grid-auto">
-              {games.map(g => (
-                <div key={g.id} className="lt-card lt-game-card">
-                  <div className="lt-game-card-header">
-                    <div>
-                      <div className="lt-game-name">{g.name}</div>
-                      {g.gameNumber && <div className="lt-game-number">Game #{g.gameNumber}</div>}
-                    </div>
-                    <div className="lt-game-badges">
-                      {g.state && <Badge label={g.state} cls="lt-badge-blue" />}
-                      {g.isGlobal && <Badge label="Global" cls="lt-badge-purple" />}
-                      <Badge label={g.active ? 'Active' : 'Inactive'} cls={g.active ? 'lt-badge-brand' : 'lt-badge-gray'} />
-                    </div>
+          <div className="lt-grid-2" style={{ gap: '1.25rem' }}>
+            <div className="lt-card">
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Active Games</div>
+              {games.filter(g => g.active).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No active games.</p>}
+              {games.filter(g => g.active).map(g => (
+                <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-color)' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{g.name}</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{fmtNum(g.ticketsPerBox)} tickets · {fmt(g.ticketPrice)}</div>
                   </div>
-                  <div className="lt-game-stats">
-                    {[['Ticket Price', fmt(g.ticketPrice)], ['Tickets / Box', fmtNum(g.ticketsPerBox)], ['Box Value', fmt(Number(g.ticketPrice) * Number(g.ticketsPerBox))]].map(([l, v]) => (
-                      <div key={l} className="lt-game-stat-item">
-                        <div className="lt-game-stat-label">{l}</div>
-                        <div className="lt-game-stat-value">{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="lt-game-card-actions">
-                    <button className="lt-btn lt-btn-ghost lt-btn-sm" style={{ flex: 1 }} onClick={() => setGameModal(g)}>
-                      <Edit2 size={13} /> Edit
-                    </button>
-                    <button className="lt-btn lt-btn-danger lt-btn-sm" onClick={() => handleDeleteGame(g.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  <Badge label="Active" cls="lt-badge-brand" />
+                </div>
+              ))}
+            </div>
+            <div className="lt-card">
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Recent Shift Reports</div>
+              {shiftReports.slice(0, 5).length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No shift reports yet.</p>}
+              {shiftReports.slice(0, 5).map(r => (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{new Date(r.closedAt || r.createdAt).toLocaleDateString()}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: Math.abs(Number(r.variance || 0)) < 0.01 ? 'var(--success)' : '#d97706' }}>
+                    {r.variance >= 0 ? '+' : ''}{fmt(r.variance)} var
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── INVENTORY ────────────────────────────────────────────────── */}
-        {tab === 'Inventory' && (
-          <div>
-            <div className="lt-filter-bar">
-              {['All', 'inventory', 'active', 'depleted', 'settled'].map(s => (
-                <button key={s} className={`lt-filter-chip ${boxFilter === s ? 'active' : ''}`}
-                  onClick={() => { setBoxFilter(s); loadBoxes(s); }}
-                  style={{ textTransform: 'capitalize' }}>{s}</button>
-              ))}
-            </div>
-            <div className="lt-table-wrap">
-              <table className="lt-table">
-                <thead>
-                  <tr>{['Game','Box #','Slot','Total Tickets','Price','Box Value','Sold','Status','Actions'].map(h => <th key={h}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {boxes.length === 0 && <tr><td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>No boxes found.</td></tr>}
-                  {boxes.map(b => (
-                    <tr key={b.id}>
-                      <td className="lt-td-strong">{b.game?.name || '—'}</td>
-                      <td>{b.boxNumber || '—'}</td>
-                      <td>{b.slotNumber ?? '—'}</td>
-                      <td>{fmtNum(b.totalTickets)}</td>
-                      <td>{fmt(b.ticketPrice)}</td>
-                      <td className="lt-td-strong">{fmt(b.totalValue)}</td>
-                      <td className="lt-td-small">{fmtNum(b.ticketsSold)} / {fmtNum(b.totalTickets)}</td>
-                      <td><Badge label={b.status} cls={statusColor(b.status)} /></td>
-                      <td className="lt-td-actions">
-                        <div style={{ display: 'flex', gap: 5 }}>
-                          {b.status === 'inventory' && (
-                            <button className="lt-btn lt-btn-ghost lt-btn-sm" onClick={() => setActivateBoxObj(b)}>Activate</button>
-                          )}
-                          {b.status === 'active' && (
-                            <button className="lt-btn lt-btn-amber lt-btn-sm" onClick={() => handleDeplete(b.id)}>Deplete</button>
-                          )}
-                          {b.status === 'inventory' && (
-                            <button className="lt-btn lt-btn-danger lt-btn-sm" onClick={async () => { if (!window.confirm('Remove box?')) return; await updateLotteryBox(b.id, { status: 'removed' }); loadBoxes(boxFilter); }}>
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+      {/* ── TICKET CATALOG (admin only) ──────────────────────────────── */}
+      {tab === 'Ticket Catalog' && <TicketCatalogTab />}
 
-        {/* ── ACTIVE TICKETS ───────────────────────────────────────────── */}
-        {tab === 'Active Tickets' && (
-          <div>
-            {boxes.filter(b => b.status === 'active').length === 0 ? (
-              <div className="lt-empty">
-                <Ticket size={40} />
-                <p>No boxes currently active in machine.</p>
-                <p style={{ fontSize: '0.82rem', marginTop: 4 }}>Activate a box from the Inventory tab.</p>
-              </div>
-            ) : (
-              <div className="lt-grid-auto">
-                {boxes.filter(b => b.status === 'active').map(b => {
-                  const pct = b.totalTickets > 0 ? Math.round((b.ticketsSold / b.totalTickets) * 100) : 0;
-                  return (
-                    <div key={b.id} className="lt-card">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{b.game?.name || 'Unknown Game'}</div>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                            {b.slotNumber ? `Slot ${b.slotNumber}` : 'No slot'} · Box {b.boxNumber || '#?'}
-                          </div>
-                        </div>
-                        <Badge label="Active" cls="lt-badge-brand" />
-                      </div>
-                      <div className="lt-progress-labels">
-                        <span>{fmtNum(b.ticketsSold)} sold</span>
-                        <span>{fmtNum(b.totalTickets - b.ticketsSold)} left</span>
-                      </div>
-                      <div className="lt-progress-wrap">
-                        <div className={`lt-progress-fill ${pct > 80 ? 'lt-progress-fill-amber' : ''}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right', marginBottom: '0.875rem' }}>{pct}%</div>
-                      <div className="lt-mini-stats">
-                        <div className="lt-mini-stat"><div className="lt-mini-stat-label">Sales</div><div className="lt-mini-stat-value" style={{ color: 'var(--accent-primary)' }}>{fmt(b.salesAmount)}</div></div>
-                        <div className="lt-mini-stat"><div className="lt-mini-stat-label">Box Value</div><div className="lt-mini-stat-value">{fmt(b.totalValue)}</div></div>
-                      </div>
-                      <button className="lt-btn lt-btn-amber" style={{ width: '100%', justifyContent: 'center' }} onClick={() => handleDeplete(b.id)}>
-                        Mark as Depleted
-                      </button>
+      {/* ── RECEIVE ORDER ────────────────────────────────────────────── */}
+      {tab === 'Receive Order' && (
+        <ReceiveOrderTab storeSettings={lotterySettings} onReloadBoxes={() => loadBoxes(boxFilter)} />
+      )}
+
+      {/* ── GAMES ────────────────────────────────────────────────────── */}
+      {tab === 'Games' && (
+        <div>
+          {games.length === 0 && (
+            <div className="lt-empty">
+              <Ticket size={40} />
+              <p>No games yet. Click "New Game" to add one.</p>
+            </div>
+          )}
+          <div className="lt-grid-auto">
+            {games.map(g => (
+              <div key={g.id} className="lt-card lt-game-card">
+                <div className="lt-game-card-header">
+                  <div>
+                    <div className="lt-game-name">{g.name}</div>
+                    {g.gameNumber && <div className="lt-game-number">Game #{g.gameNumber}</div>}
+                  </div>
+                  <div className="lt-game-badges">
+                    {g.state && <Badge label={g.state} cls="lt-badge-blue" />}
+                    {g.isGlobal && <Badge label="Global" cls="lt-badge-purple" />}
+                    <Badge label={g.active ? 'Active' : 'Inactive'} cls={g.active ? 'lt-badge-brand' : 'lt-badge-gray'} />
+                  </div>
+                </div>
+                <div className="lt-game-stats">
+                  {[['Ticket Price', fmt(g.ticketPrice)], ['Tickets / Box', fmtNum(g.ticketsPerBox)], ['Box Value', fmt(Number(g.ticketPrice) * Number(g.ticketsPerBox))]].map(([l, v]) => (
+                    <div key={l} className="lt-game-stat-item">
+                      <div className="lt-game-stat-label">{l}</div>
+                      <div className="lt-game-stat-value">{v}</div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+                <div className="lt-game-card-actions">
+                  <button className="lt-btn lt-btn-ghost lt-btn-sm" onClick={() => setGameModal(g)}>
+                    <Edit2 size={13} /> Edit
+                  </button>
+                  <button className="lt-btn lt-btn-danger lt-btn-sm" onClick={() => handleDeleteGame(g.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── SHIFT REPORTS ────────────────────────────────────────────── */}
-        {tab === 'Shift Reports' && (
+      {/* ── INVENTORY ────────────────────────────────────────────────── */}
+      {tab === 'Inventory' && (
+        <div>
+          <div className="lt-filter-bar">
+            {['All', 'inventory', 'active', 'depleted', 'settled'].map(s => (
+              <button key={s} className={`lt-filter-chip ${boxFilter === s ? 'active' : ''}`}
+                onClick={() => { setBoxFilter(s); loadBoxes(s); }}
+                style={{ textTransform: 'capitalize' }}>{s}</button>
+            ))}
+          </div>
           <div className="lt-table-wrap">
             <table className="lt-table">
               <thead>
-                <tr>{['Date / Shift','Sales','Payouts','Net','Machine','Digital','Variance','Notes'].map(h => <th key={h}>{h}</th>)}</tr>
+                <tr>{['Game', 'Box #', 'Slot', 'Total Tickets', 'Price', 'Box Value', 'Sold', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr>
               </thead>
               <tbody>
-                {shiftReports.length === 0 && <tr><td colSpan={8} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>No shift reports yet.</td></tr>}
-                {shiftReports.map(r => {
-                  const v = Number(r.variance || 0);
-                  const vCls = Math.abs(v) < 0.01 ? 'lt-td-green' : Math.abs(v) <= 5 ? 'lt-td-amber' : 'lt-td-red';
-                  return (
-                    <tr key={r.id}>
-                      <td className="lt-td-strong">
-                        {new Date(r.closedAt || r.createdAt).toLocaleDateString()}
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.shiftId?.slice(-8)}</div>
-                      </td>
-                      <td className="lt-td-brand">{fmt(r.totalSales)}</td>
-                      <td className="lt-td-amber">{fmt(r.totalPayouts)}</td>
-                      <td className="lt-td-strong">{fmt(r.netAmount)}</td>
-                      <td>{fmt(r.machineAmount)}</td>
-                      <td>{fmt(r.digitalAmount)}</td>
-                      <td className={vCls}>{v >= 0 ? '+' : ''}{fmt(v)}</td>
-                      <td className="lt-td-small">{r.notes || '—'}</td>
-                    </tr>
-                  );
-                })}
+                {boxes.length === 0 && <tr><td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>No boxes found.</td></tr>}
+                {boxes.map(b => (
+                  <tr key={b.id}>
+                    <td className="lt-td-strong">{b.game?.name || 'N/A'}</td>
+                    <td>{b.boxNumber || 'N/A'}</td>
+                    <td>{b.slotNumber ?? 'N/A'}</td>
+                    <td>{fmtNum(b.totalTickets)}</td>
+                    <td>{fmt(b.ticketPrice)}</td>
+                    <td className="lt-td-strong">{fmt(b.totalValue)}</td>
+                    <td className="lt-td-small">{fmtNum(b.ticketsSold)} / {fmtNum(b.totalTickets)}</td>
+                    <td><Badge label={b.status} cls={statusColor(b.status)} /></td>
+                    <td className="lt-td-actions">
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        {b.status === 'inventory' && (
+                          <button className="lt-btn lt-btn-ghost lt-btn-sm" onClick={() => setActivateBoxObj(b)}>Activate</button>
+                        )}
+                        {b.status === 'active' && (
+                          <button className="lt-btn lt-btn-amber lt-btn-sm" onClick={() => handleDeplete(b.id)}>Deplete</button>
+                        )}
+                        {b.status === 'inventory' && (
+                          <button className="lt-btn lt-btn-danger lt-btn-sm" onClick={async () => { if (!window.confirm('Remove box?')) return; await updateLotteryBox(b.id, { status: 'removed' }); loadBoxes(boxFilter); }}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── REPORTS ──────────────────────────────────────────────────── */}
-        {tab === 'Reports' && (
-          <div>
-            <div className="lt-card" style={{ marginBottom: '1.25rem' }}>
-              <div className="lt-date-controls">
-                <div className="lt-field">
-                  <label className="lt-field-label">From</label>
-                  <input type="date" className="lt-input" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setDatePreset('Custom'); }} style={{ maxWidth: 160 }} />
-                </div>
-                <div className="lt-field">
-                  <label className="lt-field-label">To</label>
-                  <input type="date" className="lt-input" value={dateTo} onChange={e => { setDateTo(e.target.value); setDatePreset('Custom'); }} style={{ maxWidth: 160 }} />
-                </div>
-                <button className="lt-btn lt-btn-primary" onClick={() => loadReport(dateFrom, dateTo)}>Apply</button>
-                <button className="lt-btn lt-btn-ghost" onClick={downloadReportCSV} disabled={!reportData}>⬇ Download CSV</button>
-              </div>
-              <div className="lt-filter-bar" style={{ marginBottom: 0 }}>
-                {['Today','This Week','This Month','Last Month','Custom'].map(p => (
-                  <button key={p} className={`lt-filter-chip ${datePreset === p ? 'active' : ''}`} onClick={() => applyPreset(p)}>{p}</button>
-                ))}
-              </div>
+      {/* ── ACTIVE TICKETS ───────────────────────────────────────────── */}
+      {tab === 'Active Tickets' && (
+        <div>
+          {boxes.filter(b => b.status === 'active').length === 0 ? (
+            <div className="lt-empty">
+              <Ticket size={40} />
+              <p>No boxes currently active in machine.</p>
+              <p style={{ fontSize: '0.82rem', marginTop: 4 }}>Activate a box from the Inventory tab.</p>
             </div>
-
-            {report ? (
-              <>
-                <div className="lt-stat-grid">
-                  <StatCard label="Total Sales"   value={fmt(report.totalSales)}   color="var(--accent-primary)" />
-                  <StatCard label="Total Payouts" value={fmt(report.totalPayouts)} color="#d97706" />
-                  <StatCard label="Net Revenue"   value={fmt(report.netRevenue)}   color="#2563eb" />
-                  <StatCard label="Transactions"  value={fmtNum(report.transactionCount)} sub="sale transactions" />
-                </div>
-                {report.chart?.length > 0 && (
-                  <div className="lt-card" style={{ marginBottom: '1.25rem' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Daily Sales vs Payouts</div>
-                    <SimpleBarChart data={report.chart} width={700} height={200} />
-                  </div>
-                )}
-                {report.byGame?.length > 0 && (
-                  <div className="lt-card">
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Sales by Game</div>
-                    <div className="lt-table-wrap">
-                      <table className="lt-table">
-                        <thead><tr>{['Game','Sales','Payouts','Net','Transactions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
-                        <tbody>
-                          {report.byGame.map((g, i) => (
-                            <tr key={i}>
-                              <td className="lt-td-strong">{g.gameName || 'Unknown'}</td>
-                              <td className="lt-td-brand">{fmt(g.sales)}</td>
-                              <td className="lt-td-amber">{fmt(g.payouts)}</td>
-                              <td className="lt-td-strong">{fmt(g.net)}</td>
-                              <td>{fmtNum(g.count)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+          ) : (
+            <div className="lt-grid-auto">
+              {boxes.filter(b => b.status === 'active').map(b => {
+                const pct = b.totalTickets > 0 ? Math.round((b.ticketsSold / b.totalTickets) * 100) : 0;
+                return (
+                  <div key={b.id} className="lt-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{b.game?.name || 'Unknown Game'}</div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          {b.slotNumber ? `Slot ${b.slotNumber}` : 'No slot'} · Box {b.boxNumber || '#?'}
+                        </div>
+                      </div>
+                      <Badge label="Active" cls="lt-badge-brand" />
                     </div>
+                    <div className="lt-progress-labels">
+                      <span>{fmtNum(b.ticketsSold)} sold</span>
+                      <span>{fmtNum(b.totalTickets - b.ticketsSold)} left</span>
+                    </div>
+                    <div className="lt-progress-wrap">
+                      <div className={`lt-progress-fill ${pct > 80 ? 'lt-progress-fill-amber' : ''}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right', marginBottom: '0.875rem' }}>{pct}%</div>
+                    <div className="lt-mini-stats">
+                      <div className="lt-mini-stat"><div className="lt-mini-stat-label">Sales</div><div className="lt-mini-stat-value" style={{ color: 'var(--accent-primary)' }}>{fmt(b.salesAmount)}</div></div>
+                      <div className="lt-mini-stat"><div className="lt-mini-stat-label">Box Value</div><div className="lt-mini-stat-value">{fmt(b.totalValue)}</div></div>
+                    </div>
+                    <button className="lt-btn lt-btn-amber" style={{ width: '100%', justifyContent: 'center' }} onClick={() => handleDeplete(b.id)}>
+                      Mark as Depleted
+                    </button>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="lt-empty"><p>No report data. Select a date range and click Apply.</p></div>
-            )}
-          </div>
-        )}
-
-        {/* ── COMMISSION ───────────────────────────────────────────────── */}
-        {tab === 'Commission' && (
-          <div>
-            <div className="lt-commission-banner">
-              <div>
-                <div className="lt-commission-rate">
-                  💰 Commission Rate:{' '}
-                  {lotterySettings?.commissionRate != null ? `${(Number(lotterySettings.commissionRate) * 100).toFixed(2)}%` : '—'}
-                </div>
-                <div className="lt-commission-hint">Store-level rate · Adjust in the Settings tab</div>
-              </div>
+                );
+              })}
             </div>
-            <div className="lt-period-bar">
-              <span className="lt-period-label">Period:</span>
-              {['day','week','month'].map(p => (
-                <button key={p} className={`lt-period-btn ${reportPeriod === p ? 'active' : ''}`} onClick={() => setReportPeriod(p)}>{p}</button>
+          )}
+        </div>
+      )}
+
+      {/* ── SHIFT REPORTS ────────────────────────────────────────────── */}
+      {tab === 'Shift Reports' && (
+        <div className="lt-table-wrap">
+          <table className="lt-table">
+            <thead>
+              <tr>{['Date / Shift', 'Sales', 'Payouts', 'Net', 'Machine', 'Digital', 'Variance', 'Notes'].map(h => <th key={h}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {shiftReports.length === 0 && <tr><td colSpan={8} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>No shift reports yet.</td></tr>}
+              {shiftReports.map(r => {
+                const v = Number(r.variance || 0);
+                const vCls = Math.abs(v) < 0.01 ? 'lt-td-green' : Math.abs(v) <= 5 ? 'lt-td-amber' : 'lt-td-red';
+                return (
+                  <tr key={r.id}>
+                    <td className="lt-td-strong">
+                      {new Date(r.closedAt || r.createdAt).toLocaleDateString()}
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{r.shiftId?.slice(-8)}</div>
+                    </td>
+                    <td className="lt-td-brand">{fmt(r.totalSales)}</td>
+                    <td className="lt-td-amber">{fmt(r.totalPayouts)}</td>
+                    <td className="lt-td-strong">{fmt(r.netAmount)}</td>
+                    <td>{fmt(r.machineAmount)}</td>
+                    <td>{fmt(r.digitalAmount)}</td>
+                    <td className={vCls}>{v >= 0 ? '+' : ''}{fmt(v)}</td>
+                    <td className="lt-td-small">{r.notes || 'N/A'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── REPORTS ──────────────────────────────────────────────────── */}
+      {tab === 'Reports' && (
+        <div>
+          <div className="lt-card" style={{ marginBottom: '1.25rem' }}>
+            <div className="lt-date-controls">
+              <div className="lt-field">
+                <label className="lt-field-label">From</label>
+                <input type="date" className="lt-input" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setDatePreset('Custom'); }} style={{ maxWidth: 160 }} />
+              </div>
+              <div className="lt-field">
+                <label className="lt-field-label">To</label>
+                <input type="date" className="lt-input" value={dateTo} onChange={e => { setDateTo(e.target.value); setDatePreset('Custom'); }} style={{ maxWidth: 160 }} />
+              </div>
+              <button className="lt-btn lt-btn-primary" onClick={() => loadReport(dateFrom, dateTo)}>Apply</button>
+              <button className="lt-btn lt-btn-ghost" onClick={downloadReportCSV} disabled={!reportData}>⬇ Download CSV</button>
+            </div>
+            <div className="lt-filter-bar" style={{ marginBottom: 0 }}>
+              {['Today', 'This Week', 'This Month', 'Last Month', 'Custom'].map(p => (
+                <button key={p} className={`lt-filter-chip ${datePreset === p ? 'active' : ''}`} onClick={() => applyPreset(p)}>{p}</button>
               ))}
             </div>
-            {commission ? (
-              <>
-                <div className="lt-stat-grid">
-                  <StatCard label="Total Commission" value={fmt(commission.totalCommission)} color="#7c3aed" />
-                  <StatCard label="Total Sales"      value={fmt(commission.totalSales)}      color="var(--accent-primary)" />
-                  <StatCard label="Avg Commission %"
-                    value={commission.avgRate ? `${(Number(commission.avgRate) * 100).toFixed(2)}%` : '—'}
-                    color="#2563eb" />
-                </div>
-                {commission.byGame?.length > 0 && (
-                  <div className="lt-card">
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Commission by Game</div>
-                    <div className="lt-table-wrap">
-                      <table className="lt-table">
-                        <thead><tr>{['Game','Rate','Sales','Commission'].map(h => <th key={h}>{h}</th>)}</tr></thead>
-                        <tbody>
-                          {commission.byGame.map((g, i) => (
-                            <tr key={i}>
-                              <td className="lt-td-strong">{g.gameName}</td>
-                              <td>{g.rate ? `${(Number(g.rate) * 100).toFixed(2)}%` : '—'}</td>
-                              <td className="lt-td-brand">{fmt(g.sales)}</td>
-                              <td style={{ fontWeight: 700, color: '#7c3aed' }}>{fmt(g.commission)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="lt-empty"><p>No commission data available.</p></div>
-            )}
           </div>
-        )}
 
-        {/* ── SETTINGS ─────────────────────────────────────────────────── */}
-        {tab === 'Settings' && (
-          <div className="lt-settings-wrap">
-            <div className="lt-card">
-              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Lottery Settings</div>
-              {settingsMsg && (
-                <div className={settingsMsg.startsWith('Error') ? 'lt-error' : 'lt-success-msg'}>{settingsMsg}</div>
+          {report ? (
+            <>
+              <div className="lt-stat-grid">
+                <StatCard label="Total Sales" value={fmt(report.totalSales)} color="var(--accent-primary)" />
+                <StatCard label="Total Payouts" value={fmt(report.totalPayouts)} color="#d97706" />
+                <StatCard label="Net Revenue" value={fmt(report.netRevenue)} color="#2563eb" />
+                <StatCard label="Transactions" value={fmtNum(report.transactionCount)} sub="sale transactions" />
+              </div>
+              {report.chart?.length > 0 && (
+                <div className="lt-card" style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Daily Sales vs Payouts</div>
+                  <SimpleBarChart data={report.chart} width={700} height={200} />
+                </div>
               )}
-              <div className="lt-field">
-                <label className="lt-field-label">Store State / Province</label>
-                <select className="lt-select" value={settingsForm.state} onChange={e => setSettingsForm(f => ({ ...f, state: e.target.value }))}>
-                  <option value="">— Select —</option>
-                  {ALL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <span className="lt-field-hint">Used to filter the ticket catalog to your state's available tickets</span>
+              {report.byGame?.length > 0 && (
+                <div className="lt-card">
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Sales by Game</div>
+                  <div className="lt-table-wrap">
+                    <table className="lt-table">
+                      <thead><tr>{['Game', 'Sales', 'Payouts', 'Net', 'Transactions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {report.byGame.map((g, i) => (
+                          <tr key={i}>
+                            <td className="lt-td-strong">{g.gameName || 'Unknown'}</td>
+                            <td className="lt-td-brand">{fmt(g.sales)}</td>
+                            <td className="lt-td-amber">{fmt(g.payouts)}</td>
+                            <td className="lt-td-strong">{fmt(g.net)}</td>
+                            <td>{fmtNum(g.count)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="lt-empty"><p>No report data. Select a date range and click Apply.</p></div>
+          )}
+        </div>
+      )}
+
+      {/* ── COMMISSION ───────────────────────────────────────────────── */}
+      {tab === 'Commission' && (
+        <div>
+          <div className="lt-commission-banner">
+            <div>
+              <div className="lt-commission-rate">
+                💰 Commission Rate:{' '}
+                {lotterySettings?.commissionRate != null ? `${(Number(lotterySettings.commissionRate) * 100).toFixed(2)}%` : 'N/A'}
               </div>
-              <div className="lt-field">
-                <label className="lt-field-label">Commission Rate (%)</label>
-                <PriceInput maxValue={100} className="lt-input" value={settingsForm.commissionRate}
-                  onChange={(v) => setSettingsForm(f => ({ ...f, commissionRate: v }))}
-                  placeholder="e.g. 5.4" style={{ maxWidth: 200 }} />
-                <span className="lt-field-hint">Enter as percentage e.g. 5.4 for 5.4%</span>
-              </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                {[
-                  ['enabled',              'Enable Lottery',                 'Allow lottery sales and payouts in POS'],
-                  ['cashOnly',             'Cash Only',                      'Restrict lottery payments to cash transactions only'],
-                  ['scanRequiredAtShiftEnd','Require Ticket Scan at Shift End','Cashiers must scan each active box before closing a shift'],
-                ].map(([key, label, hint]) => (
-                  <label key={key} className="lt-toggle-row">
-                    <input type="checkbox" checked={!!settingsForm[key]} onChange={e => setSettingsForm(f => ({ ...f, [key]: e.target.checked }))} />
-                    <div><div className="lt-toggle-label">{label}</div><div className="lt-toggle-hint">{hint}</div></div>
-                  </label>
-                ))}
-              </div>
-              <button className="lt-btn lt-btn-primary" onClick={handleSaveSettings} disabled={settingsSaving}>
-                {settingsSaving ? <RefreshCw size={14} className="lt-spin" /> : <Check size={14} />}
-                {settingsSaving ? 'Saving…' : 'Save Settings'}
-              </button>
+              <div className="lt-commission-hint">Store-level rate · Adjust in the Settings tab</div>
             </div>
           </div>
-        )}
+          <div className="lt-period-bar">
+            <span className="lt-period-label">Period:</span>
+            {['day', 'week', 'month'].map(p => (
+              <button key={p} className={`lt-period-btn ${reportPeriod === p ? 'active' : ''}`} onClick={() => setReportPeriod(p)}>{p}</button>
+            ))}
+          </div>
+          {commission ? (
+            <>
+              <div className="lt-stat-grid">
+                <StatCard label="Total Commission" value={fmt(commission.totalCommission)} color="#7c3aed" />
+                <StatCard label="Total Sales" value={fmt(commission.totalSales)} color="var(--accent-primary)" />
+                <StatCard label="Avg Commission %"
+                  value={commission.avgRate ? `${(Number(commission.avgRate) * 100).toFixed(2)}%` : 'N/A'}
+                  color="#2563eb" />
+              </div>
+              {commission.byGame?.length > 0 && (
+                <div className="lt-card">
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Commission by Game</div>
+                  <div className="lt-table-wrap">
+                    <table className="lt-table">
+                      <thead><tr>{['Game', 'Rate', 'Sales', 'Commission'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {commission.byGame.map((g, i) => (
+                          <tr key={i}>
+                            <td className="lt-td-strong">{g.gameName}</td>
+                            <td>{g.rate ? `${(Number(g.rate) * 100).toFixed(2)}%` : 'N/A'}</td>
+                            <td className="lt-td-brand">{fmt(g.sales)}</td>
+                            <td style={{ fontWeight: 700, color: '#7c3aed' }}>{fmt(g.commission)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="lt-empty"><p>No commission data available.</p></div>
+          )}
+        </div>
+      )}
 
-        {/* ── Modals ───────────────────────────────────────────────────── */}
-        {gameModal && (
-          <GameModal game={gameModal === 'new' ? null : gameModal} onSave={handleSaveGame} onClose={() => setGameModal(null)} />
-        )}
-        {receiveModal && (
-          <ReceiveBoxModal games={games.filter(g => g.active)} onSave={handleReceive} onClose={() => setReceiveModal(false)} />
-        )}
-        {activateBoxObj && (
-          <ActivateBoxModal box={activateBoxObj} onConfirm={handleActivateBox} onClose={() => setActivateBoxObj(null)} />
-        )}
-      </div>
+      {/* ── SETTINGS ─────────────────────────────────────────────────── */}
+      {tab === 'Settings' && (
+        <div className="lt-settings-wrap">
+          <div className="lt-card">
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>Lottery Settings</div>
+            {settingsMsg && (
+              <div className={settingsMsg.startsWith('Error') ? 'lt-error' : 'lt-success-msg'}>{settingsMsg}</div>
+            )}
+            <div className="lt-field">
+              <label className="lt-field-label">Store State / Province</label>
+              <select className="lt-select" value={settingsForm.state} onChange={e => setSettingsForm(f => ({ ...f, state: e.target.value }))}>
+                <option value="">— Select —</option>
+                {ALL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <span className="lt-field-hint">Used to filter the ticket catalog to your state's available tickets</span>
+            </div>
+            <div className="lt-field">
+              <label className="lt-field-label">Commission Rate (%)</label>
+              <PriceInput maxValue={100} className="lt-input" value={settingsForm.commissionRate}
+                onChange={(v) => setSettingsForm(f => ({ ...f, commissionRate: v }))}
+                placeholder="e.g. 5.4" style={{ maxWidth: 200 }} />
+              <span className="lt-field-hint">Enter as percentage e.g. 5.4 for 5.4%</span>
+            </div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              {[
+                ['enabled', 'Enable Lottery', 'Allow lottery sales and payouts in POS'],
+                ['cashOnly', 'Cash Only', 'Restrict lottery payments to cash transactions only'],
+                ['scanRequiredAtShiftEnd', 'Require Ticket Scan at Shift End', 'Cashiers must scan each active box before closing a shift'],
+              ].map(([key, label, hint]) => (
+                <label key={key} className="lt-toggle-row">
+                  <input type="checkbox" checked={!!settingsForm[key]} onChange={e => setSettingsForm(f => ({ ...f, [key]: e.target.checked }))} />
+                  <div><div className="lt-toggle-label">{label}</div><div className="lt-toggle-hint">{hint}</div></div>
+                </label>
+              ))}
+            </div>
+            <button className="lt-btn lt-btn-primary" onClick={handleSaveSettings} disabled={settingsSaving}>
+              {settingsSaving ? <RefreshCw size={14} className="lt-spin" /> : <Check size={14} />}
+              {settingsSaving ? 'Saving…' : 'Save Settings'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modals ───────────────────────────────────────────────────── */}
+      {gameModal && (
+        <GameModal game={gameModal === 'new' ? null : gameModal} onSave={handleSaveGame} onClose={() => setGameModal(null)} />
+      )}
+      {receiveModal && (
+        <ReceiveBoxModal games={games.filter(g => g.active)} onSave={handleReceive} onClose={() => setReceiveModal(false)} />
+      )}
+      {activateBoxObj && (
+        <ActivateBoxModal box={activateBoxObj} onConfirm={handleActivateBox} onClose={() => setActivateBoxObj(null)} />
+      )}
+    </div>
   );
 }

@@ -49,8 +49,8 @@ const STATUS_META = {
 };
 
 const money = (n) => `$${(Number(n) || 0).toFixed(2)}`;
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-const fmtDateTime = (d) => d ? new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+const fmtDateTime = (d) => d ? new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
 export default function Exchange() {
   const { can } = usePermissions();
@@ -261,7 +261,7 @@ function DashboardTab({ kpi, orders, balances, navigate, myCode, onClaimCode }) 
                 {recent.map(o => (
                   <tr key={o.id} onClick={() => navigate(`/portal/exchange/orders/${o.id}`)} className="ex-row-click">
                     <td><strong>{o.orderNumber}</strong></td>
-                    <td>{o.partner?.name || '—'}</td>
+                    <td>{o.partner?.name || 'N/A'}</td>
                     <td>
                       <span className={`ex-dir ex-dir--${o.direction}`}>
                         {o.direction === 'outgoing' ? <ArrowRight size={12} /> : <ArrowLeft size={12} />}
@@ -819,7 +819,7 @@ function PartnersTab({ partners, pendingIn, onRefresh, can }) {
               <div>
                 <h4>{lookupResult.name}</h4>
                 <div className="ex-muted">
-                  {lookupResult.address || '—'} · {lookupResult.orgName}
+                  {lookupResult.address || 'N/A'} · {lookupResult.orgName}
                 </div>
                 <div className="ex-code-chip">{lookupResult.storeCode}</div>
               </div>

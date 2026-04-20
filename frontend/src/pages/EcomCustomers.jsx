@@ -102,7 +102,7 @@ export default function EcomCustomers() {
           <thead><tr><th>Name</th><th>Email</th><th>Orders</th><th>Spent</th><th>Joined</th></tr></thead>
           <tbody>{customers.map(c => (
             <tr key={c.id} onClick={() => selectCustomer(c.id)}>
-              <td className="ecust-td-bold">{c.firstName || c.name || '—'} {c.lastName || ''}</td>
+              <td className="ecust-td-bold">{c.firstName || c.name || 'N/A'} {c.lastName || ''}</td>
               <td>{c.email}</td>
               <td>{c.orderCount}</td>
               <td>{fmt(c.totalSpent)}</td>

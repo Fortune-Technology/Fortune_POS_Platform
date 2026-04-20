@@ -248,3 +248,17 @@
   .prm-panel-body { padding: 1rem; }
   .prm-type-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Panel responsive sizing (inline-style-override via class) ───────────────── */
+.prm-panel {
+  width: min(70vw, 1100px);
+  min-width: 0;
+}
+@media (max-width: 1024px) {
+  .prm-panel { width: 90vw; }
+}
+@media (max-width: 640px) {
+  .prm-panel { width: 100vw; border-left: none !important; }
+  /* Stack the two-column body (type picker + form) vertically */
+  .prm-two-col { grid-template-columns: 1fr !important; height: auto !important; }
+}
