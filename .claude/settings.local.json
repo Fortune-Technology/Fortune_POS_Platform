@@ -74,7 +74,9 @@
       "Bash(netstat -ano)",
       "Bash(npm ls *)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports',{}\\), indent=2\\)\\)\")",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(cp \"C:/Users/nishn/Downloads/WHS11209 \\(5\\).csv\" \"C:/Users/nishn/Desktop/Future Foods/Portal/Storv_POS_All/Storv_POS_All/backend/_agne_sample.csv\")",
+      "Bash(sed -i \"s|C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\nishn\\\\\\\\\\\\\\\\Downloads\\\\\\\\\\\\\\\\WHS11209 \\(5\\).csv|./_agne_sample.csv|\" _upload_test.cjs)"
     ]
   }
 }
