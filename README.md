@@ -1,7 +1,11 @@
-# Storeveu POS — Full-Stack Multi-Tenant Retail Platform
+# Storeveu POS — Full-Stack Multi-Org Retail Platform
 ### POS Terminal + Management Portal + Business Intelligence
 
-A modern, cloud-first retail management system for independent convenience, grocery, and liquor stores. Combines a real-time management portal with an offline-first POS cashier terminal (Electron desktop app), a superadmin panel, an e-commerce module (backend + Next.js storefront), AI-powered invoice processing, hardware integration (receipt printers, cash drawers, barcode scanners, scales, PAX payment terminals), and a complete lottery compliance module.
+A modern, cloud-first retail management system for independent convenience, grocery, and liquor stores. Combines a real-time management portal with an offline-first POS cashier terminal (Electron desktop app), a superadmin panel, an e-commerce module (backend + Next.js storefront), AI-powered invoice processing, hardware integration (receipt printers, cash drawers, barcode scanners, scales, PAX payment terminals), a full lottery compliance module, a fuel (gas-station) module, and a freeform Quick Buttons WYSIWYG builder.
+
+**Multi-org:** a single user login can belong to many organisations via the `UserOrg` junction, with per-org role resolution, invitation-driven onboarding, and store-ownership transfer (typed-"TRANSFER" confirmation). See the Multi-Org section below and `CLAUDE.md` Sessions 32–35 for the full rollout.
+
+**RBAC:** granular permission catalog (133 keys) with `Permission` / `Role` / `RolePermission` / `UserRole` tables, `requirePermission()` middleware, and a 5-layer enforcement model (sidebar filter → route guard → API gate → per-button gating → JWT-embedded permission set). See `CLAUDE.md` Sessions 30–31.
 
 ---
 
@@ -50,7 +54,9 @@ A modern, cloud-first retail management system for independent convenience, groc
 | Backend | Node.js, Express 4 |
 | Database | **PostgreSQL 16** via Prisma 5 ORM |
 | Auth | JWT (8-hour access tokens, configurable via `JWT_ACCESS_TTL`) + bcryptjs (passwords & POS PINs) |
-| Auth Hardening | DOMPurify XSS sanitization, in-memory rate limiting, server-side password/email/phone validators, `parsePrice` hardening |
+| Auth Hardening | DOMPurify XSS sanitization, in-memory rate limiting, server-side password/email/phone validators, `parsePrice` hardening, public-invitation lookup/accept limiters |
+| RBAC | `Permission` / `Role` / `RolePermission` / `UserRole` tables, 133-key catalog, `requirePermission()` middleware |
+| Multi-Org | `UserOrg` junction (many-to-many), `Invitation` table (7-day token-based), per-org role resolution, store ownership transfer |
 | File Handling | Multer, pdf2pic, csv-parser, fast-csv, xlsx |
 | OCR | Azure Document Intelligence + OpenAI GPT-4o-mini |
 | Payment Terminals | PAX A920/A35/A80/S300 (via backend API proxy) |
@@ -406,8 +412,16 @@ REVALIDATE_SECRET="any_random_secret_string"    # must match ecom-backend
 | `/portal/branding` | **StoreBranding.jsx** | Store theme & logo |
 | `/portal/transactions` | **Transactions.jsx** | POS transaction audit log |
 | `/portal/ecomm` | EcommIntegration.jsx | eCommerce sync |
+| `/portal/fuel` | **Fuel.jsx** | Fuel module (Session 23): types, sales report, settings |
+| `/portal/quick-buttons` | **QuickButtonBuilder.jsx** | Freeform tile builder (Session 37) |
+| `/portal/roles` | **Roles.jsx** | Role & permission management (Session 30) |
+| `/portal/invitations` | **Invitations.jsx** | Email invitation admin (Session 33) |
+| `/portal/my-profile` | **MyProfile.jsx** | Self-service profile + password (Session 37b) |
+| `/invite/:token` | **AcceptInvitation.jsx** | **Public** invitation accept page |
+| `/reset-password` | **ResetPassword.jsx** | **Public** password reset (Session 18) |
+| `/impersonate` | **ImpersonateLanding** | Internal — admin Login-As + cashier-app PIN-SSO (Session 37b) |
 
-All portal routes are wrapped in `<ProtectedRoute>`.
+All portal routes are wrapped in `<ProtectedRoute>` → `<PermissionRoute>`. Route-to-permission mapping lives in [`frontend/src/rbac/routePermissions.js`](frontend/src/rbac/routePermissions.js) and [`admin-app/src/rbac/routePermissions.js`](admin-app/src/rbac/routePermissions.js).
 
 ---
 
@@ -550,9 +564,68 @@ All routes require `Authorization: Bearer <token>` unless noted.
 ### Admin `/api/admin` (superadmin only)
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/backup/:target` | Download database backup (main/ecom) |
+| GET | `/backup/:target` | Download database backup (main/ecom) via streaming pg_dump (Session 29) |
 | GET | `/images/rehost-status` | Global image cache stats |
 | POST | `/images/rehost` | Re-host next batch of external images |
+| POST | `/users/:id/impersonate` | Login-as-user (2h token, audit `impersonatedBy`) |
+
+### Roles `/api/roles` (Session 30)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/permissions` | Full 133-key catalog |
+| GET | `/` | List roles (`?scope=admin` / `?includeSystem=false`) |
+| POST | `/` / PUT `/:id` / DELETE `/:id` | Role CRUD (system roles refuse edit/delete) |
+| GET | `/users/:userId/roles` / PUT `/users/:userId/roles` | Per-user role assignment |
+| GET | `/me/permissions` | Effective permission set for current JWT |
+
+### Invitations `/api/invitations` (Session 33)
+| Method | Path | Access | Description |
+|--------|------|--------|-------------|
+| GET | `/:token` | Public (rate-limited) | Lookup invite by token |
+| POST | `/:token/accept` | Public (rate-limited) | Accept — creates User + UserOrg, or attaches to existing account |
+| GET | `/` | manager+ | List org invitations by status |
+| POST | `/` | manager+ | Create invitation (`transferOwnership: true` restricted to owner/superadmin) |
+| POST | `/:id/resend` / DELETE `/:id` | manager+ | Resend / revoke |
+
+### Fuel `/api/fuel` (Session 23)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET / POST / PUT / DELETE | `/types` | Fuel type CRUD |
+| GET / PUT | `/settings` | Per-store fuel settings |
+| GET | `/transactions` | List fuel transactions |
+| GET | `/report` | Date-range report (by type: sales/refunds/net/avg $/gal) |
+| GET | `/dashboard` | Today + month KPIs |
+
+### Quick Buttons `/api/quick-buttons` (Session 37)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET / PUT / DELETE | `/?storeId=` | Freeform tile layout CRUD |
+| POST | `/upload` | Tile image upload (multer, 10MB, static served from `/uploads/quick-buttons/`) |
+| GET | `/actions` | 19-key whitelist (discount, void, open_drawer, cash_drop, lottery_sale, fuel_sale, bottle_return, etc.) |
+
+### States `/api/states` (superadmin, Session 36)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/public` | Active state catalog for dropdowns |
+| GET / POST / PUT / DELETE | `/` | Superadmin catalog CRUD |
+| POST | `/stores/:id/apply-state-defaults` | Upsert tax/deposit/age/lottery defaults from state |
+
+### Price Scenarios `/api/price-scenarios` (superadmin, Session 36)
+Full CRUD for Interchange-plus pricing scenarios (used by the Admin Price Calculator).
+
+### Self-Service `/api/users/me` (Session 37b)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/me` | Own profile + all UserOrg memberships |
+| PUT | `/me` | Update own name / phone |
+| PUT | `/me/password` | Change own password (requires current) |
+| GET / PUT / DELETE | `/me/pin[/:storeId]` | Per-store register PIN (Session 36 — `UserStore.posPin`) |
+
+### Auth `/api/auth` (additional)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/verify-password` | Lock-screen unlock (Session 25 InactivityLock) |
+| POST | `/reset-password` | Token-based password reset (Session 18) |
 
 ### Catalog `/api/catalog`
 CRUD for Departments, MasterProducts, StoreProducts, TaxRules, DepositRules, Promotions, Vendors.
@@ -571,14 +644,42 @@ Analytics with weather correlation, predictions.
 
 ## 8. Database Models (Prisma)
 
-### Multi-Tenant Core
+### Multi-Tenant / Multi-Org Core
 | Model | Key Fields |
 |-------|-----------|
 | `Organization` | id, name, state, country, subscriptionPlan (trial/starter/pro/enterprise) |
-| `User` | id, orgId, email, pin, role (cashier/manager/owner/admin/superadmin) |
-| `Store` | id, orgId, name, address, state, timezone, pos (JSON), branding (JSON) |
-| `UserStore` | userId, storeId (many-to-many) |
+| `User` | id, orgId (**nullable** — home/primary org; null after transfer), email, pin, role (legacy primary role) |
+| `UserOrg` | userId, orgId, role, isPrimary, invitedById, invitedAt, acceptedAt — many-to-many membership (Session 32) |
+| `Invitation` | id, token (crypto random), email, orgId, role, transferOwnership, status, expiresAt, acceptedByUserId — 7-day email/SMS invites (Session 33) |
+| `Store` | id, orgId, name, address, stateCode, timezone, pos (JSON), branding (JSON) |
+| `UserStore` | userId, storeId, **posPin** (per-store PIN override, Session 36) |
 | `Station` | id, storeId, name, token, hardwareConfig (JSON — printer, scale, PAX) |
+
+### RBAC (Session 30)
+| Model | Key Fields |
+|-------|-----------|
+| `Permission` | key, module, action, scope ('org' / 'admin') — 133 seeded keys |
+| `Role` | id, orgId (null = system), scope, key, name, isSystem, status |
+| `RolePermission` | roleId, permissionId |
+| `UserRole` | userId, roleId (assigns additive custom roles) |
+
+### Fuel Module (Session 23)
+| Model | Key Fields |
+|-------|-----------|
+| `FuelType` | id, storeId, name, gradeLabel, pricePerGallon Decimal(10,3), color, isDefault, isTaxable, taxRate |
+| `FuelSettings` | id, storeId (unique), enabled, cashOnly, allowRefunds, defaultEntryMode ('amount'/'gallons'), defaultFuelTypeId |
+| `FuelTransaction` | id, fuelTypeId, gallons Decimal(10,3), pricePerGallon Decimal(10,3), amount, entryMode, taxAmount, posTransactionId |
+
+### Quick Buttons (Session 37)
+| Model | Key Fields |
+|-------|-----------|
+| `QuickButtonLayout` | id, storeId (unique), name, gridCols, rowHeight, tree (JSON — freeform tiles: product/folder/action/text/image, 1-level folder depth) |
+
+### Platform-Level Catalogs (superadmin, Session 36)
+| Model | Key Fields |
+|-------|-----------|
+| `State` | code (PK, 2-letter), name, defaultTaxRate, defaultLotteryCommission, alcoholAgeLimit, tobaccoAgeLimit, bottleDepositRules (JSON), lotteryGameStubs (JSON) |
+| `PriceScenario` | id, storeName, location, mcc, inputs (JSON), results (JSON), createdById — Interchange-plus pricing scenarios |
 
 ### Catalog & Inventory
 | Model | Key Fields |
@@ -1072,6 +1173,19 @@ npm run electron:build  # Production NSIS installer (Windows x64)
 ---
 
 ## 16. Changelog
+
+> **Authoritative session log:** `CLAUDE.md` at the repo root has a full session-by-session breakdown (currently Sessions 1–37b). This Changelog keeps the highlights for humans; anything not listed here lives in CLAUDE.md.
+
+### April 2026 — Sessions 30–37b (summary)
+
+- **Session 23** — Fuel module: `FuelType` / `FuelSettings` / `FuelTransaction`, portal 4-tab UI, cashier FuelModal (amount/gallons toggle), EoD fuel section.
+- **Sessions 26–28** — Sales/EoD unified. Fixed the cash-sales-saving-as-`pending` bug that hid cash from EoD/Daily. Redefined Gross (= Σ grandTotal incl. tax) vs Net (= Σ subtotal pre-tax), refunds netted across all surfaces.
+- **Session 29** — Admin UI consistency pass, database backup endpoint (streaming pg_dump), product image system Phase 1–3 (`GlobalProductImage` keyed by stripped UPC, image re-hosting), dashboard showcase, `JWT_ACCESS_TTL` bumped 2h → 8h, `--content-max-width` / `--mkt-max-width` CSS vars.
+- **Session 30** — RBAC foundation: `Permission` / `Role` / `RolePermission` / `UserRole` tables, 133-key catalog, 6 seeded system roles (superadmin/owner/admin/manager/cashier/staff), `requirePermission()` middleware, admin + portal role editors, `usePermissions()` hook.
+- **Session 31** — RBAC enforcement across 5 layers (sidebar filter, route guard, 15 backend route files gated, per-button CRUD gating, JWT-embedded permissions). Cashier now sees only 10 of ~30 sidebar items; direct URL navigation blocked with `<Unauthorized />`; 6/6 restricted APIs return 403 under cashier JWT.
+- **Sessions 32–35** — Multi-org migration (Phases 1–4 complete, Phase 4 deferred). `UserOrg` junction, `Invitation` table with 7-day token-based accept flow, store ownership transfer with typed-"TRANSFER" confirmation, StoreSwitcher org grouping, nullable `User.orgId`, rate-limited public invitation endpoints.
+- **Session 36** — Owner per-store PIN (`UserStore.posPin` tiered lookup), Admin Price Calculator (`PriceScenario`), US State catalog (`State`) with auto-populate defaults (tax/deposit/age/lottery), mobile UPC scanner (native BarcodeDetector + ZXing fallback), cashier PIN-login scroll fix for 1366×768 POS hardware.
+- **Session 37 + 37b** — Quick Buttons WYSIWYG: freeform drag-resize tile builder (react-grid-layout legacy adapter), 1-level folders, 19-action whitelist, per-store `rowHeight`, image uploads, custom color swatches. PIN-SSO from cashier-app "Back Office" → portal `/impersonate`. Sidebar "signed in as" user card. My Profile / My PIN self-service pages. Manager role missing-`stores.view` RBAC fix.
 
 ### April 2026 — QA & Security Audit (Session 18)
 

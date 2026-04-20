@@ -1,6 +1,27 @@
 # Storeveu POS Platform — Project Overview
 
-The Storeveu POS Platform is a comprehensive, multi-tenant POS and management ecosystem designed for retail, convenience, grocery, and liquor store operations. It bridges the gap between traditional IT Retail systems and modern cloud-based analytics, providing real-time visibility, advanced forecasting, and full hardware integration.
+The Storeveu POS Platform is a comprehensive, **multi-org** POS and management ecosystem designed for retail, convenience, grocery, and liquor store operations. It bridges the gap between traditional IT Retail systems and modern cloud-based analytics, providing real-time visibility, advanced forecasting, and full hardware integration.
+
+> For the full session-by-session engineering log, see [`CLAUDE.md`](CLAUDE.md). This file is the high-level human-facing overview.
+
+---
+
+## 🧩 Modules (at a glance)
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| **POS Terminal (cashier-app)** | Production | Electron/PWA, offline-first, hardware integration |
+| **Management Portal** | Production | React 19, permission-gated sidebar |
+| **Admin Panel (superadmin)** | Production | Standalone app on :5175, separate `admin_user` localStorage |
+| **E-Commerce Module** | Production | Next.js storefront + ecom-backend, see `ECOMMERCE_GUIDE.md` |
+| **Lottery Module** | Production | State-scoped games, EOD scan reconciliation, commission reports |
+| **Fuel Module** | Production (Session 23) | Per-store fuel types, sale/refund, EoD fuel section |
+| **Invoice OCR** | Production | Vendor-scoped itemCode matching, live totals, cases/units toggle — see `Invoice-Processing-Architecture.md` |
+| **Vendor Orders (14-factor)** | Production | Demand-driven auto-reorder, Holt-Winters + weather + stockout penalty |
+| **RBAC** | Production (Sessions 30–31) | 133-key permission catalog, 5-layer enforcement |
+| **Multi-Org Access** | Production (Sessions 32–35) | One login → many orgs, 7-day email invitations, store ownership transfer |
+| **Quick Buttons WYSIWYG** | Production (Session 37) | Freeform drag-resize tile builder, 1-level folders, 19 action types |
+| **Product Image System** | Production (Session 29) | `GlobalProductImage` cache keyed by stripped UPC, image re-hosting |
 
 ---
 
@@ -93,9 +114,10 @@ A full-featured, offline-first POS terminal available as an Electron desktop app
 
 ### Completed (Q2 2026)
 - **E-Commerce Module:** Full online store with Next.js storefront, product sync from POS, 15 premium templates, customer auth (unified with POS Customer table), checkout with stock check, order management, custom domains, analytics.
-- **Admin Panel:** Standalone superadmin app (admin-app/) with user/org/store CRUD, login-as-user impersonation, support tickets, billing management.
+- **Admin Panel:** Standalone superadmin app (admin-app/) with user/org/store CRUD, login-as-user impersonation, support tickets, billing management, database backup streaming, product image re-hosting.
 - **Unified Customer Auth:** POS Customer table is now single source of truth for both in-store and online storefront authentication.
 - **CI/CD with Atomic Deploys:** GitHub Actions pipeline deploys all 6 apps with atomic file swaps and Nginx reload.
+- **Fuel Module, RBAC (133 keys), Multi-Org Access, Quick Buttons WYSIWYG, US State catalog, Mobile UPC scanner** — see Modules table above.
 
 ### Planned (Q3-Q4 2026)
 - **Customer Loyalty Points:** Points-per-dollar model with redemption as tender.

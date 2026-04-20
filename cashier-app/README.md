@@ -11,8 +11,8 @@ A fast, full-featured, and offline-first Point of Sale terminal designed for hig
 | **Core** | React 18, Javascript (ESM) |
 | **Desktop** | Electron 33 (IPC for USB printing, drawer, app control) |
 | **Packaging** | Electron Builder (NSIS installer, Windows x64) |
-| **State Management** | Zustand 5 (7 stores: auth, cart, shift, station, manager, lottery, sync) |
-| **Offline Storage** | **Dexie.js** v4 (IndexedDB — products, tx queue, departments, promotions, cashiers) |
+| **State Management** | Zustand 5 (stores: auth, cart, shift, station, manager, lottery, fuel, sync) |
+| **Offline Storage** | **Dexie.js** v5 (IndexedDB — products, tx queue, departments, promotions, cashiers, held carts) |
 | **Receipt Printing** | ESC/POS (USB via PowerShell, Network TCP, QZ Tray fallback) |
 | **Hardware** | Barcode scanners (HID/Serial), Magellan scales, PAX terminals, ZPL label printers |
 | **PWA Readiness** | Manifest.webmanifest, Service Workers (Vite PWA Plugin) |
@@ -25,9 +25,9 @@ A fast, full-featured, and offline-first Point of Sale terminal designed for hig
 The terminal is designed for zero-latency lookups by syncing a snapshot of the **PostgreSQL native catalog** to the device's local memory.
 
 1. **Station Setup:** On first load, the manager registers the browser as a persistent "Station" via the back-office.
-2. **Catalog Sync:** The terminal fetches a full catalog snapshot via `/api/pos-terminal/catalog/snapshot` and stores it in **IndexedDB**.
-3. **PIN Login:** Cashiers enter their 6-digit PIN to authenticate a local session.
-4. **Transaction Buffer:** During sales, transactions are stored in a local queue and synced to the server in the background.
+2. **Catalog Sync:** The terminal fetches a full catalog snapshot via `/api/pos-terminal/catalog/snapshot` and stores it in **IndexedDB**. Sync cadence: 15 min auto + on login + manual button. Supports **tombstones** (deleted product IDs returned in `deleted[]` for incremental sync) and **replace semantics** for small tables (departments, promotions, tax rules, deposit rules — wiped + bulk-put each sync).
+3. **PIN Login:** Cashiers enter their 4–8 digit PIN to authenticate a local session. Backend uses **tiered lookup** — `UserStore.posPin` (per-store override) wins over `User.posPin` (org-wide fallback), so owners can set their own per-store PIN without a duplicate account (Session 36).
+4. **Transaction Buffer:** During sales, transactions are stored in a local queue and synced to the server in the background. Backend forces `status: 'complete'` on every accepted sale (Session 28 fix — was previously silently storing cash sales as `pending` and hiding them from reports).
 
 ---
 
@@ -73,20 +73,28 @@ cashier-app/
 │   │   ├── client.js       → Axios instance (Bearer + Station token headers)
 │   │   └── pos.js          → All cashier API calls
 │   ├── services/
-│   │   ├── printerService.js → ESC/POS receipt builder + printing
+│   │   ├── printerService.js → ESC/POS receipt builder (receipt + EoD report) + printing
 │   │   └── qzService.js    → QZ Tray WebSocket client
 │   ├── components/
-│   │   ├── cart/            → CartItem, CartTotals
-│   │   ├── layout/         → StatusBar, StoreveuLogo
-│   │   ├── modals/         → 15+ modals (Lottery, Tender, Refund, Void, etc.)
-│   │   ├── pos/            → ActionBar, CategoryPanel, NumPad
+│   │   ├── cart/           → CartItem (on-hand badge, fuel/bottle-return rendering), CartTotals, BagFeeRow
+│   │   ├── layout/         → StatusBar (age-check chips), StoreveuLogo
+│   │   ├── modals/         → 20+ modals (Tender, Lottery, Fuel, Refund, Void, OpenItem, CustomerLookup,
+│   │   │                     EndOfDay, CloseShift, CashDrawer, VendorPayout, BottleRedemption,
+│   │   │                     ManagerPin, PackSizePicker, AgeVerification, AddProduct, Discount,
+│   │   │                     HoldRecall, TransactionHistory, ReprintReceipt, PriceCheck)
+│   │   ├── pos/            → ActionBar (scrollable), CategoryPanel, NumPad, QuickButtonRenderer,
+│   │   │                     ChangeDueOverlay (unified 5s auto-close post-sale screen)
 │   │   └── tender/         → TenderModal, ReceiptModal
 │   ├── db/
-│   │   └── dexie.js        → IndexedDB v5 (products, txQueue, departments, promotions, cashiers)
-│   ├── hooks/              → 8 hooks (scanner, scale, hardware, catalog sync, branding, etc.)
-│   ├── screens/            → POSScreen, PinLogin, StationSetup, StoreSelect, Login
-│   ├── stores/             → 7 Zustand stores (auth, cart, shift, station, manager, lottery, sync)
-│   └── utils/              → Tax calc, promo engine, formatters, PDF-417 parser, cash presets
+│   │   └── dexie.js        → IndexedDB v5 (products, txQueue, departments, promotions, cashiers, held carts)
+│   ├── hooks/              → usePOSConfig, useFuelSettings, useQuickButtonLayout, useCatalogSync,
+│   │                         useBranding, useHardware, useScanner, useScale, useOnlineStatus,
+│   │                         useBroadcastSync (customer display)
+│   ├── screens/            → POSScreen, PinLoginScreen, StationSetupScreen, StoreSelect,
+│   │                         LoginScreen, CustomerDisplayScreen (hash route /#/customer-display)
+│   ├── stores/             → Zustand: auth, cart, shift, station, manager, lottery, fuel, sync
+│   └── utils/              → Tax calc, promo engine, formatters, PDF-417 parser, cash presets,
+│                              sound.js (error beep), digitsToDisplay/digitsToNumber cent helpers
 ├── index.html              → Entry HTML
 └── vite.config.js          → PWA and build configuration
 ```
@@ -131,31 +139,49 @@ npm run build            # dist/ folder with service worker
 
 **Electron (Windows Desktop):**
 ```bash
-npm run electron:build   # NSIS installer in dist-electron/
-npm run electron:pack    # Unpacked app (no installer)
+npm run electron:build         # Production NSIS installer — uses .env.production (cloud API)
+npm run electron:build:local   # Local installable build — uses .env (localhost API)
+npm run electron:pack          # Unpacked app (no installer, for testing)
 ```
+
+| Script | Env file | API URL baked in | Use for |
+|--------|---------|------------------|---------|
+| `npm run electron:dev` | `.env` | `http://localhost:5000/api` | Local dev with live reload |
+| `npm run electron:build:local` | `.env` | `http://localhost:5000/api` | Local installed build |
+| `npm run electron:build` | `.env.production` | `https://api.storeveu.com/api` | Cloud/production deploy |
 
 App ID: `com.storeveu.pos` | Persistent config: `%APPDATA%/storeveu_station.json`
 
 ---
 
 ## Key Features
-- **Fast Scanning:** Optimized for HID-compliant USB/Bluetooth barcode scanners + serial port via QZ Tray.
-- **Smart Deposits:** Automatically calculates bottle deposits based on product size and container type.
+- **Fast Scanning:** Optimized for HID-compliant USB/Bluetooth barcode scanners + serial port via QZ Tray. **Scan gating** — scans are rejected (with error beep) while TenderModal is open, and dismiss the ChangeDueOverlay to start a fresh sale.
+- **Mobile Camera Scanner:** `BarcodeScannerModal` uses native `BarcodeDetector` API (Chromium) with `@zxing/browser` CDN fallback (iOS Safari). No dependency needed at install time (Session 36).
+- **Quick-Cash Bypass:** Quick cash buttons ($10, $20, exact, smart presets, plain CASH) bypass TenderModal entirely — single tap completes the sale, opens drawer, shows `ChangeDueOverlay` with 5-second auto-close.
+- **Smart Deposits + Bottle Return:** Per-product deposit calculation; bottle return adds negative cart lines via `addBottleReturnItems` (not a standalone refund tx). TenderModal handles net-negative carts as refunds.
 - **EBT Support:** Flags eligible items and separates EBT vs Non-EBT totals.
-- **PIN Security:** Rapid cashier switching via 4-6 digit PIN (offline-capable with cached PIN hashes).
-- **Lottery Integration:** Unified sale/payout modal with qty-based pricing and automated EOD box reconciliation.
+- **Bag Fee Row:** Configurable bag (+/−) counter pinned above payment buttons; stored as synthetic `isBagFee: true` line item in the Transaction JSON.
+- **PIN Security:** Rapid cashier switching via 4–8 digit PIN (offline-capable with cached PIN hashes). Tiered lookup supports per-store PINs via `UserStore.posPin`.
+- **Manager PIN Session:** Gated actions (refund, void, no-sale, Back Office, discount ≥ threshold) prompt for manager PIN; session cached 10 min.
+- **Back Office PIN-SSO:** "Back Office" action in ActionBar opens the portal in a new tab, authenticated **as the manager who entered the PIN** via `/impersonate?token=JWT` (Session 37b). No stale session hijacking.
+- **Lottery Integration:** Unified sale/payout modal with qty-based locked pricing and automated EOD box reconciliation. "Lotto Shift" button + close-shift interception when `scanRequiredAtShiftEnd=true`.
+- **Fuel Module (Session 23):** Fuel Sale + Fuel Refund buttons when store has fuel enabled. Amount or Gallons entry mode, 3-decimal $/gallon locked to FuelType config, preview shows the other side live.
+- **Quick Buttons Tab (Session 37):** POS home screen supports CATALOG / BUTTONS / FOLDERS tabs. BUTTONS tab renders the per-store WYSIWYG layout (products, 1-level folders, actions, text, images) at exact (x,y,w,h) positions configured from the portal.
+- **Store-Level Age Policy:** Tobacco + Alcohol age limits configured per-store in portal StoreSettings (e.g. `{21, 19}` for Ontario). StatusBar shows two age-check date chips (Tobacco 21+ / Alcohol 19+) that override per-product `ageRequired`.
+- **Customer Display (second screen):** Hash route `/#/customer-display` renders a read-only customer-facing screen. POS → display sync via `BroadcastChannel('storv-customer-display')` — zero latency. Electron auto-opens fullscreen on secondary monitor.
 - **Branded UI:** Dynamically pulls store logos and theme colors from the portal.
-- **Receipt Printing:** Full ESC/POS receipt builder with USB (PowerShell), Network TCP, and QZ Tray support.
-- **Cash Drawer:** Auto-kick on cash tender via ESC/POS command, manual via No Sale button.
-- **Weight Scales:** Magellan/Datalogic serial scales via Web Serial API with auto-fill quantity.
+- **Receipt + EoD Printing:** Full ESC/POS builder for receipts AND End-of-Day reports. USB (PowerShell/winspool), Network TCP, and QZ Tray transports.
+- **Cash Drawer:** Auto-kick on cash tender, manual via No Sale (logs a POS event).
+- **Weight Scales:** Magellan/Datalogic serial via Web Serial API; auto-fill quantity on scalable items.
 - **PAX Terminals:** Card payment integration via backend API proxy (A920, A35, A80, S300).
-- **Multi-UPC Support:** Products can have multiple barcodes; scan any linked UPC to find the product.
-- **Pack Size Picker:** Products with multiple sizes (Single, 6-Pack, 12-Pack) show a picker modal at scan.
+- **Multi-UPC Support:** Products can have multiple barcodes via `ProductUpc` table; backend search checks UPC table first.
+- **Pack Size Picker:** Products with multiple `ProductPackSize` rows (Single, 6-Pack, 12-Pack) show `PackSizePickerModal` at scan.
 - **Hold/Recall:** Unlimited simultaneous parked transactions stored in IndexedDB.
-- **Offline Mode:** Full offline sales capability with batch sync on reconnect.
+- **Offline Mode:** Full offline sales capability with batch sync on reconnect. Cashier-app transaction queue uses local `status: 'pending'` for sync tracking only — backend forces `status: 'complete'` on write.
 - **Promotion Engine:** Client-side evaluation of sales, BOGO, volume, mix & match, and combo deals.
-- **Age Verification:** PDF-417 driver's license scanning + manual DOB entry.
+- **Age Verification:** PDF-417 driver's license scanning + manual DOB entry; uses store-level policy.
+- **On-Hand Badge:** Cart line items show current stock with colour tiers (green/amber/red) when store-scoped `quantityOnHand` is available.
+- **Midnight Shift Handling:** Backend `shiftScheduler` auto-closes shifts past store-local midnight every 10 min (Session 19b). Cashier-app shows an amber banner if a lingering pre-midnight shift is detected.
 
 ---
 

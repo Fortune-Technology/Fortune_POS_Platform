@@ -432,7 +432,40 @@ async function main() {
       await prisma.userStore.create({ data: { userId: user.id, storeId } }).catch(() => {});
     }
 
+    // UserOrg junction — Phase 1 multi-org access.
+    // Every user gets a UserOrg row for their home org. For non-superadmin
+    // users, the effective role in the org matches the legacy User.role.
+    // Superadmin gets a row in the system org so cross-org tools work.
+    await prisma.userOrg.upsert({
+      where:  { userId_orgId: { userId: user.id, orgId: u.orgId } },
+      update: { role: u.role, isPrimary: true },
+      create: {
+        userId:    user.id,
+        orgId:     u.orgId,
+        role:      u.role,
+        isPrimary: true,
+      },
+    }).catch(() => {});
+
     userCount++;
+  }
+
+  // Backfill UserOrg rows for ALL seed users (idempotent — covers re-runs
+  // where the user already existed but the UserOrg row was never created,
+  // e.g. pre-Phase-1 seed runs).
+  for (const u of SEED_USERS) {
+    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    if (!existing) continue;
+    await prisma.userOrg.upsert({
+      where:  { userId_orgId: { userId: existing.id, orgId: u.orgId } },
+      update: {},
+      create: {
+        userId:    existing.id,
+        orgId:     u.orgId,
+        role:      u.role,
+        isPrimary: true,
+      },
+    }).catch(() => {});
   }
 
   if (userCount > 0) {
@@ -455,6 +488,63 @@ async function main() {
   } else {
     console.log(`  ✓ All seed users already exist`);
   }
+
+  // ── Lottery Settings (store-level) ────────────────────────
+  // Required for lottery game visibility filtering (games with state=null
+  // show to all stores; games with a state only show to stores whose
+  // LotterySettings.state matches).
+  await prisma.lotterySettings.upsert({
+    where:  { storeId },
+    update: {},
+    create: {
+      orgId:                  ORG_ID,
+      storeId,
+      enabled:                true,
+      cashOnly:               false,
+      state:                  'ON',
+      commissionRate:         0.0540, // 5.4% — typical Ontario commission
+      scanRequiredAtShiftEnd: false,
+    },
+  });
+  console.log(`  ✓ Lottery settings (store-level) seeded`);
+
+  // ── Fuel Settings + default Fuel Type ─────────────────────
+  // Disabled by default — store admin flips the flag in Store Settings
+  // when the site actually pumps fuel. One demo type seeded so the UI
+  // isn't empty on first open.
+  await prisma.fuelSettings.upsert({
+    where:  { storeId },
+    update: {},
+    create: {
+      orgId:            ORG_ID,
+      storeId,
+      enabled:          false,
+      cashOnly:         false,
+      allowRefunds:     true,
+      defaultEntryMode: 'amount',
+    },
+  });
+
+  const existingFuelType = await prisma.fuelType.findFirst({
+    where: { orgId: ORG_ID, storeId, name: 'Regular' },
+  });
+  if (!existingFuelType) {
+    await prisma.fuelType.create({
+      data: {
+        orgId:          ORG_ID,
+        storeId,
+        name:           'Regular',
+        gradeLabel:     '87 Octane',
+        pricePerGallon: 3.999,
+        color:          '#16a34a',
+        isDefault:      true,
+        isTaxable:      true,
+        sortOrder:      0,
+        active:         true,
+      },
+    });
+  }
+  console.log(`  ✓ Fuel settings + 1 demo fuel type (Regular 87) seeded`);
 
   // ── Lottery Games & Data ──────────────────────────────────
   await seedLottery(ORG_ID, storeId);

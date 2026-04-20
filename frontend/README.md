@@ -6,10 +6,11 @@ A premium, dark-themed management portal for Storeveu POS store owners and manag
 
 ## ✨ Design Philosophy
 
-- **Glassmorphism:** Frosted glass backgrounds with vibrant accent gradients.
-- **Dark Mode First:** Deep charcoal backgrounds for maximum visual comfort.
+- **Light Theme:** Clean white/slate surfaces with brand blue accents (`--brand-primary: #3d56b5`).
+- **Consistent Layout:** Shared `Layout.jsx` wraps all portal routes — Sidebar mounts once and persists across navigation (React Router `Outlet`).
+- **External CSS Only:** Every component has a dedicated `.css` file with a unique class-name prefix. Zero inline `style={{}}` in new code. See `ENGINEERING_PRINCIPLES.md`.
 - **Dynamic Interactions:** Subtle hover micro-animations and smooth transitions.
-- **Mobile Responsive:** All modules adapt to tablet and mobile viewports.
+- **Responsive:** Breakpoints at 1024/768/480px across all pages. Hamburger nav below 768px.
 
 ---
 
@@ -31,33 +32,26 @@ A premium, dark-themed management portal for Storeveu POS store owners and manag
 
 ```
 frontend/
-├── public/              → Static assets (favicon, manifest)
+├── public/                → Static assets (favicon, manifest, sounds/ordernotification.mp3)
 ├── src/
-│   ├── assets/          → Logos and imagery
-│   ├── components/      → Shared UI (Sidebar, Layout, Navbar, StoreSwitcher, SetupGuide, SEO)
-│   ├── contexts/        → React contexts (StoreContext)
-│   ├── pages/           → Module-specific views (45+ pages)
-│   │   ├── marketing/   → Home, About, Features, Pricing, Contact
-│   │   ├── Lottery.jsx  → Full lottery portal (8 tabs)
-│   │   ├── ReceiptSettings.jsx → Per-store receipt configuration
-│   │   ├── RealTimeDashboard.jsx
-│   │   ├── SalesAnalytics.jsx
-│   │   ├── ProductCatalog.jsx
-│   │   ├── ProductForm.jsx → Product create/edit
-│   │   ├── BulkImport.jsx → CSV/Excel bulk import
-│   │   ├── Transactions.jsx → POS audit log
-│   │   ├── StoreManagement.jsx
-│   │   ├── StoreBranding.jsx
-│   │   └── ...
-│   ├── services/        → Centralized Axios API instances
-│   ├── store/           → Redux slices
-│   ├── utils/
-│   │   ├── formatters.js  → Shared formatting utilities (currency, dates, percentages)
-│   │   └── exportUtils.js → CSV/PDF download helpers
-│   ├── App.jsx          → Main router and route definitions
-│   └── main.jsx         → Entry point
-├── index.html           → Base HTML template
-└── package.json         → Frontend dependencies
+│   ├── assets/            → Logos and imagery
+│   ├── components/        → Shared UI (Sidebar, Layout, Navbar, StoreSwitcher, InactivityLock,
+│   │                         PermissionRoute, TransferOwnershipModal, UserRolesModal,
+│   │                         BarcodeScannerModal, EcomOrderNotifier, PriceInput, SEO, ...)
+│   ├── contexts/          → React contexts (StoreContext)
+│   ├── hooks/             → usePermissions, useNotificationCounts (when present)
+│   ├── rbac/              → routePermissions.js — single source of truth for route → permission key
+│   ├── pages/             → 60+ module views including marketing/, Lottery, Fuel,
+│   │                         QuickButtonBuilder, MyProfile, MyPIN, Invitations,
+│   │                         AcceptInvitation, Roles, ResetPassword, Unauthorized, ...
+│   ├── services/          → api.js (Axios instance with 401 interceptor + X-Store-Id header)
+│   ├── store/             → Redux slices
+│   ├── styles/            → portal.css (shared `p-*` classes)
+│   ├── utils/             → formatters.js, exportUtils.js (CSV/PDF download)
+│   ├── App.jsx            → All routes wrapped in `<PermissionRoute>` under shared `<Layout>`
+│   └── main.jsx           → Entry point
+├── index.html             → Base HTML template (--content-max-width, --mkt-max-width tokens)
+└── package.json
 ```
 
 ---
@@ -79,6 +73,9 @@ Uses Holt-Winters Triple Exponential Smoothing to forecast future sales based on
 ### 5. Lottery & Compliance
 A high-integrity management system for scratch-ticket inventory, box activation, and automated EOD reconciliation (8 tabs: Overview, Games, Inventory, Active Tickets, Shift Reports, Reports, Commission, Settings).
 
+### 5b. Fuel Module
+Full gas-station fuel sale + refund system (Session 23). Portal page has 4 tabs: Overview, Fuel Types (3-decimal $/gallon), Sales Report, Settings. Cashier app gets Fuel Sale + Fuel Refund buttons in the action bar when the store has fuel enabled.
+
 ### 6. Public Marketing Site
 A high-performance promotional site with landing pages and product feature deep-dives, optimized for SEO (Home, About, Features, Pricing, Contact).
 
@@ -98,13 +95,30 @@ CSV/Excel product import pipeline with preview, validation, column mapping, and 
 Service fee mapping (bottle deposit, bag fee, alcohol surcharge) and cross-store deposit rules.
 
 ### 12. Shared Layout & Persistent Sidebar
-All portal routes are nested under a shared `Layout.jsx` wrapper that renders the `Sidebar` once and uses React Router's `Outlet` for page content. The sidebar persists across all navigation and scrolls independently from the main content area.
+All portal routes are nested under a shared `Layout.jsx` wrapper that renders the `Sidebar` once and uses React Router's `Outlet` for page content. The sidebar persists across all navigation and scrolls independently from the main content area. The sidebar also renders a clickable "signed in as" user card (→ `/portal/my-profile`).
 
-### 13. SEO Component
+### 13. RBAC-Gated Navigation
+Every portal route is wrapped in `<PermissionRoute>` which reads `localStorage.user.permissions` (populated at login) and renders `<Unauthorized />` on missing perms. The Sidebar filters its nav items through the same `routePermissions.js` map — users only see links they can access. The `usePermissions()` hook + `<Can permission="...">` component are available for per-button gating. Superadmin always bypasses.
+
+### 14. Quick Buttons WYSIWYG Builder
+Drag-and-drop tile builder for the cashier POS home screen (`/portal/quick-buttons`, Sessions 37 + 37b). Tiles support product, folder (1-level), action (19 whitelisted POS handlers), text, and image types. Uses `react-grid-layout` (legacy adapter) with configurable row height (40–160px) and grid columns (3–12). Image uploads land in `/uploads/quick-buttons/`.
+
+### 15. Multi-Org Access
+A single email/login can have `UserOrg` memberships in many organisations. StoreSwitcher groups stores by org name when multiple memberships exist. `req.orgId` on the backend is derived from the active store, so switching stores switches the active org. Store transfer is a first-class flow — see `TransferOwnershipModal` and `/portal/invitations`.
+
+### 16. Self-Service User Pages
+- `/portal/my-profile` — any authenticated user can edit name/phone, change password (live strength meter)
+- `/portal/account?tab=mypin` — per-store register PIN management (`UserStore.posPin`)
+- `/portal/invitations` — manager+ can invite teammates (7-day tokens, email + optional SMS)
+
+### 17. Inactivity Lock
+`InactivityLock.jsx` mounts globally; after 60s idle on any `/portal/*` route it overlays a password re-verify screen (`POST /auth/verify-password`). Session + current page preserved — only interaction blocked.
+
+### 18. SEO Component
 `components/SEO.jsx` provides consistent meta tag management (title, description, Open Graph) across all marketing and portal pages.
 
-### 14. Shared Formatters
-`utils/formatters.js` provides centralized currency, date, and percentage formatting utilities used across all portal pages for consistent display.
+### 19. Shared Formatters + Export
+`utils/formatters.js` (currency/date/percentage) and `utils/exportUtils.js` (CSV + jspdf PDF downloads) are reused across every analytics and report page.
 
 ---
 

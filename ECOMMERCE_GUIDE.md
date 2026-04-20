@@ -24,7 +24,7 @@ Redis (optional)           :6379  → BullMQ queue + inventory cache
 | **Product Sync** | Auto-sync from POS via BullMQ (Redis) or HTTP fallback (no Redis) |
 | **Shopping Cart** | Cart drawer + full page, localStorage + server sync |
 | **Checkout** | Requires login, pickup/delivery, stock check with POS |
-| **Unified Customer Auth** | POS `Customer` table is the single source of truth; storefront auth (signup/login) proxies through ecom-backend to POS backend. Supports profile edit (first/last name, phone), saved addresses, and password change |
+| **Unified Customer Auth** | POS `Customer` table is the single source of truth (`passwordHash` + `addresses JSON` fields on Customer). Storefront auth proxies through ecom-backend to POS backend (`POST /api/storefront/:storeId/auth/signup|login|password`). Store-level isolation enforced: a customer of Store A cannot authenticate on Store B's storefront. Supports profile edit, saved addresses, password change. See Session 17 in CLAUDE.md |
 | **Order Management** | Portal: status progression, customer detail. Storefront: order history + detail |
 | **Email Notifications** | Contact form, order confirmation, status updates via SMTP |
 | **Order Alerts** | Real-time polling (15s) with MP3 sound + toast notification in portal |
@@ -85,7 +85,7 @@ cp .env.example .env.local
 ```env
 DATABASE_URL="postgresql://user:pass@localhost:5432/storeveu_pos"
 JWT_SECRET=your_secret_here
-JWT_ACCESS_TTL=2h                                    # Session 18 / C-6
+JWT_ACCESS_TTL=8h                                    # Session 29 (was 2h after Session 18)
 INTERNAL_API_KEY=<random 64-hex-char string>         # Session 18 / C-1
 CORS_ORIGIN=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5005
 ECOM_BACKEND_URL=http://localhost:5005
@@ -131,15 +131,17 @@ npm run dev
 
 ### 5. Initial E-Commerce Setup Flow
 
-1. Login to portal → select a store in the store switcher
-2. Go to **Online Store → Store Setup**
+1. Login to portal → select a store in the StoreSwitcher (stores are grouped by org when the user has multi-org memberships, see CLAUDE.md Session 32)
+2. Go to **Online Store → Store Setup** (sidebar gate: `ecom.view` permission, see CLAUDE.md Session 31)
 3. Click **"Enable E-Commerce"** → enter store name
-4. **General tab** → upload store logo/banner → click **"Sync Products Now"**
-5. **Branding tab** → pick primary color, font, logo text
-6. **Pages tab** → create Home, About, Contact pages (pick templates)
-7. **Fulfillment tab** → enable pickup/delivery, set hours/fees
-8. **Save All Changes**
-9. Visit `http://localhost:3000?store=<your-slug>` to see the live storefront
+4. **General tab** → upload store logo/banner → click **"Sync Products Now"** (HTTP fallback if Redis is absent; otherwise BullMQ)
+5. **Branding tab** → pick primary color, font, logo text — storefront `_app.js` BrandingInjector applies via CSS custom properties + dynamic Google Fonts `<link>` injection
+6. **Pages tab** → create Home, About, Contact pages, choosing from 15 premium templates (5 per page type) — see Session 11 notes in CLAUDE.md
+7. **Fulfillment tab** → enable pickup/delivery, set hours/fees, min order
+8. **SEO & Social tab** → meta title/description, social links
+9. **Save All Changes** → visit `http://localhost:3000?store=<your-slug>` or `http://localhost:3000` (store discovery page, Session 12)
+10. **Online Orders** (separate sidebar item) — order management with 15s real-time polling and audible MP3 notification
+11. **Analytics** and **Customers** are now separate sidebar pages (Session 12), no longer tabs under Store Setup
 
 ### 6. Redis (Optional)
 
