@@ -16,89 +16,111 @@
  * Safe to re-run — it only creates rows that don't exist, and it won't
  * overwrite an existing default ProductUpc row.
  *
+ * Batched: Postgres prepared statements have a ~32767 bind-variable limit,
+ * and loading all products + their upcs relation in one query can exceed it
+ * on large catalogs. We fetch IDs first (tiny payload), then walk chunks.
+ *
  * Run: node prisma/backfillPrimaryUpcs.js
  */
 
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+const CHUNK_SIZE = 500;
+
 async function main() {
   console.log('[backfill] Scanning products with a primary UPC…');
 
+  // First pass: just the minimal fields we need. No relation fetch, so the
+  // response is tiny (~64 bytes/row × 10k rows = ~640 KB, well under any limit).
   const products = await prisma.masterProduct.findMany({
-    where: {
-      upc: { not: null },
-      deleted: false,
-    },
-    select: {
-      id: true,
-      orgId: true,
-      upc: true,
-      upcs: { where: { isDefault: true }, select: { id: true, upc: true } },
-    },
+    where:  { upc: { not: null }, deleted: false },
+    select: { id: true, orgId: true, upc: true },
+    orderBy: { id: 'asc' },
   });
 
   console.log(`[backfill] Found ${products.length} products with a primary UPC.`);
 
-  let created = 0;
-  let skipped = 0;
+  let created    = 0;
+  let skipped    = 0;
   let mismatched = 0;
-  let conflicts = 0;
+  let conflicts  = 0;
+  const warnings = []; // capped at 20 to avoid log flood
 
-  for (const p of products) {
-    const primaryUpc = p.upc;
-    const existingDefault = p.upcs[0];
+  for (let i = 0; i < products.length; i += CHUNK_SIZE) {
+    const chunk    = products.slice(i, i + CHUNK_SIZE);
+    const chunkIds = chunk.map(p => p.id);
 
-    if (existingDefault && existingDefault.upc === primaryUpc) {
-      skipped++;
-      continue;
-    }
-
-    if (existingDefault && existingDefault.upc !== primaryUpc) {
-      // This product's ProductUpc default points at a different barcode than
-      // the MasterProduct.upc column. That's a data divergence — flag it.
-      mismatched++;
-      console.warn(
-        `[backfill] product ${p.id} (orgId=${p.orgId}): MasterProduct.upc=${primaryUpc} ` +
-        `but ProductUpc default=${existingDefault.upc}. Skipping — inspect manually.`
-      );
-      continue;
-    }
-
-    // No default ProductUpc yet. Check if the primary UPC already exists
-    // under a different product (shouldn't happen with the MasterProduct unique
-    // constraint, but defensive).
-    const conflict = await prisma.productUpc.findUnique({
-      where: { orgId_upc: { orgId: p.orgId, upc: primaryUpc } },
+    // For this chunk only: existing default ProductUpc rows.
+    const defaults = await prisma.productUpc.findMany({
+      where:  { masterProductId: { in: chunkIds }, isDefault: true },
+      select: { masterProductId: true, upc: true },
     });
-    if (conflict && conflict.masterProductId !== p.id) {
-      conflicts++;
-      console.warn(
-        `[backfill] product ${p.id}: UPC ${primaryUpc} is already in ProductUpc for ` +
-        `product ${conflict.masterProductId}. Skipping — resolve manually.`
-      );
-      continue;
+    const defaultByProductId = new Map(defaults.map(d => [d.masterProductId, d]));
+
+    for (const p of chunk) {
+      const primaryUpc      = p.upc;
+      const existingDefault = defaultByProductId.get(p.id);
+
+      if (existingDefault && existingDefault.upc === primaryUpc) {
+        skipped++;
+        continue;
+      }
+
+      if (existingDefault && existingDefault.upc !== primaryUpc) {
+        // The ProductUpc default points at a different barcode than the
+        // MasterProduct.upc column — data divergence. Log and skip.
+        mismatched++;
+        if (warnings.length < 20) {
+          warnings.push(
+            `product ${p.id} (orgId=${p.orgId}): MasterProduct.upc=${primaryUpc} ` +
+            `but ProductUpc default=${existingDefault.upc}`
+          );
+        }
+        continue;
+      }
+
+      // No default yet. Check for UPC conflict across products.
+      const conflict = await prisma.productUpc.findUnique({
+        where:  { orgId_upc: { orgId: p.orgId, upc: primaryUpc } },
+        select: { id: true, masterProductId: true, label: true },
+      });
+
+      if (conflict && conflict.masterProductId !== p.id) {
+        conflicts++;
+        if (warnings.length < 20) {
+          warnings.push(
+            `product ${p.id}: UPC ${primaryUpc} is already in ProductUpc for ` +
+            `product ${conflict.masterProductId}`
+          );
+        }
+        continue;
+      }
+
+      if (conflict && conflict.masterProductId === p.id) {
+        // Already an alternate for this product — promote to default.
+        await prisma.productUpc.update({
+          where: { id: conflict.id },
+          data:  { isDefault: true, label: conflict.label || 'Primary' },
+        });
+      } else {
+        await prisma.productUpc.create({
+          data: {
+            orgId:           p.orgId,
+            masterProductId: p.id,
+            upc:             primaryUpc,
+            isDefault:       true,
+            label:           'Primary',
+          },
+        });
+      }
+      created++;
     }
 
-    if (conflict && conflict.masterProductId === p.id) {
-      // Already an alternate for this product — promote it to default.
-      await prisma.productUpc.update({
-        where: { id: conflict.id },
-        data:  { isDefault: true, label: conflict.label || 'Primary' },
-      });
-    } else {
-      await prisma.productUpc.create({
-        data: {
-          orgId: p.orgId,
-          masterProductId: p.id,
-          upc: primaryUpc,
-          isDefault: true,
-          label: 'Primary',
-        },
-      });
+    const done = Math.min(i + CHUNK_SIZE, products.length);
+    if (done % 2500 === 0 || done === products.length) {
+      console.log(`[backfill] Processed ${done} / ${products.length}`);
     }
-    created++;
-    if (created % 500 === 0) console.log(`[backfill] … created ${created} so far`);
   }
 
   console.log('[backfill] Summary:');
@@ -106,6 +128,10 @@ async function main() {
   console.log(`  skipped:    ${skipped} (already in sync)`);
   console.log(`  mismatched: ${mismatched} (manual review)`);
   console.log(`  conflicts:  ${conflicts} (manual review)`);
+  if (warnings.length > 0) {
+    console.log(`[backfill] First ${warnings.length} warnings:`);
+    for (const w of warnings) console.log(`  - ${w}`);
+  }
 }
 
 main()
