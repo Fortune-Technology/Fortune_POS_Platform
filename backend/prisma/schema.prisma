@@ -174,8 +174,17 @@ model TaxRule {
 
   rate Decimal @db.Decimal(6, 4) // e.g. 0.0550 = 5.5%
 
-  // Which product classes this rule applies to
-  // Stored as comma-separated string: "alcohol,spirits"
+  // Preferred matcher (Option B) — multi-state/country friendly.
+  // A rule applies when the product's departmentId is in this array. Empty
+  // array means "no department match — fall through to the legacy class
+  // matcher below". This lets retailers model tax by their OWN department
+  // names (e.g. "Beer & Malt", "Clothing Under $175") instead of a hardcoded
+  // class vocabulary that's tied to one US state.
+  departmentIds Int[] @default([])
+
+  // Legacy matcher — product class string ("alcohol", "grocery", "all", etc.).
+  // Still evaluated when departmentIds is empty, so existing rules keep
+  // working without migration.
   appliesTo String // "grocery", "alcohol", "tobacco", "hot_food", "all"
 
   // EBT: if true, EBT-eligible items are exempt from this tax
