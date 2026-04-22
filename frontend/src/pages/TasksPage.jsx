@@ -74,7 +74,7 @@ const TaskModal = ({ task, onClose, onSaved, employees }) => {
     description: task?.description || '',
     priority:    task?.priority || 'normal',
     category:    task?.category || 'Other',
-    assigneeId:  task?.assigneeId || task?.assignee_id || '',
+    assignedTo:  task?.assignedTo || task?.assigneeId || task?.assignee_id || '',
     dueDate:     task?.dueDate ? task.dueDate.slice(0, 10) : task?.due_date ? task.due_date.slice(0, 10) : '',
     storeId:     task?.storeId || task?.store_id || '',
   });
@@ -179,7 +179,7 @@ const TaskModal = ({ task, onClose, onSaved, employees }) => {
           <div className="p-field-row">
             <div className="p-field">
               <label className="p-field-label">Assign To</label>
-              <select className="p-select" value={form.assigneeId} onChange={e => set('assigneeId', e.target.value)}>
+              <select className="p-select" value={form.assignedTo} onChange={e => set('assignedTo', e.target.value)}>
                 <option value="">Unassigned</option>
                 {employees.map(emp => (
                   <option key={emp.id || emp._id} value={emp.id || emp._id}>
