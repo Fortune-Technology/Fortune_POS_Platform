@@ -93,6 +93,10 @@ export const getCatalogSnapshot = async (req, res) => {
         retailPrice:    sp?.retailPrice != null ? Number(sp.retailPrice) : (p.defaultRetailPrice != null ? Number(p.defaultRetailPrice) : null),
         quantityOnHand: sp?.quantityOnHand != null ? Number(sp.quantityOnHand) : null,
         taxable:        p.taxable,
+        // Session 40 Phase 1 — strict-FK tax. Both fields sent so the cashier's
+        // selectTotals can try taxRuleId first, then dept-linked rule, then
+        // fall back to taxClass string match.
+        taxRuleId:      p.taxRuleId || null,
         taxClass:       p.taxClass || p.department?.taxClass || 'grocery',
         ebtEligible:    p.ebtEligible || p.department?.ebtEligible || false,
         ageRequired:    p.ageRequired,
