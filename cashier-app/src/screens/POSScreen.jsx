@@ -508,8 +508,15 @@ export default function POSScreen() {
   const searchRef = useRef(null);
 
   // ── Tax rules (from IndexedDB) ───────────────────────────────────────────
+  // CRITICAL: this state must re-read from Dexie every time catalogSyncedAt
+  // changes. Previous version had an empty-array deps `[]` which meant it
+  // only read once on mount — if the user cleared storage (or started with
+  // an empty Dexie cache), POSScreen mounted BEFORE the first sync populated
+  // db.taxRules, and then taxRules stayed [] forever → every item rang up at
+  // 0% tax. This bit prod on 2026-04-23 after a cache-clear troubleshooting
+  // session. The fix mirrors the promotions load effect immediately below.
   const [taxRules, setTaxRules] = useState([]);
-  useEffect(() => { db.taxRules.toArray().then(setTaxRules); }, []);
+  useEffect(() => { db.taxRules.toArray().then(setTaxRules); }, [catalogSyncedAt]);
 
   // ── Load promotions from IndexedDB ─────────────────────────────────────────
   // Re-runs every time catalogSyncedAt changes (initial sync + every 15-min refresh)
