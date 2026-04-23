@@ -58,6 +58,7 @@ import aiAssistantRoutes    from './routes/aiAssistantRoutes.js';
 import { startTokenRefreshScheduler } from './utils/posScheduler.js';
 import { startBillingScheduler } from './services/billingScheduler.js';
 import { startShiftScheduler }  from './services/shiftScheduler.js';
+import { startLoyaltyScheduler } from './services/loyaltyScheduler.js';
 import { startPendingMoveScheduler } from './services/lottery/index.js';
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
 
@@ -194,6 +195,7 @@ const startServer = async () => {
   startTokenRefreshScheduler();
   startBillingScheduler();
   startShiftScheduler();
+  startLoyaltyScheduler();
   startPendingMoveScheduler();
 
   // Recurring task spawner — checks every 15 minutes for tasks due

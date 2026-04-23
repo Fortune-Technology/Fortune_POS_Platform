@@ -4,92 +4,22 @@
  */
 
 import prisma from '../config/postgres.js';
+import {
+  processTransactionPoints,
+  reverseTransactionPoints,
+} from '../services/loyaltyService.js';
+import {
+  applyChargeTender as _applyChargeTender,
+  refundChargeOnTx  as _refundChargeOnTx,
+  sumChargeTender   as _sumChargeTender,
+} from '../services/chargeAccountService.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const getOrgId   = (req) => req.orgId   || req.user?.orgId;
 const getStoreId = (req) => req.query.storeId || req.body?.storeId;
 
-/**
- * _processLoyaltyPoints
- * Called fire-and-forget after a transaction is saved.
- * Awards earned points and deducts redeemed points for the attached customer.
- */
-async function _processLoyaltyPoints({ orgId, storeId, customerId, lineItems, subtotal, txId, txNumber, loyaltyPointsRedeemed }) {
-  // Load the loyalty program
-  const program = await prisma.loyaltyProgram.findUnique({ where: { storeId } });
-  if (!program || !program.enabled) return;
-
-  // Load earn rules for this store
-  const earnRules = await prisma.loyaltyEarnRule.findMany({
-    where: { storeId, active: true },
-  });
-
-  // Build lookup maps
-  const excludedDepts    = new Set(earnRules.filter(r => r.targetType === 'department' && r.action === 'exclude').map(r => r.targetId));
-  const excludedProducts = new Set(earnRules.filter(r => r.targetType === 'product'    && r.action === 'exclude').map(r => r.targetId));
-  const deptMultipliers  = {};
-  const prodMultipliers  = {};
-  earnRules.filter(r => r.action === 'multiply').forEach(r => {
-    if (r.targetType === 'department') deptMultipliers[r.targetId] = Number(r.multiplier);
-    else                               prodMultipliers[r.targetId] = Number(r.multiplier);
-  });
-
-  // Compute eligible spend from lineItems
-  let eligibleSubtotal = 0;
-  const items = Array.isArray(lineItems) ? lineItems : [];
-  for (const li of items) {
-    if (li.isLottery || li.isBottleReturn || li.qty <= 0) continue;
-    const deptId = li.departmentId ? String(li.departmentId) : null;
-    const prodId = li.productId    ? String(li.productId)    : null;
-    // Check exclusions
-    if (deptId && excludedDepts.has(deptId))    continue;
-    if (prodId && excludedProducts.has(prodId)) continue;
-    // Apply multiplier (product takes precedence over department)
-    let mult = 1;
-    if (prodId && prodMultipliers[prodId] !== undefined) mult = prodMultipliers[prodId];
-    else if (deptId && deptMultipliers[deptId] !== undefined) mult = deptMultipliers[deptId];
-    eligibleSubtotal += (li.lineTotal || 0) * mult;
-  }
-
-  // Calculate points to award
-  const ptsPerDollar = Number(program.pointsPerDollar);
-  const pointsEarned = Math.floor(eligibleSubtotal * ptsPerDollar);
-
-  // Net points change
-  const redeemed      = Math.max(0, loyaltyPointsRedeemed || 0);
-  const netPointsDelta = pointsEarned - redeemed;
-
-  if (netPointsDelta === 0 && pointsEarned === 0) return;
-
-  // Fetch current customer
-  const customer = await prisma.customer.findFirst({
-    where: { id: customerId, orgId },
-    select: { id: true, loyaltyPoints: true, pointsHistory: true },
-  });
-  if (!customer) return;
-
-  const currentPoints  = customer.loyaltyPoints || 0;
-  const newPoints      = Math.max(0, currentPoints + netPointsDelta);
-  const history        = Array.isArray(customer.pointsHistory) ? customer.pointsHistory : [];
-
-  const historyEntry = {
-    date:     new Date().toISOString(),
-    txId,
-    txNumber,
-    earned:   pointsEarned,
-    redeemed,
-    balance:  newPoints,
-  };
-
-  await prisma.customer.update({
-    where: { id: customerId },
-    data:  {
-      loyaltyPoints: newPoints,
-      pointsHistory: [...history, historyEntry],
-    },
-  });
-}
+// Charge-account helpers are now in services/chargeAccountService.js — see imports above.
 
 // ── GET /api/pos-terminal/catalog/snapshot ─────────────────────────────────
 // Returns flat denormalised product list for IndexedDB seeding.
@@ -279,6 +209,17 @@ export const createTransaction = async (req, res) => {
       return res.status(400).json({ error: 'lineItems, lotteryItems, or fuelItems required' });
     }
 
+    // ── Charge-account tender validation ──────────────────────────────────
+    // If any tender line uses the 'charge' method, validate the customer can
+    // charge it (account enabled + within limit) BEFORE saving the tx. We
+    // reserve the balance atomically here so two concurrent stations can't
+    // both push a charge over the limit.
+    const chargeAmount = _sumChargeTender(tenderLines);
+    if (chargeAmount > 0) {
+      const r = await _applyChargeTender({ orgId, customerId, chargeAmount });
+      if (!r.ok) return res.status(400).json({ error: r.error });
+    }
+
     // Generate a human-readable transaction number
     const today = new Date();
     const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
@@ -318,10 +259,9 @@ export const createTransaction = async (req, res) => {
 
     // ── Award / deduct loyalty points (fire-and-forget) ───────────────────
     if (customerId) {
-      _processLoyaltyPoints({
+      processTransactionPoints({
         orgId, storeId, customerId,
         lineItems: lineItems || [],
-        subtotal:  parseFloat(subtotal) || 0,
         txId:      tx.id, txNumber,
         loyaltyPointsRedeemed: parseInt(loyaltyPointsRedeemed) || 0,
       }).catch(err => console.error('[loyalty] points error:', err.message));
@@ -410,6 +350,19 @@ export const batchCreateTransactions = async (req, res) => {
 
     for (const tx of transactions) {
       try {
+        // Charge-tender validation for offline replay. If a queued tx used
+        // the 'charge' method but the customer's account has since been
+        // disabled or the limit lowered, we reject this individual tx with
+        // an error and continue replaying the rest.
+        const chargeAmount = _sumChargeTender(tx.tenderLines);
+        if (chargeAmount > 0) {
+          const r = await _applyChargeTender({ orgId, customerId: tx.customerId, chargeAmount });
+          if (!r.ok) {
+            errors.push({ localId: tx.localId, error: r.error });
+            continue;
+          }
+        }
+
         const today = new Date(tx.offlineCreatedAt || Date.now());
         const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
         const count = await prisma.transaction.count({ where: { orgId, storeId: tx.storeId } });
@@ -496,6 +449,16 @@ export const batchCreateTransactions = async (req, res) => {
               })
             );
           Promise.all(updates).catch(() => {});
+        }
+
+        // Award/redeem loyalty points on the replayed offline tx.
+        if (tx.customerId) {
+          processTransactionPoints({
+            orgId, storeId: tx.storeId, customerId: tx.customerId,
+            lineItems: tx.lineItems || [],
+            txId: saved.id, txNumber: saved.txNumber,
+            loyaltyPointsRedeemed: parseInt(tx.loyaltyPointsRedeemed) || 0,
+          }).catch(err => console.error('[loyalty] batch points error:', err.message));
         }
       } catch (e) {
         errors.push({ localId: tx.localId, error: e.message });
@@ -892,6 +855,18 @@ export const voidTransaction = async (req, res) => {
       },
     });
 
+    // Reverse any loyalty points earned/redeemed on the original tx, and
+    // refund any in-store charge that was posted to a customer's account.
+    reverseTransactionPoints({ originalTx: tx, reason: 'void_reverse' })
+      .catch(err => console.error('[loyalty] void reverse error:', err.message));
+    const chargeAmount = _sumChargeTender(tx.tenderLines);
+    if (chargeAmount > 0) {
+      // Find the customer linked to this tx via pointsHistory (same lookup
+      // approach reverseTransactionPoints uses) and refund their balance.
+      _refundChargeOnTx({ orgId, originalTx: tx, chargeAmount })
+        .catch(err => console.error('[charge] void refund error:', err.message));
+    }
+
     res.json({ ...voided, grandTotal: Number(voided.grandTotal) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -936,6 +911,15 @@ export const createRefund = async (req, res) => {
         syncedAt:     new Date(),
       },
     });
+
+    // Reverse loyalty + charge effects of the original tx.
+    reverseTransactionPoints({ originalTx: orig, reason: 'refund_reverse' })
+      .catch(err => console.error('[loyalty] refund reverse error:', err.message));
+    const origCharge = _sumChargeTender(orig.tenderLines);
+    if (origCharge > 0) {
+      _refundChargeOnTx({ orgId, originalTx: orig, chargeAmount: origCharge })
+        .catch(err => console.error('[charge] refund reverse error:', err.message));
+    }
 
     res.status(201).json({ ...refund, grandTotal: Number(refund.grandTotal) });
   } catch (err) {

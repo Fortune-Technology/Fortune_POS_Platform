@@ -113,6 +113,10 @@ export const useCartStore = create((set, get) => ({
         qty:              1,
         unitPrice:        Number(product.retailPrice || 0),
         taxable:          product.taxable ?? true,
+        // Session 40 Phase 1 — strict-FK tax. `taxRuleId` is authoritative;
+        // `taxClass` kept as the legacy fallback matcher. selectTotals checks
+        // taxRuleId first, then dept-linked rule, then taxClass match.
+        taxRuleId:        product.taxRuleId || null,
         taxClass:         product.taxClass || 'grocery',
         ebtEligible:      product.ebtEligible || false,
         ageRequired:      product.ageRequired || null,
@@ -138,7 +142,7 @@ export const useCartStore = create((set, get) => ({
 
   // ── Open Item (manual entry — no catalog product) ────────────────────────
   // Used for misc items that don't have a barcode, like "Coffee" or custom amounts.
-  addOpenItem: ({ name, price, taxClass = 'standard', taxable = true, departmentId = null }) => {
+  addOpenItem: ({ name, price, taxRuleId = null, taxClass = 'standard', taxable = true, departmentId = null }) => {
     const { items, promotions } = get();
     const newItem = calcLine({
       lineId:           nanoid(8),
@@ -149,6 +153,10 @@ export const useCartStore = create((set, get) => ({
       qty:              1,
       unitPrice:        Number(price) || 0,
       taxable:          !!taxable,
+      // Open items can also carry an explicit taxRuleId if the UI supplies one
+      // (e.g. a "Generic Tobacco" quick-entry button). Otherwise falls through
+      // to the taxClass matcher as before.
+      taxRuleId:        taxRuleId || null,
       taxClass:         taxClass || 'standard',
       ebtEligible:      false,
       ageRequired:      null,
@@ -429,6 +437,72 @@ export const useCartStore = create((set, get) => ({
   setTxNumber: (n) => set({ txNumber: n }),
 }));
 
+// ── Shared "effective discount" builder ────────────────────────────────────
+// Combines all three discount sources (customer standing %, manual order
+// discount, loyalty redemption) into a single dollar-amount value that can
+// be passed to `selectTotals(items, taxRules, effectiveDiscount, bagFeeInfo)`.
+//
+// Used by POSScreen (live cart total) and TenderModal (final checkout total)
+// so both screens always agree on the math.
+//
+// Returns null when nothing reduces the cart, otherwise:
+//   { type: 'amount', value, sources: [{ kind, amount, label }] }
+// `sources` is purely informational — selectTotals ignores it. The cashier-
+// app surfaces it in the cart panel and on the customer-facing display so
+// the cashier can explain "why is the total lower than the subtotal".
+export function computeEffectiveDiscount({ items, customer, orderDiscount, loyaltyRedemption }) {
+  const rawSubtotal = items.reduce((s, i) => s + (i.lineTotal || 0), 0);
+  if (rawSubtotal <= 0) return null;
+
+  let dollarOff = 0;
+  const sources = [];
+
+  // Customer standing discount — stored as Decimal(5,4) (e.g. 0.0500 = 5%).
+  // Applied first so subsequent calculations work off the discounted base.
+  // Only applied to the *positive* subtotal — net-negative carts (refunds)
+  // skip this so the customer doesn't get penalised on a return.
+  const cdRate = Number(customer?.discount || 0);
+  if (cdRate > 0 && rawSubtotal > 0) {
+    const amt = Math.round(rawSubtotal * cdRate * 100) / 100;
+    dollarOff += amt;
+    sources.push({ kind: 'customer', amount: amt, label: `${(cdRate * 100).toFixed(cdRate >= 0.1 ? 0 : 1)}% loyalty` });
+  }
+
+  if (orderDiscount) {
+    const amt = orderDiscount.type === 'percent'
+      ? Math.round(rawSubtotal * orderDiscount.value / 100 * 100) / 100
+      : Math.min(orderDiscount.value, rawSubtotal);
+    dollarOff += amt;
+    sources.push({
+      kind: 'manual',
+      amount: amt,
+      label: orderDiscount.type === 'percent' ? `${orderDiscount.value}% off` : `$${amt.toFixed(2)} off`,
+    });
+  }
+
+  if (loyaltyRedemption) {
+    const amt = loyaltyRedemption.discountType === 'dollar_off'
+      ? Number(loyaltyRedemption.discountValue) || 0
+      : Math.round(rawSubtotal * (Number(loyaltyRedemption.discountValue) || 0) / 100 * 100) / 100;
+    dollarOff += amt;
+    sources.push({
+      kind: 'redemption',
+      amount: amt,
+      label: loyaltyRedemption.rewardName || 'Reward redeemed',
+    });
+  }
+
+  if (dollarOff <= 0) return null;
+  // Never let the combined discount exceed the subtotal — selectTotals also
+  // clamps but this keeps the displayed dollarOff honest.
+  const cappedOff = Math.min(dollarOff, rawSubtotal);
+  return {
+    type:    'amount',
+    value:   Math.round(cappedOff * 100) / 100,
+    sources,
+  };
+}
+
 // ── Derived totals ─────────────────────────────────────────────────────────
 // bagFeeInfo: { bagTotal, ebtEligible, discountable } | null
 export function selectTotals(items, taxRules = [], orderDiscount = null, bagFeeInfo = null) {
@@ -438,15 +512,21 @@ export function selectTotals(items, taxRules = [], orderDiscount = null, bagFeeI
   let taxTotal = 0;
   for (const item of items) {
     if (!item.taxable || item.ebtEligible) continue;
-    // Option B match order:
-    //   1. If ANY active rule has this item's departmentId in its departmentIds
-    //      → use that rule (dept-linked rules win)
-    //   2. Otherwise fall through to the legacy class matcher on appliesTo
-    // Both paths check `active`. The first matching rule wins in each tier.
-    const deptRule = item.departmentId
+    // Session 40 Phase 1 resolution order (strict-FK migration):
+    //   1. Product-level explicit FK: item.taxRuleId → rule (per-product override)
+    //   2. Department-linked rule via TaxRule.departmentIds[] (Option B)
+    //   3. Legacy string match on appliesTo ↔ item.taxClass
+    //   4. rate = 0 (no rule matched)
+    // Every tier requires the rule to be `active: true`.
+    const productRule = item.taxRuleId
+      ? taxRules.find(r => r.active && Number(r.id) === Number(item.taxRuleId))
+      : null;
+    const deptRule = !productRule && item.departmentId
       ? taxRules.find(r => r.active && Array.isArray(r.departmentIds) && r.departmentIds.includes(Number(item.departmentId)))
       : null;
-    const rule = deptRule || taxRules.find(r => r.active && (!r.departmentIds || r.departmentIds.length === 0) && matchTax(r.appliesTo, item.taxClass));
+    const rule = productRule
+      || deptRule
+      || taxRules.find(r => r.active && (!r.departmentIds || r.departmentIds.length === 0) && matchTax(r.appliesTo, item.taxClass));
     taxTotal += item.lineTotal * (rule ? parseFloat(rule.rate) : 0);
   }
   taxTotal = round2(taxTotal);

@@ -383,15 +383,31 @@ export const acceptInvitation     = (token, body = {}) => api.post(`/invitations
 export const getCatalogDepartments  = (params) => api.get('/catalog/departments', { params }).then(r => r.data);
 export const createCatalogDepartment= (data)   => api.post('/catalog/departments', data).then(r => r.data);
 export const updateCatalogDepartment= (id, d)  => api.put(`/catalog/departments/${id}`, d).then(r => r.data);
-export const deleteCatalogDepartment= (id)     => api.delete(`/catalog/departments/${id}`).then(r => r.data);
+// Pass `{ force: true }` to cascade-detach products assigned to this dept.
+// Without force, returns 409 `code: 'IN_USE'` + `usageCount` if any products
+// still reference it.
+export const deleteCatalogDepartment= (id, opts = {}) =>
+  api.delete(`/catalog/departments/${id}`, { params: opts.force ? { force: 'true' } : {} }).then(r => r.data);
 
 // ── Catalog — Vendors ─────────────────────────────────────────────────────
 export const getCatalogVendors   = (params) => api.get('/catalog/vendors', { params }).then(r => r.data);
 export const getCatalogVendor    = (id)     => api.get(`/catalog/vendors/${id}`).then(r => r.data);
 export const createCatalogVendor = (data)   => api.post('/catalog/vendors', data).then(r => r.data);
 export const updateCatalogVendor = (id, d)  => api.put(`/catalog/vendors/${id}`, d).then(r => r.data);
-export const deleteCatalogVendor = (id)     => api.delete(`/catalog/vendors/${id}`).then(r => r.data);
+// Pass `{ force: true }` to cascade-detach products assigned to this vendor.
+export const deleteCatalogVendor = (id, opts = {}) =>
+  api.delete(`/catalog/vendors/${id}`, { params: opts.force ? { force: 'true' } : {} }).then(r => r.data);
 export const getVendorProducts   = (id, params) => api.get(`/catalog/vendors/${id}/products`, { params }).then(r => r.data);
+
+// ── Catalog — Product ↔ Vendor mappings (per-vendor item code + cost) ─────
+// One MasterProduct can have N vendors. `isPrimary: true` mapping's
+// vendorItemCode mirrors back into MasterProduct.itemCode for legacy readers.
+// getProductVendors returns `{ success, data: [{ id, vendorId, vendor, vendorItemCode, priceCost, caseCost, packInCase, isPrimary, lastReceivedAt, ... }] }`.
+export const getProductVendors     = (productId)           => api.get(`/catalog/products/${productId}/vendor-mappings`).then(r => r.data);
+export const createProductVendor   = (productId, data)     => api.post(`/catalog/products/${productId}/vendor-mappings`, data).then(r => r.data);
+export const updateProductVendor   = (productId, id, data) => api.put(`/catalog/products/${productId}/vendor-mappings/${id}`, data).then(r => r.data);
+export const deleteProductVendor   = (productId, id)       => api.delete(`/catalog/products/${productId}/vendor-mappings/${id}`).then(r => r.data);
+export const makeProductVendorPrimary = (productId, id)    => api.post(`/catalog/products/${productId}/vendor-mappings/${id}/make-primary`).then(r => r.data);
 export const getVendorPayouts    = (id, params) => api.get(`/catalog/vendors/${id}/payouts`, { params }).then(r => r.data);
 export const getVendorStats      = (id)     => api.get(`/catalog/vendors/${id}/stats`).then(r => r.data);
 

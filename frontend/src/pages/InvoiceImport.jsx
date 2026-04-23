@@ -100,18 +100,45 @@ const MAPPING_CONF = {
   medium: { bg: '#f59e0b', color: '#fff' },
   low:    { bg: '#ef4444', color: '#fff' },
 };
-const TIER_LABEL = { upc: 'UPC', vendorMap: 'MAP', sku: 'SKU', fuzzy: 'FUZZY', ai: 'AI', manual: 'MANUAL', costProx: 'COST', global: 'GLOBAL' };
+// Session 39 Round 5 — added `itemCode` (distributor-code / vendor-scoped,
+// Tier 2) and `plu` (produce code, Tier 4) labels. `sku` removed from the
+// cascade years ago but left here for back-compat on legacy drafts.
+const TIER_LABEL = {
+  upc:       'UPC',
+  itemCode:  'ITEM#',
+  vendorMap: 'LEARNED',
+  plu:       'PLU',
+  global:    'GLOBAL',
+  costProx:  'COST',
+  fuzzy:     'FUZZY',
+  ai:        'AI',
+  manual:    'MANUAL',
+  sku:       'SKU',
+};
 
 // ─── Match reason tooltips ──────────────────────────────────────────────────
 const TIER_TOOLTIP = {
-  upc:       'Matched by UPC',
-  vendorMap: (item) => `Learned match (confirmed ${item.confirmCount ?? '?'} times)`,
-  fuzzy:     (item) => `Fuzzy match (${item.similarityPct ?? item.matchScore ?? '??'}% similarity)`,
-  ai:        'AI match',
-  costProx:  'Cost proximity match',
-  global:    'Cross-store match',
-  sku:       'Matched by SKU',
-  manual:    'Manual match',
+  upc:       'Matched by UPC barcode (highest confidence)',
+  itemCode:  (item) => `Matched by distributor item code "${item.originalItemCode || item.itemCode || '?'}" (vendor-scoped, highest confidence)`,
+  vendorMap: (item) => `Learned match from prior invoice (confirmed ${item.confirmCount ?? '?'} times)`,
+  plu:       (item) => `Matched by PLU code "${item.plu || '?'}" (produce)`,
+  global:    'Cross-store learned match',
+  costProx:  'Matched by cost proximity + name similarity (lower confidence — verify before confirming)',
+  fuzzy:     (item) => `Fuzzy name match (${item.similarityPct ?? item.matchScore ?? '??'}% similarity — verify)`,
+  ai:        'AI match — gpt-4o-mini chose the most likely catalog product. VERIFY before confirming.',
+  sku:       'Matched by internal SKU (legacy — vendor invoices never reference our SKU)',
+  manual:    'Matched manually by user',
+};
+
+// Session 39 Round 5 — cost-change indicator per matched line.
+// Rendered next to the unit cost; green ↓ when the invoice cost dropped,
+// red ↑ when it rose by more than 5%, grey = when it's within the noise
+// band, muted — when this is the first time we've seen this product priced.
+const COST_DELTA_META = {
+  up:   { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  arrow: '↑', label: 'Cost up' },
+  down: { color: '#10b981', bg: 'rgba(16,185,129,0.12)', arrow: '↓', label: 'Cost down' },
+  same: { color: '#64748b', bg: 'rgba(100,116,139,0.08)', arrow: '=', label: 'Unchanged (±5%)' },
+  new:  { color: '#94a3b8', bg: 'rgba(148,163,184,0.06)', arrow: '—', label: 'First time priced' },
 };
 
 // ─── Confidence-based row background colors ─────────────────────────────────
@@ -853,6 +880,36 @@ function ReviewPanel({
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, minWidth: 52, textAlign: 'right' }}>
                           {fmt(item.totalAmount)}
                         </span>
+
+                        {/* Session 39 Round 5 — cost-change indicator */}
+                        {isMatched && item.costDelta && (() => {
+                          const cd = item.costDelta;
+                          const meta = COST_DELTA_META[cd.direction] || COST_DELTA_META.same;
+                          const pctStr = cd.pct != null ? `${cd.pct > 0 ? '+' : ''}${(cd.pct * 100).toFixed(1)}%` : '';
+                          const tooltip = cd.direction === 'new'
+                            ? 'First invoice for this product — no prior cost to compare'
+                            : cd.direction === 'same'
+                              ? `Unchanged — invoice $${cd.newUnitCost.toFixed(4)}/unit vs catalog $${cd.prevUnitCost.toFixed(4)}/unit (${pctStr})`
+                              : `${meta.label} — invoice $${cd.newUnitCost.toFixed(4)}/unit vs catalog $${cd.prevUnitCost.toFixed(4)}/unit (${pctStr})`;
+                          return (
+                            <>
+                              <span style={{ color: 'var(--border-color)', fontSize: '0.7rem' }}>·</span>
+                              <span
+                                title={tooltip}
+                                style={{
+                                  fontSize: '0.68rem', fontWeight: 800,
+                                  padding: '2px 6px', borderRadius: 4,
+                                  background: meta.bg, color: meta.color,
+                                  display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'help',
+                                  minWidth: 52, justifyContent: 'center',
+                                }}
+                              >
+                                <span style={{ fontSize: '0.82rem', lineHeight: 1 }}>{meta.arrow}</span>
+                                {cd.pct != null ? pctStr : 'new'}
+                              </span>
+                            </>
+                          );
+                        })()}
 
                         {/* Retail price */}
                         {retail > 0 && (
@@ -1655,9 +1712,14 @@ const InvoiceImport = () => {
           const { data } = await queueInvoice(fd);
           const real = data.invoices?.[0];
           if (real) setInvoices(prev => prev.map(inv => inv.id === stubId ? real : inv));
-        } catch {
+        } catch (err) {
+          // Session 39 Round 5 — surface the backend's specific error
+          // (FILE_TOO_LARGE / UNSUPPORTED_FILE_TYPE / OCR failure) instead
+          // of a generic "Failed to queue" toast the user has no way to act on.
           setInvoices(prev => prev.filter(inv => inv.id !== stubId));
-          toast.error(`Failed to queue ${file.name}`);
+          const payload = err?.response?.data || {};
+          const msg = payload.detail || payload.error || err?.message || 'Failed to queue';
+          toast.error(`${file.name}: ${msg}`);
         }
       }
       toast.info(`${files.length} invoice${files.length > 1 ? 's' : ''} queued — AI processing in background`);
@@ -1677,7 +1739,16 @@ const InvoiceImport = () => {
   }, [uploadFiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg'], 'application/pdf': ['.pdf'] }, multiple: true,
+    // Session 39 Round 5 — HEIC/HEIF added. Backend transcodes to JPEG
+    // before OCR via heic-convert, so iPhone-native photos upload directly.
+    onDrop,
+    accept: {
+      'image/*':        ['.png', '.jpg', '.jpeg', '.heic', '.heif'],
+      'image/heic':     ['.heic'],
+      'image/heif':     ['.heif'],
+      'application/pdf':['.pdf'],
+    },
+    multiple: true,
   });
 
   const openReview = (inv) => {
@@ -2195,6 +2266,26 @@ const InvoiceImport = () => {
             Pick a vendor to use their item codes for matching, or leave as auto-detect.
           </span>
         </div>
+        {/* Session 39 Round 5 — pro-tip banner. Encourages the user to
+            preselect a vendor, because without it Tier 2 can't fire with
+            high confidence and the cascade drops to fuzzy/AI matching. */}
+        {!uploadVendorId && (
+          <div style={{
+            marginTop: 8, padding: '8px 12px', borderRadius: 8,
+            background: 'rgba(59,130,246,0.08)',
+            border: '1px solid rgba(59,130,246,0.25)',
+            fontSize: '0.78rem', color: 'var(--text-secondary)',
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+          }}>
+            <span style={{ fontSize: '0.95rem', lineHeight: 1.1 }}>💡</span>
+            <span>
+              <strong style={{ color: '#2563eb' }}>Pro tip:</strong>{' '}
+              preselecting the vendor above enables exact distributor-code matching.
+              Your second invoice from any vendor is usually 95%+ automatic —
+              every line you confirm below teaches the system.
+            </span>
+          </div>
+        )}
 
         <div {...getRootProps()} className={`ii-dropzone ${isDragActive ? 'ii-dropzone--active' : ''}`}>
           <input {...getInputProps()} />

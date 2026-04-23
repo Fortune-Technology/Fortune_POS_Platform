@@ -73,7 +73,7 @@ import { usePOSConfig }      from '../hooks/usePOSConfig.js';
 import { useFuelSettings }   from '../hooks/useFuelSettings.js';
 import { useHardware }       from '../hooks/useHardware.js';
 import { useCustomerDisplayPublisher } from '../hooks/useBroadcastSync.js';
-import { useCartStore, selectTotals } from '../stores/useCartStore.js';
+import { useCartStore, selectTotals, computeEffectiveDiscount } from '../stores/useCartStore.js';
 import { useManagerStore }   from '../stores/useManagerStore.js';
 import { useShiftStore }     from '../stores/useShiftStore.js';
 import { useStationStore }   from '../stores/useStationStore.js';
@@ -541,22 +541,12 @@ export default function POSScreen() {
   }, [items.map(i => `${i.lineId}:${i.qty}`).join(','), promotions]); // eslint-disable-line
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  // Combine order discount + loyalty redemption into a single dollar-off value
-  const rawSubtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-  let _dollarOff = 0;
-  if (orderDiscount) {
-    _dollarOff += orderDiscount.type === 'percent'
-      ? rawSubtotal * orderDiscount.value / 100
-      : orderDiscount.value;
-  }
-  if (loyaltyRedemption) {
-    _dollarOff += loyaltyRedemption.discountType === 'dollar_off'
-      ? loyaltyRedemption.discountValue
-      : rawSubtotal * loyaltyRedemption.discountValue / 100;
-  }
-  const effectiveDiscount = _dollarOff > 0
-    ? { type: 'amount', value: Math.round(_dollarOff * 100) / 100 }
-    : null;
+  // computeEffectiveDiscount stacks customer standing discount + manual order
+  // discount + loyalty redemption into a single dollar-off value. Both POSScreen
+  // and TenderModal call this helper so the cart total and tender total agree.
+  const effectiveDiscount = computeEffectiveDiscount({
+    items, customer, orderDiscount, loyaltyRedemption,
+  });
   // Bag fee
   const bagPrice = posConfig.bagFee?.pricePerBag || 0;
   const rawBagTotal = Math.round(bagCount * bagPrice * 100) / 100;
@@ -1498,21 +1488,36 @@ export default function POSScreen() {
           }}>
             {customer ? (
               <>
-                <User size={13} color="var(--green)" style={{ flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '0.78rem', fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {customer.name}
-                  </div>
-                  {customer.loyaltyPoints != null && (
-                    <div style={{ fontSize: '0.65rem', color: 'var(--green)', fontWeight: 600 }}>
-                      {customer.loyaltyPoints} pts
+                {/* Tappable area opens the Customer modal — gives the cashier
+                    access to the Rewards tab + customer details mid-sale.
+                    The X button (detach) is OUTSIDE this button so it doesn't
+                    accidentally fire when the cashier means to open details. */}
+                <button
+                  onClick={() => setShowCustomer(true)}
+                  title="View customer / Rewards"
+                  style={{
+                    flex: 1, minWidth: 0,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'none', border: 'none', padding: 0,
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <User size={13} color="var(--green)" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.78rem', fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {customer.name}
                     </div>
-                  )}
-                </div>
+                    {customer.loyaltyPoints != null && (
+                      <div style={{ fontSize: '0.65rem', color: 'var(--green)', fontWeight: 600 }}>
+                        {customer.loyaltyPoints} pts
+                      </div>
+                    )}
+                  </div>
+                </button>
                 <button
                   onClick={clearCustomer}
                   title="Remove customer"

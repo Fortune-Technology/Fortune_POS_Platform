@@ -20,9 +20,10 @@ import {
   X, DollarSign, CreditCard, Leaf, Smartphone,
   MoreHorizontal, Check, RotateCcw,
   RefreshCw, Trash2, PlusCircle, Wifi, WifiOff,
+  UserCheck,
 } from 'lucide-react';
 import NumPadInline, { digitsToNumber, numberToDigits } from '../pos/NumPadInline.jsx';
-import { useCartStore, selectTotals } from '../../stores/useCartStore.js';
+import { useCartStore, selectTotals, computeEffectiveDiscount } from '../../stores/useCartStore.js';
 import { useSyncStore }  from '../../stores/useSyncStore.js';
 import { useAuthStore }  from '../../stores/useAuthStore.js';
 import { submitTransaction } from '../../api/pos.js';
@@ -41,13 +42,18 @@ const METHODS = [
   { id: 'ebt',         label: 'EBT',         Icon: Leaf,           color: '#34d399',               bg: 'rgba(52,211,153,.13)',  border: 'rgba(52,211,153,.4)'  },
   { id: 'manual_card', label: 'Manual Card', Icon: Smartphone,     color: 'var(--text-secondary)', bg: 'rgba(255,255,255,.07)', border: 'rgba(255,255,255,.18)'},
   { id: 'manual_ebt',  label: 'Manual EBT',  Icon: Leaf,           color: '#6ee7b7',               bg: 'rgba(110,231,183,.1)',  border: 'rgba(110,231,183,.3)' },
+  // Charge: house-account tender. Only shown when the attached customer has
+  // instoreChargeEnabled=true. Backend validates against balanceLimit and
+  // increments Customer.balance atomically so concurrent terminals can't
+  // both push a charge over the limit. Voids/refunds decrement the balance.
+  { id: 'charge',      label: 'Charge',      Icon: UserCheck,      color: '#a855f7',               bg: 'rgba(168,85,247,.13)',  border: 'rgba(168,85,247,.4)'  },
   { id: 'other',       label: 'Other',       Icon: MoreHorizontal, color: 'var(--text-secondary)', bg: 'rgba(255,255,255,.07)', border: 'rgba(255,255,255,.18)'},
 ];
 const BY_ID       = Object.fromEntries(METHODS.map(m => [m.id, m]));
 // All methods can now accept partial amounts. Integrated card/ebt partials
 // charge the Dejavoo/PAX terminal for the entered amount when the cashier
 // clicks "Add & Continue", so Card+Card and Card+EBT splits work natively.
-const HAS_AMOUNT  = ['cash', 'card', 'ebt', 'manual_card', 'manual_ebt', 'other'];
+const HAS_AMOUNT  = ['cash', 'card', 'ebt', 'manual_card', 'manual_ebt', 'charge', 'other'];
 // Methods that route through the integrated payment terminal
 const USES_TERMINAL = ['card', 'ebt'];
 const GIVES_CHANGE = ['cash'];
@@ -81,22 +87,13 @@ export default function TenderModal({
 }) {
   const { items, clearCart, customer, loyaltyRedemption, orderDiscount } = useCartStore();
 
-  // Combine orderDiscount + loyaltyRedemption into one effective dollar-amount discount
-  const effectiveCombinedDiscount = useMemo(() => {
-    const rawSubtotal = items.reduce((s, i) => s + i.lineTotal, 0);
-    let dollarOff = 0;
-    if (orderDiscount) {
-      dollarOff += orderDiscount.type === 'percent'
-        ? rawSubtotal * orderDiscount.value / 100
-        : orderDiscount.value;
-    }
-    if (loyaltyRedemption) {
-      dollarOff += loyaltyRedemption.discountType === 'dollar_off'
-        ? loyaltyRedemption.discountValue
-        : rawSubtotal * loyaltyRedemption.discountValue / 100;
-    }
-    return dollarOff > 0 ? { type: 'amount', value: Math.round(dollarOff * 100) / 100 } : null;
-  }, [items, orderDiscount, loyaltyRedemption]);
+  // Single source of truth for cart-level discount math (customer standing %
+  // + manual order discount + loyalty redemption). Same helper POSScreen uses
+  // so the cart total and the tender total never disagree.
+  const effectiveCombinedDiscount = useMemo(
+    () => computeEffectiveDiscount({ items, customer, orderDiscount, loyaltyRedemption }),
+    [items, customer, orderDiscount, loyaltyRedemption]
+  );
 
   const totals = selectTotals(items, taxRules, effectiveCombinedDiscount, bagFeeInfo);
   const hasLotteryItems  = items.some(i => i.isLottery);
@@ -120,9 +117,24 @@ export default function TenderModal({
   const isPureCashOnlyCart = hasCashFloor &&
     (totals.grandTotal > 0 && Math.abs(cashMinFloorR - totals.grandTotal) < 0.01);
 
+  // ── Charge-account eligibility ────────────────────────────────────────────
+  // The 'charge' tender requires (a) a customer attached, (b) charge account
+  // enabled on that customer, and (c) at least some headroom under the
+  // balanceLimit. We surface the available room so the cashier can split
+  // (e.g. $80 charge + $20 cash when the limit is reached).
+  const customerBalance      = Number(customer?.balance || 0);
+  const customerBalanceLimit = Number(customer?.balanceLimit || 0);
+  const customerChargeOpen   = !!customer?.instoreChargeEnabled;
+  const customerChargeRoom   = customerChargeOpen
+    ? Math.max(0, Math.round((customerBalanceLimit - customerBalance) * 100) / 100)
+    : 0;
+  // When the limit is 0 we treat that as "unlimited" (matches back-office
+  // semantics: 0/blank limit field means no cap).
+  const chargeAllowed = customerChargeOpen && (customerBalanceLimit <= 0 || customerChargeRoom > 0.005);
+
   const allowedMethods = isPureCashOnlyCart
     ? METHODS.filter(m => m.id === 'cash')
-    : METHODS;
+    : METHODS.filter(m => m.id !== 'charge' || chargeAllowed);
   const cashier  = useAuthStore(s => s.cashier);
   const { isOnline, enqueue } = useSyncStore();
   const station  = useStationStore(s => s.station);
@@ -193,6 +205,10 @@ export default function TenderModal({
     ? Math.max(0, Math.round((cashMinFloorR - cashCommitted) * 100) / 100)
     : 0;
 
+  // Cap the charge amount at the customer's remaining limit so the cashier
+  // can't accidentally tender more than the account supports.
+  const chargeMaxFromLimit = customerBalanceLimit > 0 ? customerChargeRoom : Infinity;
+
   const canComplete = useMemo(() => {
     if (isRefundTx) return true;  // refund/bottle return: always completeable
     // 3f — enforce cash floor from lottery/fuel items before letting card
@@ -207,9 +223,15 @@ export default function TenderModal({
     }
     if (GIVES_CHANGE.includes(method)) return activeAmt >= remaining - 0.005;
     if (method === 'manual_ebt') return activeAmt > 0;
+    if (method === 'charge') {
+      if (!chargeAllowed) return false;
+      // Cashier may type a partial; default to full remaining when blank.
+      const want = activeAmt > 0 ? activeAmt : remaining;
+      return want > 0 && want <= chargeMaxFromLimit + 0.005;
+    }
     if (method === 'other') return activeAmt > 0;
     return false;
-  }, [isRefundTx, cashFloorShortfall, method, activeAmt, remaining, totalSplit, totals.grandTotal]);
+  }, [isRefundTx, cashFloorShortfall, method, activeAmt, remaining, totalSplit, totals.grandTotal, chargeAllowed, chargeMaxFromLimit]);
 
   const canAddSplit = HAS_AMOUNT.includes(method) && activeAmt > 0 && activeAmt < remaining - 0.005;
 
@@ -421,6 +443,15 @@ export default function TenderModal({
         line.provider = hasDejavoo ? 'dejavoo' : 'pax';
       }
       finalLines.push(line);
+    } else if (method === 'charge') {
+      // Charge defaults to full remaining when no explicit amount typed —
+      // matches the cash/card "tap and complete" UX. Cap at the customer's
+      // available limit so the backend won't 400 us.
+      const want = Math.min(
+        activeAmt > 0 ? activeAmt : remaining,
+        chargeMaxFromLimit,
+      );
+      finalLines.push({ method: 'charge', amount: Math.round(want * 100) / 100, ...(note ? { note } : {}) });
     } else if (activeAmt > 0) {
       finalLines.push({ method, amount: activeAmt, ...(note ? { note } : {}) });
     }

@@ -279,7 +279,20 @@ const findBestCompositeMatch = (invoiceItem, posProducts) => {
  * For items where we know the case cost but UPC/code didn't match.
  */
 const matchByCostProximity = (invoiceItem, posProducts) => {
-  const itemCost = invoiceItem.caseCost || invoiceItem.netCost;
+  // Session 39 Round 5 — prefer NET (post-discount) cost when available.
+  // Previously used raw caseCost which often holds Azure's GROSS-price read
+  // and made this tier pick the wrong catalog product on invoices with a
+  // separate DISC column (beer distributors, grocery distributors, etc.).
+  // Fall back chain:
+  //   1. explicit netCost
+  //   2. caseCost - discount (computed when only gross + disc are known)
+  //   3. caseCost (no discount info → assume gross IS the cost)
+  const explicitNet = Number(invoiceItem.netCost || 0);
+  const gross       = Number(invoiceItem.caseCost || 0);
+  const disc        = Number(invoiceItem.discount || 0);
+  const itemCost = explicitNet > 0 ? explicitNet
+    : (gross > 0 && disc > 0) ? Math.max(0, gross - disc)
+    : gross;
   if (!itemCost || itemCost <= 0) return null;
 
   let best = null;
@@ -391,28 +404,84 @@ Return JSON only:
 // ─── INDEX BUILDERS ───────────────────────────────────────────────────────────
 
 /**
+ * Parse a cell that may contain multiple vendor item codes separated by
+ * common delimiters. Examples:
+ *   "112107"                  → ["112107"]
+ *   "112107 / 144615 / 144620"→ ["112107", "144615", "144620"]
+ *   "A-123/B-456"             → ["a-123", "b-456"]   (dashes inside codes preserved)
+ *   "47-123,92-44"            → ["47-123", "92-44"]
+ *   ""  / null                → []
+ *
+ * Session 39 Round 5 — many real-world catalogs concatenate multiple
+ * distributor codes in one `itemCode` cell (different case sizes, old +
+ * new codes after a vendor restructure, etc.). Parsing this at the matching
+ * layer lets Tier 2 hit any of the codes without requiring store cleanup.
+ *
+ * Deliberate choices:
+ *   - Splits on  /  ,  ;  |  newline  and runs-of-2+-whitespace.
+ *   - Does NOT split on single space or dash — some codes legitimately
+ *     contain those (e.g. "47-123" as a hyphenated code).
+ */
+const parseItemCodeCell = (rawCell) => {
+  if (rawCell == null) return [];
+  const s = String(rawCell).trim();
+  if (!s) return [];
+  // Split on delimiters but preserve internal dashes/single-spaces
+  const tokens = s.split(/\s*[\/,;|]\s*|\n|\s{2,}/g);
+  return tokens
+    .map(t => t.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+/**
  * Build a vendor-scoped index of distributor itemCode → product.
  * Key format: `${vendorId}::${normalizedItemCode}` — prevents cross-vendor
  * collisions (Hershey's 2468231280 vs Jeremy's 27149 vs Coca-Cola 115583).
  *
  * Also builds an org-wide fallback index `*::${normalizedItemCode}` used as a
  * low-confidence fallback when the invoice has no resolved vendorId.
+ *
+ * Multi-code cells (e.g. "112107 / 144615 / 144620") are split into
+ * separate index entries so any one of them matches an incoming invoice.
  */
 const buildItemCodeIndex = (posProducts) => {
   const vendorScoped = new Map();
   const orgWide      = new Map();
   for (const p of posProducts) {
-    if (!p.itemCode) continue;
-    const code = String(p.itemCode).trim().toLowerCase();
-    if (!code) continue;
-    // Vendor-scoped (only if product has a vendor assigned)
-    if (p.vendorId) {
-      vendorScoped.set(`${p.vendorId}::${code}`, p);
+    const codes = parseItemCodeCell(p.itemCode);
+    if (codes.length === 0) continue;
+    for (const code of codes) {
+      // Vendor-scoped (only if product has a vendor assigned)
+      if (p.vendorId) {
+        const key = `${p.vendorId}::${code}`;
+        if (!vendorScoped.has(key)) vendorScoped.set(key, p);
+      }
+      // Org-wide fallback — first match wins
+      if (!orgWide.has(code)) orgWide.set(code, p);
     }
-    // Org-wide fallback — first match wins
-    if (!orgWide.has(code)) orgWide.set(code, p);
   }
   return { vendorScoped, orgWide };
+};
+
+/**
+ * Session 39 Round 5 — Merge learned VendorProductMap codes into the
+ * item-code index. Previously Tier 2 only consulted `MasterProduct.itemCode`,
+ * so a match learned on invoice #1 (written as a VendorProductMap row) only
+ * hit via the slower Tier 3 on invoice #2. Now every confirmed match on
+ * invoice #1 gives invoice #2 a zero-cost Tier 2 hit. Keeps multi-vendor
+ * products correct since VendorProductMap is already keyed by vendorId.
+ */
+const mergeVendorProductMapIntoItemCodeIndex = (index, vendorMaps, idIndex) => {
+  for (const vm of vendorMaps) {
+    if (!vm.vendorItemCode || !vm.vendorId || !vm.posProductId) continue;
+    const posProduct = idIndex.get(String(vm.posProductId));
+    if (!posProduct) continue; // product deleted since map was written
+    const codes = parseItemCodeCell(vm.vendorItemCode);
+    for (const code of codes) {
+      const key = `${vm.vendorId}::${code}`;
+      if (!index.vendorScoped.has(key)) index.vendorScoped.set(key, posProduct);
+    }
+  }
 };
 
 /**
@@ -450,10 +519,42 @@ const filterByVendor = (posProducts, vendorId) => {
 
 // ─── APPLY MATCH ──────────────────────────────────────────────────────────────
 
+// Session 39 Round 5 — compute a cost-change indicator between the invoice's
+// per-unit cost and the catalog's stored per-unit cost. Consumed by the
+// review UI to render a green ↓ / red ↑ / grey = / muted — badge per line.
+//
+// Returns { direction, pct, prevUnitCost, newUnitCost } or null when there
+// is no prior cost to compare against (first time this product is priced).
+//
+// Threshold: ±5% is treated as no material change. Anything outside that
+// is flagged so the store owner notices supplier price changes early.
+const COST_CHANGE_THRESHOLD = 0.05; // 5%
+const buildCostDelta = (posProduct, newUnitCost) => {
+  const prev = Number(posProduct.costPrice || 0);
+  const next = Number(newUnitCost || 0);
+  if (!next) return null;
+  if (!prev) return { direction: 'new', pct: null, prevUnitCost: null, newUnitCost: next };
+  const pct = (next - prev) / prev;
+  let direction = 'same';
+  if      (pct >  COST_CHANGE_THRESHOLD) direction = 'up';
+  else if (pct < -COST_CHANGE_THRESHOLD) direction = 'down';
+  return { direction, pct, prevUnitCost: prev, newUnitCost: next };
+};
+
 const applyMatch = (results, index, posProduct, tier, confidence) => {
   const item = results[index];
-  const caseCost = item.caseCost || item.netCost || 0;
+  // Session 39 Round 5 — use NET (post-discount) cost for unitCost math
+  // so the store's effective per-unit cost is accurate when the invoice
+  // has a discount column. Falls back to gross caseCost when no net is
+  // available. Matches the priority order in matchByCostProximity.
+  const explicitNet = Number(item.netCost || 0);
+  const gross       = Number(item.caseCost || 0);
+  const disc        = Number(item.discount || 0);
+  const caseCost = explicitNet > 0 ? explicitNet
+    : (gross > 0 && disc > 0) ? Math.max(0, gross - disc)
+    : gross || 0;
   const packSize = posProduct.pack || item.unitsPerPack || item.packUnits || 1;
+  const unitCost = caseCost / packSize;
 
   results[index] = {
     ...item,
@@ -464,9 +565,11 @@ const applyMatch = (results, index, posProduct, tier, confidence) => {
     description: posProduct.name,                        // override with POS canonical name
     suggestedRetailPrice: posProduct.retailPrice,
     packUnits: packSize,
-    unitCost: caseCost / packSize,
+    unitCost,
     depositAmount: posProduct.deposit || item.depositAmount,
     upc: posProduct.upc || item.upc,
+    // Session 39 Round 5 — cost change indicator for the review UI
+    costDelta: buildCostDelta(posProduct, unitCost),
     // Pre-populate POS metadata so the review UI shows correct dropdowns immediately
     departmentId: posProduct.departmentId != null ? String(posProduct.departmentId) : (item.departmentId || ''),
     vendorId:     posProduct.vendorId     != null ? String(posProduct.vendorId)     : (item.vendorId     || ''),
@@ -565,12 +668,20 @@ export const matchLineItems = async (lineItems, posProducts, vendorName, opts = 
     console.warn('⚠ Could not load vendor product map:', err.message);
   }
 
-  // Build a fast code-keyed lookup from the vendor map
-  const vendorMapByCode = new Map(
-    vendorMaps
-      .filter((m) => m.vendorItemCode)
-      .map((m) => [String(m.vendorItemCode).trim().toLowerCase(), m])
-  );
+  // Build a fast code-keyed lookup from the vendor map.
+  // Session 39 Round 5 — splits multi-code cells so each token is its own key.
+  const vendorMapByCode = new Map();
+  for (const m of vendorMaps) {
+    const codes = parseItemCodeCell(m.vendorItemCode);
+    for (const code of codes) {
+      if (!vendorMapByCode.has(code)) vendorMapByCode.set(code, m);
+    }
+  }
+
+  // Session 39 Round 5 — fold learned VendorProductMap codes into the
+  // Tier 2 index so invoice #2+ hits Tier 2 directly (zero AI / zero cost)
+  // instead of falling through to Tier 3.
+  mergeVendorProductMapIntoItemCodeIndex(itemCodeIdx, vendorMaps, idIndex);
 
   // Preserve original vendor fields before we overwrite description/upc with POS data
   const results = lineItems.map((item) => ({
@@ -601,37 +712,39 @@ export const matchLineItems = async (lineItems, posProducts, vendorName, opts = 
     // With a known vendorId this is near-perfect; without one we still try an
     // org-wide lookup but downgrade to medium confidence to avoid cross-vendor
     // collisions (e.g. "01328" could mean different things to two distributors).
+    // Session 39 Round 5 — also parses multi-code invoice cells ("112107 /
+    // 144615") so any token can match — usually just one but defensive.
     if (item.itemCode) {
-      const code = String(item.itemCode).trim().toLowerCase();
-      if (code) {
-        // Vendor-scoped exact match — highest confidence
+      const invoiceCodes = parseItemCodeCell(item.itemCode);
+      let tier2Hit = null;
+      for (const code of invoiceCodes) {
         if (vendorId) {
-          const vendorHit = itemCodeIdx.vendorScoped.get(`${vendorId}::${code}`);
-          if (vendorHit) {
-            applyMatch(results, i, vendorHit, 'itemCode', 'high');
-            continue;
-          }
+          const hit = itemCodeIdx.vendorScoped.get(`${vendorId}::${code}`);
+          if (hit) { tier2Hit = { product: hit, conf: 'high' }; break; }
+        } else {
+          const hit = itemCodeIdx.orgWide.get(code);
+          if (hit) { tier2Hit = { product: hit, conf: 'medium' }; break; }
         }
-        // Org-wide fallback — only when vendorId is unknown (safer to leave
-        // unmatched when vendorId IS known but scoped lookup missed)
-        if (!vendorId) {
-          const orgHit = itemCodeIdx.orgWide.get(code);
-          if (orgHit) {
-            applyMatch(results, i, orgHit, 'itemCode', 'medium');
-            continue;
-          }
-        }
+      }
+      if (tier2Hit) {
+        applyMatch(results, i, tier2Hit.product, 'itemCode', tier2Hit.conf);
+        continue;
       }
     }
 
     // ── Tier 3a: Learned vendor map — by item code ───────────────────────────
+    // Session 39 Round 5 — tries each token from a multi-code invoice cell.
     if (item.itemCode) {
-      const key = String(item.itemCode).trim().toLowerCase();
-      const vm = vendorMapByCode.get(key);
-      if (vm) {
-        const posProduct = idIndex.get(vm.posProductId);
+      const invoiceCodes = parseItemCodeCell(item.itemCode);
+      let vmHit = null;
+      for (const code of invoiceCodes) {
+        const vm = vendorMapByCode.get(code);
+        if (vm) { vmHit = vm; break; }
+      }
+      if (vmHit) {
+        const posProduct = idIndex.get(vmHit.posProductId);
         if (posProduct) {
-          const conf = (vm.confirmedCount || 0) >= 2 ? 'high' : 'medium';
+          const conf = (vmHit.confirmedCount || 0) >= 2 ? 'high' : 'medium';
           applyMatch(results, i, posProduct, 'vendorMap', conf);
           continue;
         }
