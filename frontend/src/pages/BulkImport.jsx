@@ -17,6 +17,7 @@ import {
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
+import { useImportScopeModules } from '../hooks/useStoreModules';
 import { previewImport, commitImport, downloadImportTemplate, getImportHistory, getCatalogDepartments, getCatalogVendors, listVendorTemplates } from '../services/api';
 import './BulkImport.css';
 
@@ -46,8 +47,7 @@ const FIELD_DESCRIPTIONS = {
   // ── Identifiers ──
   upc:                { desc: 'Barcode scanned at the register — one per product',                    example: '0081100110012' },
   plu:                { desc: 'Produce/scale lookup number (4–5 digits)',                              example: '4011, 94011' },
-  sku:                { desc: 'Your internal stock-keeping number',                                   example: 'BEV-001' },
-  itemCode:           { desc: 'Distributor / vendor item number for reordering',                      example: '84483, 111398' },
+  itemCode:           { desc: 'Distributor / vendor item number for reordering. When a Vendor is also mapped on the same row, this populates a per-vendor mapping (one product can have different item codes for different vendors). The first import per product auto-flags that vendor as primary; manual override available on the product page.', example: '84483, 111398' },
 
   // ── Product display ──
   name:               { desc: 'Full product name shown to cashier and customer',                      example: '19 CRIME AMERIKAZ RED 750 ML' },
@@ -66,7 +66,9 @@ const FIELD_DESCRIPTIONS = {
   // ── Classification ──
   departmentId:       { desc: 'Department name or numeric ID. Enable "Auto-create" to add missing',   example: 'Wine, Beer, Liquor, 7' },
   vendorId:           { desc: 'Vendor / distributor name or ID. Enable "Auto-create" to add missing', example: 'MARTIGNETTI, ABACUS, 12' },
-  taxClass:           { desc: 'Tax class — matches your store Tax Rules by rate or name',              example: '6.25%, grocery, alcohol, standard' },
+  // Session 40 Phase 1 (strict-FK migration)
+  taxRuleName:        { desc: 'Preferred — name of a Tax Rule from your store\'s Tax Rules page. Resolved to an exact FK at import so rule renames and rate changes stay correct automatically.', example: '"Liquor 7%", "Maine Food", "Alcohol Excise"' },
+  taxClass:           { desc: '(legacy) Free-text tax class string. Kept for backward compat; use Tax Rule Name instead for new imports.', example: '6.25%, grocery, alcohol, standard' },
 
   // ── Pricing ──
   defaultCostPrice:   { desc: 'Your cost per ONE individual unit (not per case)',                      example: '8.67, 0.65' },
@@ -90,10 +92,10 @@ const FIELD_DESCRIPTIONS = {
   depositPerUnit:     { desc: 'Bottle / container deposit per individual unit (dollar amount)',        example: '0.05, 0.10, 0.15' },
   caseDeposit:        { desc: 'Total bottle deposit for one full case',                                example: '0.60, 1.20, 2.40' },
 
-  // ── Linked UPC ──
-  linkedUpc:          { desc: 'Case barcode or secondary UPC that links to this product',              example: '50081100110010' },
   // ── Multi-UPC + multi-pack (Session 3) ──
-  additionalUpcs:     { desc: 'Extra barcodes for the same product. Use | to combine in one cell, OR map this field on multiple CSV columns (Pack 1 UPC, Pack 2 UPC, …) — the importer merges them.', example: '0801091234574|0801091234581' },
+  // (linkedUpc removed — legacy aliases like `caseupc`, `altbarcode` now route
+  //  into additionalUpcs so old CSVs still import without a mapping change.)
+  additionalUpcs:     { desc: 'Extra barcodes for the same product. Use | to combine in one cell, OR map this field on multiple CSV columns (Pack 1 UPC, Pack 2 UPC, …) — the importer merges them. Legacy "Case UPC" / "Linked UPC" columns also map here.', example: '0801091234574|0801091234581' },
   packOptions:        { desc: 'Multiple pack sizes for one product (cashier picker). Format: label@units@price[*] separated by ; — * marks the default.', example: 'Single@1@1.99;6-Pack@6@9.99*;Case@24@32.00' },
 
   // ── Grocery / Scale ──
@@ -110,9 +112,15 @@ const FIELD_DESCRIPTIONS = {
   labelFormatId:      { desc: 'Label format ID for shelf-edge / scale label printing',                 example: '1, 3' },
   byWeight:           { desc: 'Product is sold by weight on a scale',                                  example: 'true, false' },
 
-  // ── Inventory tracking + physical weight ──
+  // ── Inventory tracking ──
   trackInventory:     { desc: 'Deduct stock from on-hand inventory on every sale',                     example: 'true, false' },
-  weight:             { desc: 'Physical product weight in pounds (used for shipping)',                 example: '3.33, 0.5' },
+
+  // ── Shipping package (E-Commerce) ──
+  // `weight` is ship weight in lbs — used by ecom rate quotes + carrier labels.
+  weight:             { desc: 'Ship weight in pounds (used by ecom rate quotes and shipping labels)',  example: '3.33, 0.5' },
+  shipLengthIn:       { desc: 'Package length in inches (longest dimension)',                          example: '8.5, 12' },
+  shipWidthIn:        { desc: 'Package width in inches',                                               example: '4.0, 6.5' },
+  shipHeightIn:       { desc: 'Package height in inches',                                              example: '2.25, 3' },
 
   // ── E-commerce ──
   hideFromEcom:       { desc: 'Hide this product from the online storefront',                          example: 'true, false' },
@@ -122,7 +130,6 @@ const FIELD_DESCRIPTIONS = {
   ecomSalePrice:      { desc: 'Online sale price',                                                     example: '9.99' },
   ecomOnSale:         { desc: 'Whether the product is currently on sale online',                       example: 'true, false' },
   ecomDescription:    { desc: 'Product description for the online storefront',                         example: 'Premium red wine blend' },
-  ecomSummary:        { desc: 'Short summary for product cards on the storefront',                     example: 'Bold, fruity red blend' },
 
   // ── Promotions / Sale pricing ──
   specialPrice:       { desc: 'Promotional sale retail price',                                         example: '9.99, 7.99' },
@@ -178,7 +185,7 @@ const FIELD_DESCRIPTIONS = {
 };
 
 const FIELD_LABELS = {
-  upc: 'UPC / Barcode', plu: 'PLU', sku: 'SKU', itemCode: 'Distributor Item #',
+  upc: 'UPC / Barcode', plu: 'PLU', itemCode: 'Distributor Item #',
   name: 'Product Name', brand: 'Brand', description: 'Description (long)',
   size: 'Size (750, 12)', sizeUnit: 'Size Unit (ml, oz)',
   // Pack fields — names users actually recognize on supplier CSVs
@@ -192,7 +199,10 @@ const FIELD_LABELS = {
   defaultCostPrice:   'Unit Cost — what YOU pay per item',
   defaultRetailPrice: 'Retail Price — what customer pays per item',
   defaultCasePrice:   'Case Cost — what YOU pay per full case',
-  taxClass: 'Tax Class', ageRequired: 'Age Required', ebtEligible: 'EBT Eligible',
+  // Strict-FK tax (preferred) + legacy string fallback (marked legacy so users default to the FK path)
+  taxRuleName: 'Tax Rule Name',
+  taxClass: '(legacy) Tax Class',
+  ageRequired: 'Age Required', ebtEligible: 'EBT Eligible',
   discountEligible: 'Discount Eligible', taxable: 'Taxable', active: 'Active',
   reorderPoint: 'Reorder Point', reorderQty: 'Reorder Qty',
   // Grocery / Scale
@@ -200,15 +210,18 @@ const FIELD_LABELS = {
   scalePluType: 'Scale PLU Type', ingredients: 'Ingredients', nutritionFacts: 'Nutrition Facts',
   certCode: 'Certification', sectionId: 'Section ID', sectionName: 'Section Name',
   expirationDate: 'Expiration Date', labelFormatId: 'Label Format', byWeight: 'Sold by Weight',
-  // Inventory tracking + physical weight
-  trackInventory: 'Track Inventory', weight: 'Product Weight (lbs)',
+  // Inventory tracking (physical fields moved to Shipping below)
+  trackInventory: 'Track Inventory',
+  // Shipping package (E-Commerce group)
+  weight: 'Ship Weight (lbs)',
+  shipLengthIn: 'Length (in)', shipWidthIn: 'Width (in)', shipHeightIn: 'Height (in)',
   // Image
   imageUrl: 'Product Image URL',
   // E-commerce
   hideFromEcom: 'Hide from E-Commerce', ecomExternalId: 'E-Commerce ID',
   ecomPackWeight: 'E-Commerce Pack Weight', ecomPrice: 'E-Commerce Price',
   ecomSalePrice: 'E-Commerce Sale Price', ecomOnSale: 'E-Commerce On Sale',
-  ecomDescription: 'E-Commerce Description', ecomSummary: 'E-Commerce Summary',
+  ecomDescription: 'E-Commerce Description',
   // Promotions / Pricing
   specialPrice: 'Sale Price', specialCost: 'Sale Cost', priceMethod: 'Price Method',
   groupPrice: 'Group Price', groupQty: 'Group Quantity',
@@ -227,7 +240,7 @@ const FIELD_LABELS = {
   additionalUpcs: 'Additional UPCs (alternates)',
   packOptions:    'Pack Options (multi-SKU picker)',
   // Stock & Linked
-  quantityOnHand: 'Qty on Hand', linkedUpc: 'Linked/Case UPC',
+  quantityOnHand: 'Qty on Hand',
   // Other
   id: 'ID (update)', code: 'Code', color: 'Color',
   sortOrder: 'Sort Order', showInPOS: 'Show in POS', bottleDeposit: 'Bottle Deposit',
@@ -258,13 +271,20 @@ const FIELD_LABELS = {
 const TYPE_FIELDS = {
   products: [
     { group: 'Identifiers', fields: [
-      'upc','sku','itemCode','plu',
+      // `sku` removed — internal-only column, not user-mappable from CSV
+      'upc','itemCode','plu',
     ]},
     { group: 'Product Display', fields: [
       'name','brand','description','size','sizeUnit','imageUrl',
     ]},
     { group: 'Classification', fields: [
-      'departmentId','vendorId','taxClass',
+      // Session 40 Phase 2 — `taxRuleName` is the only manually-pickable tax
+      // field in the dropdown now. Legacy `taxClass` aliases (taxclass /
+      // taxtype / taxcategory / etc.) still route to the backend via the
+      // ALIASES table in importService.js, so old CSVs still import via
+      // auto-detect without re-mapping — it's just not available as a manual
+      // pick in this UI anymore (users should use Tax Rule Name).
+      'departmentId','vendorId','taxRuleName',
     ]},
     { group: 'Pack Configuration', fields: [
       'unitPack','packInCase','pack',
@@ -279,7 +299,8 @@ const TYPE_FIELDS = {
       'ebtEligible','ageRequired','discountEligible','taxable','active','wicEligible',
     ]},
     { group: 'Inventory', fields: [
-      'trackInventory','reorderPoint','reorderQty','quantityOnHand','weight',
+      // `weight` moved → E-Commerce group (it's ship weight, not stock weight).
+      'trackInventory','reorderPoint','reorderQty','quantityOnHand',
     ]},
     { group: 'Container Deposits', fields: [
       'depositPerUnit','caseDeposit',
@@ -287,8 +308,8 @@ const TYPE_FIELDS = {
     { group: 'Alt Barcodes & Pack Options', fields: [
       // additionalUpcs → ProductUpc rows (multi-source: one field, several cols)
       // packOptions    → ProductPackSize rows (cashier pack-size picker)
-      // linkedUpc      → single alternate ProductUpc row
-      'additionalUpcs','packOptions','linkedUpc',
+      // (linkedUpc removed — legacy aliases now merge into additionalUpcs)
+      'additionalUpcs','packOptions',
     ]},
     { group: 'Grocery / Scale', fields: [
       'byWeight','scaleByCount','tareWeight','scalePluType','ingredients','nutritionFacts',
@@ -296,7 +317,12 @@ const TYPE_FIELDS = {
     ]},
     { group: 'E-Commerce', fields: [
       'hideFromEcom','ecomPrice','ecomSalePrice','ecomOnSale','ecomPackWeight',
-      'ecomExternalId','ecomDescription','ecomSummary',
+      'ecomExternalId','ecomDescription',
+      // (ecomSummary removed — redundant with ecomDescription; legacy
+      //  `ecomsummary` CSV headers now route into ecomDescription.)
+      // Shipping package (ship weight + 3 dimensions). Moved `weight` in from
+      // Inventory group — it was never stock weight, always shipping weight.
+      'weight','shipLengthIn','shipWidthIn','shipHeightIn',
     ]},
     // These three groups don't populate MasterProduct — they stage into a
     // Promotion row linked to the product. Useful when a vendor CSV carries
@@ -590,12 +616,53 @@ function DropZone({ file, onFile, onClear }) {
 // an array and the backend merges the values with '|' at import time.
 const MULTI_SOURCE_FIELDS = new Set(['additionalUpcs']);
 
-function MappingTable({ importType, allHeaders, mapping, autoDetected, onChange, sampleRows }) {
+// Module-gated fields — drop from the dropdown entirely unless the target
+// store(s) have the required module enabled. Keys are field names; values
+// are module flag keys from useImportScopeModules.
+//
+// Grocery module gates PLU + every scale / ingredient / aisle field. The
+// ProductForm already hides the entire Grocery & Scale section when grocery
+// is disabled; this keeps the import dropdown consistent with that.
+const MODULE_GATED_FIELDS = {
+  plu:            'grocery',  // produce / scale lookup
+  byWeight:       'grocery',  // sold on scale
+  scaleByCount:   'grocery',  // scale item sold by count
+  tareWeight:     'grocery',  // container tare weight
+  scalePluType:   'grocery',  // random-weight / fixed PLU behavior
+  ingredients:    'grocery',  // for scale labels
+  nutritionFacts: 'grocery',  // for scale labels
+  certCode:       'grocery',  // organic / kosher certification
+  sectionId:      'grocery',  // aisle / subcategory ID
+  sectionName:    'grocery',  // aisle / subcategory name
+  expirationDate: 'grocery',  // perishable expiration
+  labelFormatId:  'grocery',  // shelf-edge / scale label layout
+  wicEligible:    'grocery',  // WIC program eligibility (US grocery)
+};
+
+function MappingTable({ importType, allHeaders, mapping, autoDetected, onChange, sampleRows, moduleFlags }) {
   const [showPreview, setShowPreview] = useState(false);
+  // Apply module gates to the raw TYPE_FIELDS shape. For grouped entries
+  // (Products) we filter each group's `fields` array; for flat entries
+  // (departments/vendors/promotions/deposits/invoice_costs) we filter the
+  // whole list. Anything not in MODULE_GATED_FIELDS always stays visible.
+  const gatedRawFields = React.useMemo(() => {
+    const raw = TYPE_FIELDS[importType] || [];
+    const keep = (field) => {
+      const needed = MODULE_GATED_FIELDS[field];
+      if (!needed) return true;
+      return moduleFlags?.[needed] === true;
+    };
+    if (raw.length > 0 && typeof raw[0] === 'object' && 'fields' in raw[0]) {
+      return raw.map(grp => ({ ...grp, fields: grp.fields.filter(keep) }))
+                .filter(grp => grp.fields.length > 0);
+    }
+    return raw.filter(keep);
+  }, [importType, moduleFlags]);
+
   // `rawFields` may be flat string[] (departments/vendors/promotions/deposits/
   // invoice_costs) or grouped [{group, fields}, ...] (products). `flatFields`
   // is always a flat string[] for code that needs to iterate every option.
-  const rawFields  = TYPE_FIELDS[importType] || [];
+  const rawFields  = gatedRawFields;
   const grouped    = isGroupedTypeFields(rawFields);
   const flatFields = flattenTypeFields(rawFields);
   const required   = REQUIRED_FIELDS[importType] || [];
@@ -1012,6 +1079,10 @@ export default function BulkImport() {
   const [step,                  setStep]                  = useState(1);
   const [importType,            setImportType]            = useState('products');
   const [storeScope,            setStoreScope]            = useState('active');
+  // Scope-aware module flags — when storeScope changes, this refetches the
+  // correct union of enabled modules so the mapping dropdown can filter
+  // module-gated fields like `plu` (grocery-only).
+  const { modules: scopeModules } = useImportScopeModules(storeScope);
   const [file,                  setFile]                  = useState(null);
   const [duplicateStrategy,     setDuplicateStrategy]     = useState('overwrite');
   const [unknownDeptStrategy,   setUnknownDeptStrategy]   = useState('skip');
@@ -1023,6 +1094,25 @@ export default function BulkImport() {
   const [preview,           setPreview]           = useState(null);
   const [mapping,           setMapping]           = useState({});
   const [autoDetected,      setAutoDetected]      = useState({});
+
+  // When scope-module flags change (e.g. user switches the target store or
+  // toggles grocery on a different store), strip any now-disabled gated
+  // fields out of the mapping — prevents silent imports of PLU / scale /
+  // grocery fields when the module isn't enabled on the target.
+  // Uses MODULE_GATED_FIELDS declared above to stay in sync with the dropdown.
+  useEffect(() => {
+    setMapping(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [field, needed] of Object.entries(MODULE_GATED_FIELDS)) {
+        if (next[field] && !scopeModules?.[needed]) {
+          delete next[field];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [scopeModules]);
   // Headers the user has manually touched — these are PINNED and will never
   // be overwritten by auto-detect on subsequent preview re-runs. This fixes
   // the "auto-mapping overrides my manual choice" bug.
@@ -1435,7 +1525,7 @@ export default function BulkImport() {
                   </button>
                 </div>
 
-                <MappingTable importType={importType} allHeaders={allHeaders} mapping={mapping} autoDetected={autoDetected} onChange={handleMappingChange} sampleRows={preview?.sample} />
+                <MappingTable importType={importType} allHeaders={allHeaders} mapping={mapping} autoDetected={autoDetected} onChange={handleMappingChange} sampleRows={preview?.sample} moduleFlags={scopeModules} />
 
                 {loading && (
                   <div className="bi-loading-row">

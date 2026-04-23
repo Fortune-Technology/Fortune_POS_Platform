@@ -22,6 +22,8 @@ import {
   getCatalogDepartments, createCatalogDepartment, updateCatalogDepartment, deleteCatalogDepartment,
   getDepartmentAttributes,
   getCatalogVendors, createCatalogVendor, updateCatalogVendor, deleteCatalogVendor,
+  // Session 40 — per-vendor item code / cost mappings
+  getProductVendors, createProductVendor, updateProductVendor, deleteProductVendor, makeProductVendorPrimary,
   upsertStoreInventory, getStoreInventory,
   getCatalogPromotions, createCatalogPromotion, updateCatalogPromotion, deleteCatalogPromotion,
   getProductUpcs, addProductUpc, deleteProductUpc,
@@ -146,12 +148,36 @@ function DeptManager({ departments, onClose, onRefresh }) {
   };
 
   const del = async (id) => {
-    if (!window.confirm('Delete department?')) return;
+    if (!window.confirm('Delete this department?')) return;
     try {
       await deleteCatalogDepartment(id);
       setList(l => l.filter(d => d.id !== id));
       onRefresh();
-    } catch (e) { toast.error(e.response?.data?.error || 'Delete failed'); }
+    } catch (e) {
+      const resp = e.response?.data;
+      // Backend returns 409 IN_USE when products still reference this dept.
+      // Offer the user an explicit opt-in cascade rather than silently
+      // detaching (or leaving stranded assignments that blank out on edit).
+      if (resp?.code === 'IN_USE') {
+        const confirmForce = window.confirm(
+          `${resp.error}\n\n` +
+          `Click OK to clear the department on ${resp.usageCount} product(s) and deactivate the department.\n` +
+          `Click Cancel to leave everything as-is and reassign the products first.`
+        );
+        if (confirmForce) {
+          try {
+            const r = await deleteCatalogDepartment(id, { force: true });
+            setList(l => l.filter(d => d.id !== id));
+            toast.success(r.message || 'Department deactivated');
+            onRefresh();
+          } catch (e2) {
+            toast.error(e2.response?.data?.error || 'Delete failed');
+          }
+        }
+      } else {
+        toast.error(resp?.error || 'Delete failed');
+      }
+    }
   };
 
   return (
@@ -262,8 +288,16 @@ function VendorManager({ vendors, onClose, onRefresh }) {
   const startEdit = (v) => {
     setEditing(v.id || 'new');
     setVendorErrors({});
-    setForm({ name:v.name??'', code:v.code??'', contactName:v.contactName??'',
-      email:v.email??'', phone:v.phone??'', terms:v.terms??'', accountNo:v.accountNo??'', active:v.active??true });
+    // `aliases` stored as a comma-separated string in the form for easy
+    // editing; serialized back to an array on save. Used by invoice OCR
+    // to match variants like "ABACUS DIST" / "Abacus Distributing Inc" /
+    // "Abacus Dist." to the same vendor row.
+    setForm({
+      name:v.name??'', code:v.code??'', contactName:v.contactName??'',
+      email:v.email??'', phone:v.phone??'', terms:v.terms??'', accountNo:v.accountNo??'',
+      aliasesText: Array.isArray(v.aliases) ? v.aliases.join(', ') : '',
+      active:v.active??true,
+    });
   };
 
   const save = async () => {
@@ -282,9 +316,26 @@ function VendorManager({ vendors, onClose, onRefresh }) {
     setVendorErrors({});
     setSaving(true);
     try {
+      // Serialize aliasesText (comma-separated) → aliases[] (the backend's
+      // canonical shape). Blank entries are dropped; whitespace trimmed;
+      // order preserved; duplicates removed case-insensitively.
+      const seen = new Set();
+      const aliasList = (form.aliasesText || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => {
+          if (!s) return false;
+          const k = s.toLowerCase();
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+      const { aliasesText, ...rest } = form;
+      const payload = { ...rest, aliases: aliasList };
+
       const res = editing === 'new'
-        ? await createCatalogVendor(form)
-        : await updateCatalogVendor(editing, form);
+        ? await createCatalogVendor(payload)
+        : await updateCatalogVendor(editing, payload);
       if (editing === 'new') setList(l => [...l, res]);
       else setList(l => l.map(v => v.id===editing ? res : v));
       toast.success(editing==='new'?'Vendor added':'Updated');
@@ -294,12 +345,34 @@ function VendorManager({ vendors, onClose, onRefresh }) {
   };
 
   const del = async (id) => {
-    if (!window.confirm('Delete vendor?')) return;
+    if (!window.confirm('Delete this vendor?')) return;
     try {
       await deleteCatalogVendor(id);
       setList(l => l.filter(v => v.id!==id));
       onRefresh();
-    } catch (e) { toast.error(e.response?.data?.error||'Delete failed'); }
+    } catch (e) {
+      const resp = e.response?.data;
+      // Backend returns 409 IN_USE when products still reference this vendor.
+      if (resp?.code === 'IN_USE') {
+        const confirmForce = window.confirm(
+          `${resp.error}\n\n` +
+          `Click OK to clear the vendor on ${resp.usageCount} product(s) and deactivate the vendor.\n` +
+          `Click Cancel to leave everything as-is and reassign the products first.`
+        );
+        if (confirmForce) {
+          try {
+            const r = await deleteCatalogVendor(id, { force: true });
+            setList(l => l.filter(v => v.id !== id));
+            toast.success(r.message || 'Vendor deactivated');
+            onRefresh();
+          } catch (e2) {
+            toast.error(e2.response?.data?.error || 'Delete failed');
+          }
+        }
+      } else {
+        toast.error(resp?.error || 'Delete failed');
+      }
+    }
   };
 
   return (
@@ -375,6 +448,24 @@ function VendorManager({ vendors, onClose, onRefresh }) {
                         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
                     </div>
                   ))}
+                  {/* Aliases — critical for invoice OCR matching.
+                      Any variant of the vendor's name the OCR might see
+                      (misspellings, old legal names, abbreviations, reseller
+                      aliases). Comma-separated in the UI; stored as String[]. */}
+                  <div className="pf-mm-field--full">
+                    <label className="pf-label">
+                      Aliases
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>
+                        comma-separated — used by invoice OCR to match variants
+                      </span>
+                    </label>
+                    <input
+                      className="form-input pf-mm-input"
+                      placeholder="e.g. Abacus Dist, Abacus Distributing Inc, ABACUS DIST."
+                      value={form.aliasesText ?? ''}
+                      onChange={e => setForm(f => ({ ...f, aliasesText: e.target.value }))}
+                    />
+                  </div>
                 </div>
                 <div className="pf-mm-section">
                   <div className="pf-label">Active</div>
@@ -685,6 +776,18 @@ export default function ProductForm() {
   const [newUpcLabel, setNewUpcLabel] = useState('');
   const [upcSaving,   setUpcSaving]   = useState(false);
 
+  // ── Per-vendor mappings (Session 40) ────────────────────────────────────
+  // vendorMappings = [{ id, vendorId, vendor, vendorItemCode, priceCost, caseCost, packInCase, isPrimary, lastReceivedAt }, ...]
+  // Primary first. Manual primary toggle + auto-primary-on-first-invoice on
+  // the backend. `vendorMappings` is the source of truth — form.vendorId/
+  // itemCode are kept as mirrors from the primary for legacy readers.
+  const [vendorMappings, setVendorMappings] = useState([]);
+  const [addingVendor,   setAddingVendor]   = useState(false);  // toggles inline add-row
+  const [newVendor,      setNewVendor]      = useState({ vendorId: '', vendorItemCode: '', priceCost: '' });
+  const [editingMapId,   setEditingMapId]   = useState(null);   // id of mapping currently being edited
+  const [editMap,        setEditMap]        = useState({});
+  const [mapSaving,      setMapSaving]      = useState(false);
+
   // ── Deals ─────────────────────────────────────────────────────────────────────
   const [deals,       setDeals]       = useState([]);
   const [dealForm,    setDealForm]    = useState(null);
@@ -702,22 +805,33 @@ export default function ProductForm() {
     name: '', brand: '', upc: '', description: '',
     productGroupId: '', imageUrl: '',
     departmentId: '', vendorId: '', itemCode: '',
+    // Session 40 Phase 1 — strict-FK tax linkage. `taxRuleId` wins if set;
+    // `taxClass` stays as the legacy fallback string for products that
+    // haven't been migrated yet (and for older cashier-app builds).
+    taxRuleId: '',
     taxClass: 'grocery', taxable: true,
     defaultCasePrice: '', defaultCostPrice: '', defaultRetailPrice: '',
     ebtEligible: false, ageRequired: '', discountEligible: true,
     byWeight: false, byUnit: true, active: true,
     size: '', sizeUnit: 'oz',
-    // Grocery / Scale
+    // Grocery / Scale (plu gated on store.pos.groceryEnabled)
+    plu: '',
     wicEligible: false, tareWeight: '', scaleByCount: false,
     scalePluType: '', ingredients: '', nutritionFacts: '',
     certCode: '', labelFormatId: '',
     // Deposits
     depositPerUnit: '', caseDeposit: '',
-    // E-commerce extended
+    // E-commerce extended (ecomSummary field removed — merged into ecomDescription)
     ecomExternalId: '', ecomPackWeight: '',
-    ecomPrice: '', ecomSalePrice: '', ecomOnSale: false, ecomSummary: '',
+    ecomPrice: '', ecomSalePrice: '', ecomOnSale: false,
+    ecomDescription: '',
+    // Shipping package dimensions (imperial: lbs + inches). Ship weight
+    // replaces the old "physical weight" field (same column, clearer label).
+    weight: '',
+    shipLengthIn: '', shipWidthIn: '', shipHeightIn: '',
     // Inventory
     reorderPoint: '', reorderQty: '',
+    trackInventory: true,
     // Session 4 — department-scoped + freeform attributes bucket
     attributes: {},
   };
@@ -766,11 +880,12 @@ export default function ProductForm() {
     if (!isEdit) return;
     (async () => {
       try {
-        const [res, promoRes, upcRes, sizeRes] = await Promise.all([
+        const [res, promoRes, upcRes, sizeRes, vMapRes] = await Promise.all([
           getCatalogProduct(id),
           getCatalogPromotions({ masterProductId: id }).catch(() => null),
           getProductUpcs(id).catch(() => ({ data: [] })),
           getProductPackSizes(id).catch(() => ({ data: [] })),
+          getProductVendors(id).catch(() => ({ data: [] })),
         ]);
         const p = res?.data || res;
         setForm({
@@ -783,6 +898,8 @@ export default function ProductForm() {
           departmentId:       p.departmentId      ?? '',
           vendorId:           p.vendorId          ?? '',
           itemCode:           p.itemCode          ?? '',
+          // Strict-FK tax linkage — load both so stale-rule warnings work
+          taxRuleId:          p.taxRuleId != null ? String(p.taxRuleId) : '',
           taxClass:           p.taxClass          ?? 'grocery',
           taxable:            p.taxable           ?? true,
           defaultCasePrice:   p.defaultCasePrice  != null ? Number(p.defaultCasePrice).toFixed(2)   : '',
@@ -796,7 +913,8 @@ export default function ProductForm() {
           active:             p.active            ?? true,
           size:               p.size              ?? '',
           sizeUnit:           p.sizeUnit          ?? 'oz',
-          // Grocery / Scale
+          // Grocery / Scale (plu gated on store.pos.groceryEnabled)
+          plu:                p.plu                ?? '',
           wicEligible:        p.wicEligible       ?? false,
           tareWeight:         p.tareWeight != null ? String(p.tareWeight) : '',
           scaleByCount:       p.scaleByCount      ?? false,
@@ -814,10 +932,18 @@ export default function ProductForm() {
           ecomPrice:          p.ecomPrice != null ? String(p.ecomPrice) : '',
           ecomSalePrice:      p.ecomSalePrice != null ? String(p.ecomSalePrice) : '',
           ecomOnSale:         p.ecomOnSale         ?? false,
-          ecomSummary:        p.ecomSummary        ?? '',
+          // ecomSummary no longer editable in the form; column still read/written
+          // by API callers but we don't expose an input.
+          ecomDescription:    p.ecomDescription    ?? '',
+          // Shipping package (imperial: lbs + inches)
+          weight:             p.weight != null ? String(p.weight) : '',
+          shipLengthIn:       p.shipLengthIn != null ? String(p.shipLengthIn) : '',
+          shipWidthIn:        p.shipWidthIn  != null ? String(p.shipWidthIn)  : '',
+          shipHeightIn:       p.shipHeightIn != null ? String(p.shipHeightIn) : '',
           // Inventory
           reorderPoint:       p.reorderPoint != null ? String(p.reorderPoint) : '',
           reorderQty:         p.reorderQty != null ? String(p.reorderQty) : '',
+          trackInventory:     p.trackInventory ?? true,
           // Session 4 attributes bucket (keeps all typed + unknown values)
           attributes:         (p.attributes && typeof p.attributes === 'object') ? p.attributes : {},
         });
@@ -829,6 +955,7 @@ export default function ProductForm() {
         if (p.reorderQty != null) setReorderQty(String(p.reorderQty));
 
         setUpcs(upcRes?.data ?? []);
+        setVendorMappings(vMapRes?.data ?? []);
 
         const sizes = sizeRes?.data ?? [];
         if (sizes.length > 0) {
@@ -980,12 +1107,18 @@ export default function ProductForm() {
 
   // ── Derived pricing ──────────────────────────────────────────────────────────
   const caseCostVal  = parseFloat(form.defaultCasePrice)   || null;
+  // Form's unit cost is authoritative (auto-filled from Case Cost OR manually
+  // edited); fall back to computed value only if neither side is set yet.
+  const unitCostFromForm = parseFloat(form.defaultCostPrice) || null;
   const retailVal    = parseFloat(form.defaultRetailPrice) || null;
 
-  // Unit cost: always derived from Case Cost ÷ Packs or Case Size ÷ Unit-Pack
+  // Unit cost: prefer the form value (auto-synced bidirectionally with Case
+  // Cost via the onChange handlers in the Pricing section). Fall back to the
+  // pure derivation from Case Cost ÷ pack math only if the form field is
+  // blank — e.g. when someone enters a case cost but pack math isn't ready.
   const ppcVal       = parseFloat(defaultPacksPerCase) || null;
   const upVal        = parseFloat(defaultUnitPack)     || 1;
-  const unitCostVal  = caseCostVal && ppcVal ? caseCostVal / ppcVal / upVal : null;
+  const unitCostVal  = unitCostFromForm ?? (caseCostVal && ppcVal ? caseCostVal / ppcVal / upVal : null);
 
   const margin       = calcMargin(unitCostVal, retailVal);
   const mColor       = marginColor(margin);
@@ -1106,6 +1239,78 @@ export default function ProductForm() {
     } catch { toast.error('Failed to remove UPC'); }
   };
 
+  // ── Per-vendor mapping handlers (Session 40) ───────────────────────────────
+  const handleAddVendorMapping = async () => {
+    if (!isEdit) { toast.error('Save the product first before adding vendor mappings'); return; }
+    if (!newVendor.vendorId) { toast.error('Pick a vendor'); return; }
+    setMapSaving(true);
+    try {
+      const r = await createProductVendor(id, {
+        vendorId:       parseInt(newVendor.vendorId),
+        vendorItemCode: newVendor.vendorItemCode.trim() || null,
+        priceCost:      newVendor.priceCost !== '' ? parseFloat(newVendor.priceCost) : null,
+      });
+      const row = r?.data || r;
+      setVendorMappings(list => {
+        const next = [...list, row];
+        // Re-sort: primary first, then most-recent
+        return next.sort((a, b) =>
+          (Number(b.isPrimary) - Number(a.isPrimary)) ||
+          (new Date(b.lastReceivedAt || b.createdAt) - new Date(a.lastReceivedAt || a.createdAt))
+        );
+      });
+      setNewVendor({ vendorId: '', vendorItemCode: '', priceCost: '' });
+      setAddingVendor(false);
+      toast.success('Vendor mapping added');
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to add vendor mapping');
+    } finally { setMapSaving(false); }
+  };
+
+  const handleSaveVendorMapping = async () => {
+    if (!editingMapId) return;
+    setMapSaving(true);
+    try {
+      const r = await updateProductVendor(id, editingMapId, {
+        vendorItemCode: editMap.vendorItemCode || null,
+        priceCost:      editMap.priceCost !== '' ? parseFloat(editMap.priceCost) : null,
+      });
+      const row = r?.data || r;
+      setVendorMappings(list => list.map(m => m.id === editingMapId ? row : m));
+      setEditingMapId(null);
+      setEditMap({});
+      toast.success('Vendor mapping updated');
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to save');
+    } finally { setMapSaving(false); }
+  };
+
+  const handleDeleteVendorMapping = async (mapId) => {
+    if (!window.confirm('Remove this vendor mapping? The product\'s other vendor mappings (if any) stay intact.')) return;
+    try {
+      await deleteProductVendor(id, mapId);
+      setVendorMappings(list => list.filter(m => m.id !== mapId));
+      // Backend auto-promotes the next-best mapping to primary if we just
+      // deleted the primary one. Reload to pick up the new primary flag.
+      const r = await getProductVendors(id).catch(() => null);
+      if (r?.data) setVendorMappings(r.data);
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to delete vendor mapping');
+    }
+  };
+
+  const handleMakePrimary = async (mapId) => {
+    try {
+      await makeProductVendorPrimary(id, mapId);
+      // Reload — the backend flipped isPrimary on one row and off on all others.
+      const r = await getProductVendors(id).catch(() => null);
+      if (r?.data) setVendorMappings(r.data);
+      toast.success('Primary vendor updated');
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to set primary');
+    }
+  };
+
   // ── Save ─────────────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
@@ -1153,6 +1358,10 @@ export default function ProductForm() {
         departmentId:       form.departmentId     ? parseInt(form.departmentId) : null,
         vendorId:           form.vendorId         ? parseInt(form.vendorId)     : null,
         itemCode:           form.itemCode         || null,
+        // Session 40 Phase 1 — send both. Backend validates taxRuleId belongs
+        // to this org, auto-mirrors the rule's appliesTo into taxClass if
+        // taxClass wasn't explicitly changed (backward compat for legacy readers).
+        taxRuleId:          form.taxRuleId ? parseInt(form.taxRuleId) : null,
         taxClass:           form.taxClass,
         taxable:            form.taxable,
         defaultCasePrice:   form.defaultCasePrice || null,
@@ -1170,6 +1379,27 @@ export default function ProductForm() {
         byUnit:             form.byUnit,
         size:               form.size             || null,
         sizeUnit:           form.sizeUnit         || null,
+        // Grocery: PLU only included when the store has grocery enabled.
+        // When disabled, we pass null so any stale PLU on the row clears out.
+        plu:                groceryEnabled ? (form.plu || null) : null,
+        // Inventory tracking toggle (deduct on sale; off for service / manual-entry items)
+        trackInventory:     form.trackInventory,
+        // E-Commerce extended — previously saved on create only; update route
+        // now also accepts these (catalog controller fix in the same batch).
+        ecomPrice:          form.ecomPrice         || null,
+        ecomSalePrice:      form.ecomSalePrice     || null,
+        ecomOnSale:         !!form.ecomOnSale,
+        ecomExternalId:     form.ecomExternalId    || null,
+        ecomPackWeight:     form.ecomPackWeight    || null,
+        ecomDescription:    form.ecomDescription   || null,
+        // ecomSummary intentionally omitted — merged into ecomDescription.
+        // Existing column data is preserved; only writes from this form stop.
+        hideFromEcom:       !!form.hideFromEcom,
+        // Shipping package (lbs + inches)
+        weight:             form.weight            || null,
+        shipLengthIn:       form.shipLengthIn      || null,
+        shipWidthIn:        form.shipWidthIn       || null,
+        shipHeightIn:       form.shipHeightIn      || null,
         attributes:         form.attributes       || {},
         active:             form.active,
       };
@@ -1434,38 +1664,78 @@ export default function ProductForm() {
                       </select>
                     </div>
 
+                    {/* Session 40 Phase 1 — strict-FK tax dropdown.
+                        Values are rule.id (stable across renames / rate changes).
+                        Shows every ACTIVE rule (no more dedupe by appliesTo —
+                        each rule is its own option). Dept-default option at top;
+                        legacy string class options preserved at the bottom with
+                        "(legacy)" prefix for products that haven't migrated yet.
+                        Stale-rule warning when taxRuleId points at a deleted/
+                        inactive rule (shows an amber "⚠ rule no longer exists"
+                        hint with a link to Tax Rules page). */}
                     <div>
                       <label className="pf-label">
-                        Tax Class
+                        Tax Rule
                         <Link to="/portal/tax-rules" className="pf-manage-link" style={{ marginLeft: 8 }}>
                           <Settings size={10} /> Manage
                         </Link>
                       </label>
                       <select className="form-input pf-full"
-                        value={form.taxClass} onChange={e => setF('taxClass', e.target.value)}>
-                        {taxRules.length > 0 ? (
-                          <>
-                            {/* Unique `appliesTo` values from the store's real tax rules.
-                                Each option shows the rule name + its percentage. */}
-                            {Array.from(new Map(taxRules.map(r => [r.appliesTo, r])).values()).map(r => {
-                              const pct = r.rate != null ? `${(Number(r.rate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : '';
-                              return (
-                                <option key={r.id} value={r.appliesTo}>
-                                  {r.name} {pct && `— ${pct}`}
-                                </option>
-                              );
-                            })}
-                            <option value="non_taxable">Non-Taxable — 0%</option>
-                          </>
-                        ) : (
-                          TAX_CLASSES.map(t => <option key={t.value} value={t.value}>{t.label} — {t.note}</option>)
+                        value={form.taxRuleId ? `rule:${form.taxRuleId}` : `class:${form.taxClass || ''}`}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val.startsWith('rule:')) {
+                            const rid = val.slice(5);
+                            const rule = taxRules.find(r => String(r.id) === rid);
+                            setF('taxRuleId', rid);
+                            // Mirror appliesTo into taxClass so legacy cashier-app
+                            // builds (that only read taxClass) apply the right rate.
+                            if (rule?.appliesTo) setF('taxClass', rule.appliesTo);
+                          } else {
+                            // Legacy class option — clear the FK and set taxClass.
+                            const cls = val.slice(6);
+                            setF('taxRuleId', '');
+                            setF('taxClass', cls);
+                          }
+                        }}>
+                        <option value="class:">— Use department / default —</option>
+                        {taxRules.length > 0 && (
+                          <optgroup label="Tax Rules (preferred)">
+                            {taxRules
+                              .filter(r => r.active !== false)
+                              .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+                              .map(r => {
+                                const pct = r.rate != null ? `${(Number(r.rate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : '';
+                                return (
+                                  <option key={r.id} value={`rule:${r.id}`}>
+                                    {r.name}{pct && ` — ${pct}`}
+                                  </option>
+                                );
+                              })}
+                          </optgroup>
                         )}
+                        <optgroup label="Legacy tax classes">
+                          {TAX_CLASSES.map(t => (
+                            <option key={t.value} value={`class:${t.value}`}>(legacy) {t.label}</option>
+                          ))}
+                          <option value="class:non_taxable">(legacy) Non-Taxable — 0%</option>
+                        </optgroup>
                       </select>
+                      {/* Stale FK warning — product has taxRuleId but that rule
+                          is not in the active rules list. Could be soft-deleted
+                          or inactive. User needs to pick a fresh rule. */}
+                      {form.taxRuleId && !taxRules.some(r => String(r.id) === String(form.taxRuleId) && r.active !== false) && (
+                        <div className="pf-warn" style={{ marginTop: 4 }}>
+                          <AlertCircle size={10} /> This product references a tax rule that is inactive or no longer exists.
+                          Pick an active rule above, or{' '}
+                          <Link to="/portal/tax-rules" style={{ color: 'var(--brand-primary)' }}>re-activate it</Link>.
+                        </div>
+                      )}
                       {taxRules.length === 0 && (
                         <div className="pf-hint" style={{ marginTop: 4 }}>
                           <Info size={10} /> No tax rules configured —{' '}
                           <Link to="/portal/tax-rules" style={{ color: 'var(--brand-primary)' }}>set them up</Link>
-                          {' '}to see your custom tax slabs here.
+                          {' '}to use strict-FK tax linking.
                         </div>
                       )}
                     </div>
@@ -1545,17 +1815,20 @@ export default function ProductForm() {
                 )}
               </div>
 
-              {/* ── Session 4: Product Details — dept-scoped attributes + freeform bucket ── */}
-              {(deptAttrs.length > 0 || Object.keys(form.attributes || {}).length > 0) && (
-                <div className="pf-card">
-                  <div className="pf-upc-header">
-                    <div className="pf-section-title" style={{ marginBottom: 0 }}>Product Details</div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      {deptAttrs.length > 0
-                        ? 'Fields configured for this department. Leave any blank.'
-                        : 'No department fields yet — add custom details below.'}
-                    </span>
+              {/* ── Session 4: Product Details — dept-scoped attributes + freeform bucket ──
+                   Always rendered so users can add their first custom tag even
+                   when the department has no typed attributes configured. */}
+              <div className="pf-card">
+                <div className="pf-upc-header">
+                  <div className="pf-section-title" style={{ marginBottom: 0 }}>
+                    Product Details <span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>Key / value tags</span>
                   </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {deptAttrs.length > 0
+                      ? 'Fields configured for this department + any custom tags.'
+                      : 'Add custom details — any key, any value. Examples: country, vintage, warehouse, flavor.'}
+                  </span>
+                </div>
 
                   {/* Dept-scoped typed fields */}
                   {deptAttrs.length > 0 && (
@@ -1659,7 +1932,6 @@ export default function ProductForm() {
                     </button>
                   </div>
                 </div>
-              )}
 
               {/* ── 2. Pricing ── */}
               <div className="pf-card">
@@ -1680,14 +1952,23 @@ export default function ProductForm() {
                     </div>
                   </div>
 
-                  {/* Case Cost — synced with Vendor sidebar */}
+                  {/* Case Cost — editing auto-fills Unit Cost (Item 21, Level 1) */}
                   <div>
                     <label className="pf-label pf-label-sm">Case Cost</label>
                     <div className="pf-dollar-wrap">
                       <span className="pf-dollar-sign">$</span>
                       <PriceInput className="form-input pf-dollar-input pf-compact-input"
                         value={form.defaultCasePrice} placeholder="0.00"
-                        onChange={(v) => setF('defaultCasePrice', v)}
+                        onChange={(v) => {
+                          setF('defaultCasePrice', v);
+                          // Auto-recalc Unit Cost when pack math is complete.
+                          const caseNum = parseFloat(v);
+                          const packsNum = parseFloat(defaultPacksPerCase);
+                          const upNum    = parseFloat(defaultUnitPack) || 1;
+                          if (caseNum > 0 && packsNum > 0 && upNum > 0) {
+                            setF('defaultCostPrice', (caseNum / packsNum / upNum).toFixed(4));
+                          }
+                        }}
                         onBlur={e => e.target.value && setF('defaultCasePrice', parseFloat(e.target.value).toFixed(2))} />
                     </div>
                   </div>
@@ -1710,11 +1991,27 @@ export default function ProductForm() {
                       onChange={e => setDefaultPacksPerCase(e.target.value)} />
                   </div>
 
-                  {/* Unit Cost — read-only, auto-calculated */}
+                  {/* Unit Cost — editable; reverse auto-fills Case Cost.
+                      When user types here, Case Cost recomputes = unit × packs × unitPack.
+                      When Case Cost changes above, this field recomputes too.
+                      Latest-edited wins; the other field updates in sync. */}
                   <div>
                     <label className="pf-label pf-label-sm">Unit Cost</label>
-                    <div className={`pf-unit-cost-display${unitCostVal ? '' : ' pf-unit-cost-empty'}`}>
-                      {unitCostVal ? fmt$(unitCostVal) : '—'}
+                    <div className="pf-dollar-wrap">
+                      <span className="pf-dollar-sign">$</span>
+                      <PriceInput className="form-input pf-dollar-input pf-compact-input"
+                        value={form.defaultCostPrice} placeholder="0.00"
+                        onChange={(v) => {
+                          setF('defaultCostPrice', v);
+                          // Auto-recalc Case Cost when pack math is complete.
+                          const unitNum = parseFloat(v);
+                          const packsNum = parseFloat(defaultPacksPerCase);
+                          const upNum    = parseFloat(defaultUnitPack) || 1;
+                          if (unitNum > 0 && packsNum > 0 && upNum > 0) {
+                            setF('defaultCasePrice', (unitNum * packsNum * upNum).toFixed(2));
+                          }
+                        }}
+                        onBlur={e => e.target.value && setF('defaultCostPrice', parseFloat(e.target.value).toFixed(4))} />
                     </div>
                   </div>
 
@@ -2040,6 +2337,22 @@ export default function ProductForm() {
                     Scale products configuration
                   </span>
                 </div>
+                {/* PLU row — 4-5 digit produce / scale lookup number.
+                    Only persisted when grocery is enabled (save payload
+                    clears it on non-grocery stores so stale data doesn't
+                    linger if grocery is later turned off). */}
+                <div style={{ marginBottom:'0.75rem' }}>
+                  <label className="pf-label">PLU <span style={{ fontSize:'0.6rem', color:'var(--text-muted)', fontWeight:400, marginLeft:6 }}>produce / scale lookup</span></label>
+                  <input
+                    className="form-input pf-full"
+                    value={form.plu}
+                    onChange={e => setF('plu', e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    placeholder="e.g. 4011 (bananas), 94011 (organic bananas)"
+                    maxLength={5}
+                    inputMode="numeric"
+                    style={{ fontFamily:'ui-monospace, SFMono-Regular, monospace', letterSpacing:'0.04em' }}
+                  />
+                </div>
                 <div className="pf-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem' }}>
                   <div>
                     <label className="pf-label">Tare Weight (lbs)</label>
@@ -2095,14 +2408,46 @@ export default function ProductForm() {
                     <input className="form-input pf-full" type="number" step="0.01" value={form.ecomPackWeight} onChange={e => setF('ecomPackWeight', e.target.value)} placeholder="0.00" />
                   </div>
                 </div>
+                {/* One description field — formerly two (Summary + Description).
+                    Merged per April audit: storefront derives the card summary
+                    from the first ~160 chars of this text. */}
                 <div style={{ marginTop:'0.75rem' }}>
-                  <label className="pf-label">Summary</label>
-                  <textarea className="form-input pf-full" rows={2} value={form.ecomSummary} onChange={e => setF('ecomSummary', e.target.value)} style={{ width:'100%', resize:'vertical' }} />
+                  <label className="pf-label">Description (SEO)</label>
+                  <textarea className="form-input pf-full" rows={4} value={form.ecomDescription} onChange={e => setF('ecomDescription', e.target.value)} style={{ width:'100%', resize:'vertical' }} placeholder="Long product description shown on the storefront product page. First ~160 chars are used on listing/grid cards." />
                 </div>
-                <div style={{ display:'flex', gap:'1rem', marginTop:'0.5rem' }}>
+
+                {/* Shipping package — ship weight + 3 dimensions (imperial only).
+                    Used by carrier rate quotes + shipping label generation. */}
+                <div style={{ marginTop:'0.75rem' }}>
+                  <div className="pf-section-title" style={{ fontSize:'0.78rem', marginBottom:'0.5rem' }}>Shipping Package</div>
+                  <div className="pf-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'0.5rem' }}>
+                    <div>
+                      <label className="pf-label">Ship Weight (lbs)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.weight} onChange={e => setF('weight', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Length (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipLengthIn} onChange={e => setF('shipLengthIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Width (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipWidthIn} onChange={e => setF('shipWidthIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Height (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipHeightIn} onChange={e => setF('shipHeightIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', gap:'1rem', marginTop:'0.75rem' }}>
                   <div className="pf-sb-toggle-row" style={{ flex:1, margin:0 }}>
                     <span className="pf-toggle-label">On Sale</span>
                     <Tog value={!!form.ecomOnSale} onChange={v => setF('ecomOnSale', v)} />
+                  </div>
+                  <div className="pf-sb-toggle-row" style={{ flex:1, margin:0 }}>
+                    <span className="pf-toggle-label">Hide from storefront</span>
+                    <Tog value={!!form.hideFromEcom} onChange={v => setF('hideFromEcom', v)} />
                   </div>
                 </div>
               </div>}
@@ -2156,14 +2501,22 @@ export default function ProductForm() {
                     <p style={{ fontSize:'0.68rem', color:'var(--text-muted)', margin:'0.4rem 0 0', lineHeight:1.4 }}>
                       Updates on save. Switch store to edit other locations.
                     </p>
+                    {/* Track inventory toggle — when off, sales don't deduct stock.
+                        Turn off for service items, manual entries, and SKUs that
+                        don't represent physical inventory. */}
+                    <div className="pf-sb-toggle-row" style={{ marginTop:'0.5rem' }}>
+                      <span className="pf-toggle-label" title="When on, each sale deducts 1 from on-hand stock. Turn off for service items, manual entries, or non-inventory SKUs.">Track Inventory</span>
+                      <Tog value={!!form.trackInventory} onChange={v => setF('trackInventory', v)} />
+                    </div>
+
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem', marginTop:'0.5rem' }}>
                       <div>
                         <label className="pf-label" style={{ fontSize:'0.65rem' }}>Reorder Point</label>
-                        <input className="form-input pf-full" type="number" min="0" value={form.reorderPoint} onChange={e => setF('reorderPoint', e.target.value)} placeholder="0" />
+                        <input className="form-input pf-full" type="number" min="0" value={form.reorderPoint} onChange={e => setF('reorderPoint', e.target.value)} placeholder="0" disabled={!form.trackInventory} />
                       </div>
                       <div>
                         <label className="pf-label" style={{ fontSize:'0.65rem' }}>Reorder Qty</label>
-                        <input className="form-input pf-full" type="number" min="0" value={form.reorderQty} onChange={e => setF('reorderQty', e.target.value)} placeholder="0" />
+                        <input className="form-input pf-full" type="number" min="0" value={form.reorderQty} onChange={e => setF('reorderQty', e.target.value)} placeholder="0" disabled={!form.trackInventory} />
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'0.4rem', marginTop:'0.5rem' }}>
@@ -2212,6 +2565,11 @@ export default function ProductForm() {
                     <option value="">— No vendor —</option>
                     {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
+                  {vendorMappings.length > 1 && (
+                    <div style={{ fontSize:'0.62rem', color:'var(--text-muted)', marginTop:'0.25rem' }}>
+                      Primary vendor — use the table below to edit/add other vendors.
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom:'0.75rem' }}>
@@ -2232,9 +2590,167 @@ export default function ProductForm() {
                   </div>
                 </div>
 
-                <button type="button" onClick={() => setShowVendMgr(true)}
-                  className="pf-btn-secondary" style={{ width:'100%', justifyContent:'center', fontSize:'0.78rem' }}>
-                  <Plus size={12} /> Add Vendor
+                {/* ── Additional vendors (Session 40) ───────────────────────
+                    Shown when the product has >1 mapping, OR the user explicitly
+                    opens the add-vendor row. Primary is the first row in the
+                    table and mirrors into form.vendorId/itemCode above. */}
+                {(vendorMappings.length > 1 || addingVendor) && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px solid var(--border-color)',
+                  }}>
+                    <div style={{ fontSize:'0.62rem', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', marginBottom:'0.5rem' }}>
+                      All Vendors for this Product
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {vendorMappings.map(m => (
+                        <div key={m.id} style={{
+                          display:'grid',
+                          gridTemplateColumns:'auto 1fr auto auto',
+                          gap:'0.4rem',
+                          alignItems:'center',
+                          padding:'0.3rem 0.5rem',
+                          borderRadius:6,
+                          background: m.isPrimary ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-tertiary)',
+                          border: m.isPrimary ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid transparent',
+                        }}>
+                          {/* Primary star */}
+                          <button type="button"
+                            onClick={() => !m.isPrimary && handleMakePrimary(m.id)}
+                            title={m.isPrimary ? 'Primary vendor (mirrors to MasterProduct.vendorId/itemCode)' : 'Make this the primary vendor'}
+                            style={{
+                              background:'none', border:'none', padding:'0 0.2rem',
+                              cursor: m.isPrimary ? 'default' : 'pointer',
+                              color: m.isPrimary ? '#f59e0b' : 'var(--text-muted)',
+                            }}>
+                            <Star size={13} fill={m.isPrimary ? '#f59e0b' : 'none'} />
+                          </button>
+                          {editingMapId === m.id ? (
+                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.3rem' }}>
+                              <input className="form-input" style={{ fontFamily:'monospace', fontSize:'0.75rem' }}
+                                value={editMap.vendorItemCode ?? ''}
+                                placeholder="Item #"
+                                onChange={e => setEditMap(f => ({ ...f, vendorItemCode: e.target.value }))} />
+                              <PriceInput className="form-input" style={{ fontSize:'0.75rem' }}
+                                value={editMap.priceCost ?? ''}
+                                placeholder="0.00"
+                                onChange={(v) => setEditMap(f => ({ ...f, priceCost: v }))} />
+                            </div>
+                          ) : (
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', fontSize:'0.78rem', minWidth:0 }}>
+                              <span style={{ fontWeight:600, color:'var(--text-primary)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                                {m.vendor?.name || 'Vendor'}
+                              </span>
+                              {m.vendorItemCode && (
+                                <span style={{ fontFamily:'monospace', fontSize:'0.7rem', color:'var(--text-muted)' }}>
+                                  {m.vendorItemCode}
+                                </span>
+                              )}
+                              {m.priceCost != null && (
+                                <span style={{ marginLeft:'auto', fontSize:'0.7rem', color:'var(--text-muted)' }}>
+                                  {fmt$(m.priceCost)}/ea
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {/* Action buttons */}
+                          {editingMapId === m.id ? (
+                            <>
+                              <button type="button" onClick={handleSaveVendorMapping} disabled={mapSaving}
+                                className="pf-btn-primary pf-btn-sm" title="Save">
+                                <Check size={11} />
+                              </button>
+                              <button type="button" onClick={() => { setEditingMapId(null); setEditMap({}); }}
+                                className="pf-btn-secondary pf-btn-sm" title="Cancel">
+                                <X size={11} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => {
+                                setEditingMapId(m.id);
+                                setEditMap({
+                                  vendorItemCode: m.vendorItemCode || '',
+                                  priceCost: m.priceCost != null ? String(m.priceCost) : '',
+                                });
+                              }}
+                                title="Edit"
+                                style={{
+                                  background:'none', border:'none', padding:'0 0.25rem',
+                                  cursor:'pointer', color:'var(--text-muted)',
+                                }}>
+                                <Settings size={11} />
+                              </button>
+                              <button type="button" onClick={() => handleDeleteVendorMapping(m.id)}
+                                title="Remove vendor mapping"
+                                style={{
+                                  background:'none', border:'none', padding:'0 0.25rem',
+                                  cursor:'pointer', color:'#ef4444',
+                                }}>
+                                <X size={11} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+
+                      {addingVendor && (
+                        <div style={{
+                          display:'grid',
+                          gridTemplateColumns:'1fr 1fr auto auto',
+                          gap:'0.35rem', alignItems:'center',
+                          padding:'0.35rem 0.5rem',
+                          borderRadius:6,
+                          background:'var(--bg-tertiary)',
+                          border:'1px dashed var(--border-color)',
+                        }}>
+                          <select className="form-input" style={{ fontSize:'0.72rem' }}
+                            value={newVendor.vendorId}
+                            onChange={e => setNewVendor(v => ({ ...v, vendorId: e.target.value }))}>
+                            <option value="">— Vendor —</option>
+                            {vendors
+                              .filter(v => !vendorMappings.some(m => m.vendorId === v.id))
+                              .map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                          </select>
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.25rem' }}>
+                            <input className="form-input" style={{ fontFamily:'monospace', fontSize:'0.72rem' }}
+                              placeholder="Item #"
+                              value={newVendor.vendorItemCode}
+                              onChange={e => setNewVendor(v => ({ ...v, vendorItemCode: e.target.value }))} />
+                            <PriceInput className="form-input" style={{ fontSize:'0.72rem' }}
+                              placeholder="$/ea"
+                              value={newVendor.priceCost}
+                              onChange={(v) => setNewVendor(val => ({ ...val, priceCost: v }))} />
+                          </div>
+                          <button type="button" onClick={handleAddVendorMapping}
+                            disabled={mapSaving || !newVendor.vendorId}
+                            className="pf-btn-primary pf-btn-sm" title="Add">
+                            <Check size={11} />
+                          </button>
+                          <button type="button" onClick={() => {
+                            setAddingVendor(false);
+                            setNewVendor({ vendorId: '', vendorItemCode: '', priceCost: '' });
+                          }}
+                            className="pf-btn-secondary pf-btn-sm" title="Cancel">
+                            <X size={11} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <button type="button"
+                  onClick={() => {
+                    if (!isEdit) {
+                      toast.info('Save the product first, then add other vendors');
+                      return;
+                    }
+                    setAddingVendor(true);
+                  }}
+                  className="pf-btn-secondary" style={{ width:'100%', justifyContent:'center', fontSize:'0.78rem', marginTop:'0.5rem' }}>
+                  <Plus size={12} /> Add Another Vendor
                 </button>
               </div>
 

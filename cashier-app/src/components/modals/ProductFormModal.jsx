@@ -741,22 +741,32 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
     name: '', brand: '', upc: '', description: '',
     productGroupId: '', imageUrl: '',
     departmentId: '', vendorId: '', itemCode: '',
+    // Session 40 Phase 1 — strict-FK tax linkage. `taxRuleId` is authoritative
+    // when set; `taxClass` stays as legacy fallback for backward compat.
+    taxRuleId: '',
     taxClass: 'grocery', taxable: true,
     defaultCasePrice: '', defaultCostPrice: '', defaultRetailPrice: '',
     ebtEligible: false, ageRequired: '', discountEligible: true,
     byWeight: false, byUnit: true, active: true,
     size: '', sizeUnit: 'oz',
-    // Grocery / Scale
+    // Grocery / Scale (plu gated on store.pos.groceryEnabled)
+    plu: '',
     wicEligible: false, tareWeight: '', scaleByCount: false,
     scalePluType: '', ingredients: '', nutritionFacts: '',
     certCode: '', labelFormatId: '',
     // Deposits
     depositPerUnit: '', caseDeposit: '',
-    // E-commerce extended
+    // E-commerce extended (ecomSummary field removed — merged into ecomDescription)
     ecomExternalId: '', ecomPackWeight: '',
-    ecomPrice: '', ecomSalePrice: '', ecomOnSale: false, ecomSummary: '',
+    ecomPrice: '', ecomSalePrice: '', ecomOnSale: false,
+    ecomDescription: '',
+    // Shipping package (imperial: lbs + inches). Ship weight replaces the old
+    // "physical weight" field (same column, clearer label).
+    weight: '',
+    shipLengthIn: '', shipWidthIn: '', shipHeightIn: '',
     // Inventory
     reorderPoint: '', reorderQty: '',
+    trackInventory: true,
     // Session 4 — department-scoped + freeform attributes bucket
     attributes: {},
   };
@@ -825,6 +835,8 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
           departmentId:       p.departmentId      ?? '',
           vendorId:           p.vendorId          ?? '',
           itemCode:           p.itemCode          ?? '',
+          // Strict-FK tax linkage — load both so stale-rule warnings work
+          taxRuleId:          p.taxRuleId != null ? String(p.taxRuleId) : '',
           taxClass:           p.taxClass          ?? 'grocery',
           taxable:            p.taxable           ?? true,
           defaultCasePrice:   p.defaultCasePrice  != null ? Number(p.defaultCasePrice).toFixed(2)   : '',
@@ -838,7 +850,8 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
           active:             p.active            ?? true,
           size:               p.size              ?? '',
           sizeUnit:           p.sizeUnit          ?? 'oz',
-          // Grocery / Scale
+          // Grocery / Scale (plu gated on store.pos.groceryEnabled)
+          plu:                p.plu                ?? '',
           wicEligible:        p.wicEligible       ?? false,
           tareWeight:         p.tareWeight != null ? String(p.tareWeight) : '',
           scaleByCount:       p.scaleByCount      ?? false,
@@ -856,10 +869,16 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
           ecomPrice:          p.ecomPrice != null ? String(p.ecomPrice) : '',
           ecomSalePrice:      p.ecomSalePrice != null ? String(p.ecomSalePrice) : '',
           ecomOnSale:         p.ecomOnSale         ?? false,
-          ecomSummary:        p.ecomSummary        ?? '',
+          ecomDescription:    p.ecomDescription    ?? '',
+          // Shipping package (imperial: lbs + inches) — Session 40 Item 32
+          weight:             p.weight != null ? String(p.weight) : '',
+          shipLengthIn:       p.shipLengthIn != null ? String(p.shipLengthIn) : '',
+          shipWidthIn:        p.shipWidthIn  != null ? String(p.shipWidthIn)  : '',
+          shipHeightIn:       p.shipHeightIn != null ? String(p.shipHeightIn) : '',
           // Inventory
           reorderPoint:       p.reorderPoint != null ? String(p.reorderPoint) : '',
           reorderQty:         p.reorderQty != null ? String(p.reorderQty) : '',
+          trackInventory:     p.trackInventory ?? true,
           // Session 4 attributes bucket (keeps all typed + unknown values)
           attributes:         (p.attributes && typeof p.attributes === 'object') ? p.attributes : {},
         });
@@ -1195,6 +1214,10 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
         departmentId:       form.departmentId     ? parseInt(form.departmentId) : null,
         vendorId:           form.vendorId         ? parseInt(form.vendorId)     : null,
         itemCode:           form.itemCode         || null,
+        // Session 40 Phase 1 — send both. Backend validates taxRuleId belongs
+        // to this org, auto-mirrors the rule's appliesTo into taxClass if
+        // taxClass wasn't explicitly changed (backward compat for legacy readers).
+        taxRuleId:          form.taxRuleId ? parseInt(form.taxRuleId) : null,
         taxClass:           form.taxClass,
         taxable:            form.taxable,
         defaultCasePrice:   form.defaultCasePrice || null,
@@ -1212,6 +1235,23 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
         byUnit:             form.byUnit,
         size:               form.size             || null,
         sizeUnit:           form.sizeUnit         || null,
+        // Grocery: PLU only sent when grocery is enabled on the active store.
+        plu:                groceryEnabled ? (form.plu || null) : null,
+        // Inventory tracking toggle (deduct on sale; off for service / manual items)
+        trackInventory:     form.trackInventory,
+        // E-Commerce extended — Session 40 Item 55/56 merge (ecomSummary removed)
+        ecomPrice:          form.ecomPrice         || null,
+        ecomSalePrice:      form.ecomSalePrice     || null,
+        ecomOnSale:         !!form.ecomOnSale,
+        ecomExternalId:     form.ecomExternalId    || null,
+        ecomPackWeight:     form.ecomPackWeight    || null,
+        ecomDescription:    form.ecomDescription   || null,
+        hideFromEcom:       !!form.hideFromEcom,
+        // Shipping package (imperial: lbs + inches) — Session 40 Item 32
+        weight:             form.weight            || null,
+        shipLengthIn:       form.shipLengthIn      || null,
+        shipWidthIn:        form.shipWidthIn       || null,
+        shipHeightIn:       form.shipHeightIn      || null,
         attributes:         form.attributes       || {},
         active:             form.active,
       };
@@ -1489,38 +1529,74 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
                       </select>
                     </div>
 
+                    {/* Session 40 Phase 1 — strict-FK tax dropdown.
+                        Values are rule.id (stable across renames / rate changes).
+                        Shows every ACTIVE rule (no more dedupe by appliesTo).
+                        Legacy string class options preserved at the bottom
+                        with "(legacy)" prefix for products that haven't
+                        migrated yet. Stale-rule warning when taxRuleId points
+                        at a deleted/inactive rule. */}
                     <div>
                       <label className="pf-label">
-                        Tax Class
+                        Tax Rule
                         <Link to="/portal/tax-rules" className="pf-manage-link" style={{ marginLeft: 8 }}>
                           <Settings size={10} /> Manage
                         </Link>
                       </label>
                       <select className="form-input pf-full"
-                        value={form.taxClass} onChange={e => setF('taxClass', e.target.value)}>
-                        {taxRules.length > 0 ? (
-                          <>
-                            {/* Unique `appliesTo` values from the store's real tax rules.
-                                Each option shows the rule name + its percentage. */}
-                            {Array.from(new Map(taxRules.map(r => [r.appliesTo, r])).values()).map(r => {
-                              const pct = r.rate != null ? `${(Number(r.rate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : '';
-                              return (
-                                <option key={r.id} value={r.appliesTo}>
-                                  {r.name} {pct && `— ${pct}`}
-                                </option>
-                              );
-                            })}
-                            <option value="non_taxable">Non-Taxable — 0%</option>
-                          </>
-                        ) : (
-                          TAX_CLASSES.map(t => <option key={t.value} value={t.value}>{t.label} — {t.note}</option>)
+                        value={form.taxRuleId ? `rule:${form.taxRuleId}` : `class:${form.taxClass || ''}`}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val.startsWith('rule:')) {
+                            const rid = val.slice(5);
+                            const rule = taxRules.find(r => String(r.id) === rid);
+                            setF('taxRuleId', rid);
+                            // Mirror appliesTo into taxClass so legacy cashier-app
+                            // builds (that only read taxClass) apply the right rate.
+                            if (rule?.appliesTo) setF('taxClass', rule.appliesTo);
+                          } else {
+                            // Legacy class option — clear the FK and set taxClass.
+                            const cls = val.slice(6);
+                            setF('taxRuleId', '');
+                            setF('taxClass', cls);
+                          }
+                        }}>
+                        <option value="class:">— Use department / default —</option>
+                        {taxRules.length > 0 && (
+                          <optgroup label="Tax Rules (preferred)">
+                            {taxRules
+                              .filter(r => r.active !== false)
+                              .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+                              .map(r => {
+                                const pct = r.rate != null ? `${(Number(r.rate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : '';
+                                return (
+                                  <option key={r.id} value={`rule:${r.id}`}>
+                                    {r.name}{pct && ` — ${pct}`}
+                                  </option>
+                                );
+                              })}
+                          </optgroup>
                         )}
+                        <optgroup label="Legacy tax classes">
+                          {TAX_CLASSES.map(t => (
+                            <option key={t.value} value={`class:${t.value}`}>(legacy) {t.label}</option>
+                          ))}
+                          <option value="class:non_taxable">(legacy) Non-Taxable — 0%</option>
+                        </optgroup>
                       </select>
+                      {/* Stale-FK warning */}
+                      {form.taxRuleId && !taxRules.some(r => String(r.id) === String(form.taxRuleId) && r.active !== false) && (
+                        <div className="pf-warn" style={{ marginTop: 4 }}>
+                          <AlertCircle size={10} /> This product references a tax rule that is inactive or no longer exists.
+                          Pick an active rule above, or{' '}
+                          <Link to="/portal/tax-rules" style={{ color: 'var(--brand-primary)' }}>re-activate it</Link>.
+                        </div>
+                      )}
                       {taxRules.length === 0 && (
                         <div className="pf-hint" style={{ marginTop: 4 }}>
                           <Info size={10} /> No tax rules configured —{' '}
                           <Link to="/portal/tax-rules" style={{ color: 'var(--brand-primary)' }}>set them up</Link>
-                          {' '}to see your custom tax slabs here.
+                          {' '}to use strict-FK tax linking.
                         </div>
                       )}
                     </div>
@@ -2095,6 +2171,22 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
                     Scale products configuration
                   </span>
                 </div>
+
+                {/* PLU row — 4-5 digit produce / scale lookup number.
+                    Save payload clears it when groceryEnabled is false. */}
+                <div style={{ marginBottom:'0.75rem' }}>
+                  <label className="pf-label">PLU <span style={{ fontSize:'0.6rem', color:'var(--text-muted)', fontWeight:400, marginLeft:6 }}>produce / scale lookup</span></label>
+                  <input
+                    className="form-input pf-full"
+                    value={form.plu}
+                    onChange={e => setF('plu', e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    placeholder="e.g. 4011 (bananas), 94011 (organic bananas)"
+                    maxLength={5}
+                    inputMode="numeric"
+                    style={{ fontFamily:'ui-monospace, SFMono-Regular, monospace', letterSpacing:'0.04em' }}
+                  />
+                </div>
+
                 <div className="pf-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem' }}>
                   <div>
                     <label className="pf-label">Tare Weight (lbs)</label>
@@ -2150,14 +2242,46 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
                     <input className="form-input pf-full" type="number" step="0.01" value={form.ecomPackWeight} onChange={e => setF('ecomPackWeight', e.target.value)} placeholder="0.00" />
                   </div>
                 </div>
+                {/* One description field — formerly two (Summary + Description).
+                    Merged per April audit: storefront derives the card summary
+                    from the first ~160 chars of this text. */}
                 <div style={{ marginTop:'0.75rem' }}>
-                  <label className="pf-label">Summary</label>
-                  <textarea className="form-input pf-full" rows={2} value={form.ecomSummary} onChange={e => setF('ecomSummary', e.target.value)} style={{ width:'100%', resize:'vertical' }} />
+                  <label className="pf-label">Description (SEO)</label>
+                  <textarea className="form-input pf-full" rows={4} value={form.ecomDescription} onChange={e => setF('ecomDescription', e.target.value)} style={{ width:'100%', resize:'vertical' }} placeholder="Long product description shown on the storefront product page. First ~160 chars are used on listing/grid cards." />
                 </div>
-                <div style={{ display:'flex', gap:'1rem', marginTop:'0.5rem' }}>
+
+                {/* Shipping package — ship weight + 3 dimensions (imperial).
+                    Used by carrier rate quotes + shipping label generation. */}
+                <div style={{ marginTop:'0.75rem' }}>
+                  <div className="pf-section-title" style={{ fontSize:'0.78rem', marginBottom:'0.5rem' }}>Shipping Package</div>
+                  <div className="pf-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'0.5rem' }}>
+                    <div>
+                      <label className="pf-label">Ship Weight (lbs)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.weight} onChange={e => setF('weight', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Length (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipLengthIn} onChange={e => setF('shipLengthIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Width (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipWidthIn} onChange={e => setF('shipWidthIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                    <div>
+                      <label className="pf-label">Height (in)</label>
+                      <input className="form-input pf-full" type="number" step="0.01" min="0" value={form.shipHeightIn} onChange={e => setF('shipHeightIn', e.target.value)} placeholder="0.00" />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', gap:'1rem', marginTop:'0.75rem' }}>
                   <div className="pf-sb-toggle-row" style={{ flex:1, margin:0 }}>
                     <span className="pf-toggle-label">On Sale</span>
                     <Tog value={!!form.ecomOnSale} onChange={v => setF('ecomOnSale', v)} />
+                  </div>
+                  <div className="pf-sb-toggle-row" style={{ flex:1, margin:0 }}>
+                    <span className="pf-toggle-label">Hide from storefront</span>
+                    <Tog value={!!form.hideFromEcom} onChange={v => setF('hideFromEcom', v)} />
                   </div>
                 </div>
               </div>}
@@ -2211,14 +2335,23 @@ export default function ProductFormModal({ productId, scannedUpc, onClose, onSav
                     <p style={{ fontSize:'0.68rem', color:'var(--text-muted)', margin:'0.4rem 0 0', lineHeight:1.4 }}>
                       Updates on save. Switch store to edit other locations.
                     </p>
+
+                    {/* Session 40 Item 28 — Track inventory toggle.
+                        When off, sales don't deduct stock. Turn off for
+                        service items, manual entries, and non-inventory SKUs. */}
+                    <div className="pf-sb-toggle-row" style={{ marginTop:'0.5rem' }}>
+                      <span className="pf-toggle-label" title="When on, each sale deducts 1 from on-hand stock. Turn off for service items, manual entries, or non-inventory SKUs.">Track Inventory</span>
+                      <Tog value={!!form.trackInventory} onChange={v => setF('trackInventory', v)} />
+                    </div>
+
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem', marginTop:'0.5rem' }}>
                       <div>
                         <label className="pf-label" style={{ fontSize:'0.65rem' }}>Reorder Point</label>
-                        <input className="form-input pf-full" type="number" min="0" value={form.reorderPoint} onChange={e => setF('reorderPoint', e.target.value)} placeholder="0" />
+                        <input className="form-input pf-full" type="number" min="0" value={form.reorderPoint} onChange={e => setF('reorderPoint', e.target.value)} placeholder="0" disabled={!form.trackInventory} />
                       </div>
                       <div>
                         <label className="pf-label" style={{ fontSize:'0.65rem' }}>Reorder Qty</label>
-                        <input className="form-input pf-full" type="number" min="0" value={form.reorderQty} onChange={e => setF('reorderQty', e.target.value)} placeholder="0" />
+                        <input className="form-input pf-full" type="number" min="0" value={form.reorderQty} onChange={e => setF('reorderQty', e.target.value)} placeholder="0" disabled={!form.trackInventory} />
                       </div>
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'0.4rem', marginTop:'0.5rem' }}>

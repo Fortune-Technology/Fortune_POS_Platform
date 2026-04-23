@@ -30,7 +30,8 @@ const ALIASES = {
   // Product identifiers
   upc:                ['upc','barcode','ean','gtin','upccode','scancode','itemcode_upc'],
   plu:                ['plu','plunumber','producelookup'],
-  sku:                ['sku','internalsku','publicid'],
+  // (sku alias removed per product decision — internal SKU is not user-facing
+  //  and the schema column is preserved but no longer mapped from CSV.)
   itemCode:           ['itemcode','item','vendoritemcode','mfrcode','vendorcode','distitemno','itemnumber','itemno','item#'],
 
   // Product display — 'description' maps to name (product name), NOT long description
@@ -58,6 +59,11 @@ const ALIASES = {
   // Classification
   departmentId:       ['dept','department','deptid','deptno','departmentid','category','deptcode','deptnumber','dept_no'],
   vendorId:           ['vendor','supplier','vendorid','vendorno','supplierid','distributor','vendorname','vendor_name','importer'],
+  // Session 40 Phase 1 (strict FK migration): `taxRuleName` is the preferred
+  // field — resolved to MasterProduct.taxRuleId by name lookup against the
+  // org's TaxRule table. `taxClass` is the legacy free-text column kept for
+  // backward compat. Mapping both is fine; taxRuleName wins when it resolves.
+  taxRuleName:        ['taxrulename','taxrule','taxname'],
   taxClass:           ['taxclass','tax1','taxtype','taxcategory','taxcode','taxrate'],
 
   // Compliance
@@ -144,8 +150,15 @@ const ALIASES = {
   ecomPrice:          ['ecommerceprice','ecomprice','onlineprice','webprice'],
   ecomSalePrice:      ['ecommercesaleprice','ecomsaleprice','onlinesaleprice'],
   ecomOnSale:         ['ecommerceonsale','ecomonsale','onlineonsale'],
-  ecomSummary:        ['ecommercesummary','ecomsummary','onlinesummary'],
-  ecomDescription:    ['ecommercedescription','ecomdescription','onlinedescription','ecommerceunitdescription'],
+  // (ecomSummary alias removed — redundant with ecomDescription. Legacy
+  //  aliases `ecommercesummary`, `onlinesummary` now route into ecomDescription
+  //  below. Storefront derives the card summary from the first N chars of
+  //  ecomDescription if no dedicated summary is stored.)
+  // Canonical long-form SEO description for the storefront product page.
+  // Also folds in legacy `ecomsummary` / `onlinesummary` aliases so CSVs
+  // written for the old two-field model still import without a mapping change.
+  ecomDescription:    ['ecommercedescription','ecomdescription','onlinedescription','ecommerceunitdescription',
+                       'ecommercesummary','ecomsummary','onlinesummary'],
   hideFromEcom:       ['hidefromecommerce','hidefromecom','hidefromweb','excludeecom'],
 
   // ── Pricing method / group pricing (for SALE promotion) ──
@@ -176,12 +189,16 @@ const ALIASES = {
   // `casebottledeposit` added so the common "Case Bottle Deposit" column maps correctly
   caseDeposit:        ['casedeposit','case_deposit','casedep','casebottledeposit','case_bottle_deposit','casedeposittotal'],
 
-  // ── Linked UPC (legacy single-extra-barcode) ──
-  linkedUpc:          ['linkedupc','caseupc','case_upc','relatedupc','altbarcode','altupc','secondaryupc'],
+  // (linkedUpc removed — redundant with `additionalUpcs` which handles any
+  //  number of alternate barcodes via pipe-separated or multi-source mapping.
+  //  Legacy aliases `caseupc`, `case_upc`, `altbarcode`, etc. are folded into
+  //  the `additionalUpcs` alias list below so existing CSVs still import.)
 
   // ── Multi-UPC via pipe-separated list (matches the export format) ──
   // Example cell value: "0055555555555|0044444444444"
-  additionalUpcs:     ['additionalupcs','alternateupcs','extraupcs','otherupcs','altupcs','secondaryupcs'],
+  // Folded in from the removed linkedUpc alias set for backward compatibility.
+  additionalUpcs:     ['additionalupcs','alternateupcs','extraupcs','otherupcs','altupcs','secondaryupcs',
+                       'linkedupc','caseupc','case_upc','relatedupc','altbarcode','altupc','secondaryupc'],
 
   // ── Pack size options compressed into ONE cell ──
   // Format: "label@unitCount@price[*];label@unitCount@price[*];…"
@@ -197,7 +214,13 @@ const ALIASES = {
   // (productCode alias removed — was never persisted to a MasterProduct column;
   // manufacturer codes should map to `itemCode` or a custom attribute instead.)
   trackInventory:     ['trackinventory','track_inventory','deductstock','inventorytracked'],
-  weight:             ['weight','productweight','itemweight','lbs','pounds'],
+  // `weight` is the ship weight in lbs (used by ecom storefront + carriers).
+  // It moved from the Inventory group to the E-Commerce group in the dropdown.
+  weight:             ['weight','productweight','itemweight','lbs','pounds','shipweight','shippingweight'],
+  // Shipping package dimensions (imperial: inches)
+  shipLengthIn:       ['shiplength','length','shippinglength','boxlength','boxlen','packagelength','pkglength'],
+  shipWidthIn:        ['shipwidth','width','shippingwidth','boxwidth','packagewidth','pkgwidth'],
+  shipHeightIn:       ['shipheight','height','shippingheight','boxheight','packageheight','pkgheight'],
 };
 
 // ─── Valid enum values ───────────────────────────────────────────────────────
@@ -356,6 +379,9 @@ export async function buildContext(orgId) {
   // Key = 4-decimal string ("0.0625") for stable equality across Prisma's Decimal.
   const taxByRate = new Map();
   const taxByClassName = new Map();
+  // Session 40 Phase 1 — map by rule NAME (case-insensitive, trimmed). Used
+  // to resolve the new `taxRuleName` CSV field → `MasterProduct.taxRuleId`.
+  const taxByRuleName = new Map();
   for (const r of taxRules) {
     const rateNum = Number(r.rate);
     if (!isNaN(rateNum)) {
@@ -365,6 +391,10 @@ export async function buildContext(orgId) {
     if (r.appliesTo) {
       const key = String(r.appliesTo).toLowerCase().trim();
       if (!taxByClassName.has(key)) taxByClassName.set(key, r);
+    }
+    if (r.name) {
+      const key = String(r.name).toLowerCase().trim();
+      if (!taxByRuleName.has(key)) taxByRuleName.set(key, r);
     }
   }
 
@@ -380,6 +410,7 @@ export async function buildContext(orgId) {
     taxRules,      // full list for warnings/debugging
     taxByRate,
     taxByClassName,
+    taxByRuleName,
   };
 }
 
@@ -570,7 +601,30 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
   //   2. Fall back to the hardcoded VALID_TAX_CLASSES enum if no tax rules
   //      exist yet for this org (first-time setup).
   //   3. Last resort: "standard" with a warning.
-  let taxClass = get('taxClass');
+  //
+  // Session 40 Phase 1: if the CSV also maps `taxRuleName` and it matches a
+  // live TaxRule by name, set `taxRuleId` on the cleaned row AND auto-mirror
+  // that rule's appliesTo into taxClass. `taxRuleName` wins over `taxClass`
+  // when both are present (the FK is authoritative).
+  let taxRuleId = null;
+  const ruleNameRaw = get('taxRuleName');
+  if (ruleNameRaw) {
+    const key = String(ruleNameRaw).toLowerCase().trim();
+    const hit = ctx.taxByRuleName?.get(key);
+    if (hit) {
+      taxRuleId = hit.id;
+      // Mirror appliesTo into taxClass if the column isn't separately mapped.
+      // This keeps legacy cashier-app builds (which only read taxClass) correct.
+      if (!mapping.taxClass) {
+        // get('taxClass') below reads the mapped column; synthesize one here.
+        raw.__syntheticTaxClass = hit.appliesTo;
+      }
+    } else {
+      warnings.push({ field: 'taxRuleName', message: `Tax rule "${ruleNameRaw}" not found — will try taxClass fallback` });
+    }
+  }
+
+  let taxClass = get('taxClass') || raw.__syntheticTaxClass || '';
   if (taxClass) {
     const raw = taxClass;
     const tcLower = taxClass.toLowerCase().trim();
@@ -654,7 +708,8 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
     cleaned: {
       upc:                upc || null,
       plu:                get('plu') || null,
-      sku:                get('sku') || null,
+      // (sku intentionally not written from CSV — column kept in schema for
+      //  legacy data but no longer mappable via the import dropdown.)
       itemCode:           get('itemCode') || null,
       name,
       brand:              get('brand') || null,
@@ -676,6 +731,8 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
       defaultCostPrice:   cost,
       defaultRetailPrice: retail,
       defaultCasePrice:   caseP,
+      // Session 40 Phase 1 — strict FK + legacy mirror
+      taxRuleId:          taxRuleId,
       taxClass:           taxClass || null,
       ageRequired:        (age === 18 || age === 21) ? age : null,
       ebtEligible:        parseBool(get('ebtEligible')),
@@ -711,13 +768,24 @@ function validateProductRow(raw, mapping, ctx, opts = {}) {
       ecomSalePrice:      parseDecimal(get('ecomSalePrice')),
       ecomOnSale:         parseBool(get('ecomOnSale')),
       ecomDescription:    get('ecomDescription') || null,
-      ecomSummary:        get('ecomSummary') || null,
+      // (ecomSummary no longer populated — legacy aliases merge into
+      //  ecomDescription via the alias table; column stays in schema for
+      //  rollback but is not written from CSV imports anymore.)
+      // Physical weight (lbs) — used for shipping. Moved to the E-Commerce
+      // group in the dropdown; stored in MasterProduct.weight.
+      weight:             parseDecimal(get('weight')),
+      // Shipping package dimensions (imperial: inches).
+      shipLengthIn:       parseDecimal(get('shipLengthIn')),
+      shipWidthIn:        parseDecimal(get('shipWidthIn')),
+      shipHeightIn:       parseDecimal(get('shipHeightIn')),
 
       // ── Product Image ──
       imageUrl:           get('imageUrl') || null,
 
-      // ── For linked UPC (processed in importProductRows) ──
-      _linkedUpc:         get('linkedUpc') || null,
+      // (Legacy single-linked-UPC staging removed — if the CSV still maps a
+      //  column with a legacy `linkedupc` / `caseupc` header, the alias
+      //  table above now routes it into `additionalUpcs` and the multi-UPC
+      //  post-processor handles it.)
 
       // ── Multi-UPC / multi-pack (Session 3) ─────────────────────────────
       // `_has*` flags distinguish "column absent" (undefined) from "column present
@@ -1088,9 +1156,10 @@ async function importProductRows(validRows, orgId, storeId, duplicateStrategy, o
 
   for (const { cleaned } of validRows) {
     // Strip internal tracking fields before DB write
+    // (_linkedUpc removed — legacy alias values now route into _additionalUpcs.)
     const {
       _existingId, _createDeptName, _createVendorName,
-      _linkedUpc, _specialPrice, _specialCost, _priceMethod, _groupPrice, _groupQty,
+      _specialPrice, _specialCost, _priceMethod, _groupPrice, _groupQty,
       _saleMultiple, _startDate, _endDate, _regMultiple,
       _tprRetail, _tprCost, _tprMultiple, _tprStartDate, _tprEndDate,
       _futureRetail, _futureCost, _futureActiveDate, _futureMultiple,
@@ -1216,22 +1285,44 @@ async function importProductRows(validRows, orgId, storeId, duplicateStrategy, o
     } catch { /* best-effort — conflicts surface at product-create time */ }
   }
 
-  let linkedCreated = 0, promosCreated = 0, altUpcsCreated = 0, packSizesCreated = 0;
+  let promosCreated = 0, altUpcsCreated = 0, packSizesCreated = 0, productVendorsUpserted = 0;
+
+  // Late-bind the ProductVendor upsert helper so importService remains agnostic
+  // of catalog internals when used from contexts where the helper isn't loaded.
+  let upsertProductVendor = null;
+  try {
+    ({ upsertProductVendor } = await import('../controllers/catalogController.js'));
+  } catch { /* fall through — per-vendor sync is best-effort */ }
 
   for (const { cleaned } of validRows) {
     const product = cleaned.upc ? productByUpcFinal.get(cleaned.upc) : null;
     if (!product) continue;
 
-    // ── Linked UPC → ProductUpc ────────────────────────────────────────────
-    if (cleaned._linkedUpc) {
+    // (Linked UPC post-process removed — legacy `linkedupc`/`caseupc` CSV
+    //  headers now route into `_additionalUpcs` via the alias table, and the
+    //  multi-UPC post-processor below handles all alternate barcodes in one
+    //  unified path.)
+
+    // ── Session 40: per-vendor item code + cost → ProductVendor ────────────
+    // When the CSV row carries both a vendorId (resolved during preview)
+    // AND an itemCode, record it as an authoritative ProductVendor mapping.
+    // First vendor for a product auto-flagged primary (handled inside
+    // upsertProductVendor) — matches the "first invoice wins" rule used by
+    // confirmInvoice. Import is best-effort; main row write already succeeded.
+    if (upsertProductVendor && cleaned.vendorId && cleaned.itemCode) {
       try {
-        await prisma.productUpc.upsert({
-          where: { orgId_upc: { orgId, upc: cleaned._linkedUpc } },
-          create: { orgId, masterProductId: product.id, upc: cleaned._linkedUpc, label: 'Linked from import' },
-          update: { masterProductId: product.id },
+        await upsertProductVendor(orgId, product.id, parseInt(cleaned.vendorId), {
+          vendorItemCode: cleaned.itemCode,
+          description:    cleaned.description || null,
+          priceCost:      cleaned.defaultCostPrice != null ? cleaned.defaultCostPrice : null,
+          caseCost:       cleaned.defaultCasePrice != null ? cleaned.defaultCasePrice : null,
+          packInCase:     cleaned.packInCase != null ? cleaned.packInCase : null,
         });
-        linkedCreated++;
-      } catch { /* dupe OK */ }
+        productVendorsUpserted++;
+      } catch (e) {
+        // Don't fail the import — log and continue.
+        console.warn('[importProductRows] ProductVendor upsert failed for product', product.id, '-', e.message);
+      }
     }
 
     // ── Session 3: additional_upcs (pipe-separated) → ProductUpc alternates
@@ -1399,10 +1490,10 @@ async function importProductRows(validRows, orgId, storeId, duplicateStrategy, o
     }
   }
 
-  if (linkedCreated > 0)    console.log(`🔗 Created ${linkedCreated} linked UPC entries`);
-  if (altUpcsCreated > 0)   console.log(`🔗 Created ${altUpcsCreated} alternate UPCs from additional_upcs column`);
-  if (packSizesCreated > 0) console.log(`📦 Created ${packSizesCreated} pack-size rows from pack_options column`);
-  if (promosCreated > 0)    console.log(`🏷️ Created ${promosCreated} promotion entries from import`);
+  if (altUpcsCreated > 0)         console.log(`🔗 Created ${altUpcsCreated} alternate UPCs from additional_upcs column`);
+  if (packSizesCreated > 0)       console.log(`📦 Created ${packSizesCreated} pack-size rows from pack_options column`);
+  if (promosCreated > 0)          console.log(`🏷️ Created ${promosCreated} promotion entries from import`);
+  if (productVendorsUpserted > 0) console.log(`🏭 Upserted ${productVendorsUpserted} per-vendor item-code mappings`);
 
   // ── Post-import: populate global image cache ────────────────────────────────
   const imageItems = validRows
@@ -1422,10 +1513,10 @@ async function importProductRows(validRows, orgId, storeId, duplicateStrategy, o
 
   return {
     created, updated, skipped, errors,
-    linkedUPCs: linkedCreated,
     alternateUPCs: altUpcsCreated,
     packSizes: packSizesCreated,
     promotions: promosCreated,
+    productVendorMappings: productVendorsUpserted,
     globalImages: globalImagesInserted,
   };
 }

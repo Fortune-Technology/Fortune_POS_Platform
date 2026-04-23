@@ -198,6 +198,12 @@ model TaxRule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Products with an explicit per-product override pointing at this rule.
+  // Phase 1 of the strict-FK migration (Session 40) — used by delete-guard
+  // in catalogController.deleteTaxRule to block removing a rule that's
+  // still referenced by N products.
+  products MasterProduct[]
+
   @@index([orgId, appliesTo])
   @@map("tax_rules")
 }
@@ -283,6 +289,7 @@ model Vendor {
   purchaseOrders PurchaseOrder[]
   vendorReturns  VendorReturn[]
   productGroups  ProductGroup[]
+  productVendors ProductVendor[]
 
   @@unique([orgId, name])
   @@index([orgId, active])
@@ -366,7 +373,26 @@ model MasterProduct {
   productGroup   ProductGroup? @relation(fields: [productGroupId], references: [id])
 
   // Tax
-  taxClass String? // "grocery", "alcohol", "tobacco", "hot_food", "none"
+  //
+  // Session 40 Phase 1 (strict FK migration):
+  //   `taxRuleId` is the authoritative per-product tax rule reference (FK).
+  //   When set, the cashier engine uses that exact rule's rate — immune to
+  //   rule renames, appliesTo changes, or ambiguity between similarly-named
+  //   rules.
+  //
+  //   `taxClass` is the legacy free-text matcher kept as a fallback so
+  //   existing data + older cashier-app builds keep working during the
+  //   transition. A Phase 2 migration script auto-populates `taxRuleId` for
+  //   products where `taxClass` maps unambiguously to an active rule.
+  //
+  //   Resolution priority at checkout:
+  //     (1) product.taxRuleId  → rule (highest priority; per-product override)
+  //     (2) dept-linked rule   via TaxRule.departmentIds[]  (Option B)
+  //     (3) legacy taxClass string match on TaxRule.appliesTo
+  //     (4) rate = 0 (no rule matched)
+  taxRuleId Int?
+  taxRule   TaxRule? @relation(fields: [taxRuleId], references: [id], onDelete: SetNull)
+  taxClass  String? // legacy — kept for backward compat during migration
   // Tax rates resolved at checkout using TaxRule table; taxClass is the lookup key
 
   // Deposit / CRV
@@ -415,7 +441,13 @@ model MasterProduct {
   ecomDescription String? // SEO-friendly description
   ecomTags        String[] // searchable tags
   ecomExternalId  String? // external ecom platform product ID
-  ecomPackWeight  Decimal? @db.Decimal(10, 4) // shipping weight
+  ecomPackWeight  Decimal? @db.Decimal(10, 4) // shipping weight (lbs)
+  // Shipping package dimensions (imperial: inches). Used by ecom storefront
+  // + carrier integrations for rate quotes and label generation. All nullable
+  // — fall back to defaults or require quote-time override if any are unset.
+  shipLengthIn    Decimal? @db.Decimal(10, 4)
+  shipWidthIn     Decimal? @db.Decimal(10, 4)
+  shipHeightIn    Decimal? @db.Decimal(10, 4)
   ecomPrice       Decimal? @db.Decimal(10, 4) // separate ecommerce price
   ecomSalePrice   Decimal? @db.Decimal(10, 4) // ecommerce sale price
   ecomOnSale      Boolean  @default(false) // ecommerce sale flag
@@ -451,6 +483,11 @@ model MasterProduct {
   vendorReturnItems    VendorReturnItem[]
   inventoryAdjustments InventoryAdjustment[]
   labelQueueItems      LabelQueue[]
+  // Per-vendor item codes / costs. One row per (product, vendor) pair.
+  // The row flagged `isPrimary: true` mirrors its `vendorItemCode` back into
+  // `MasterProduct.itemCode` so legacy readers (auto-order, ProductCatalog
+  // list) keep working. See model ProductVendor below.
+  vendorMappings       ProductVendor[]
 
   @@index([orgId, upc])
   @@index([orgId, deleted, active])
@@ -1349,6 +1386,49 @@ model VendorProductMap {
   @@unique([orgId, storeId, vendorName, vendorItemCode])
   @@index([orgId, storeId, vendorName])
   @@map("vendor_product_maps")
+}
+
+// ProductVendor — authoritative per-vendor item-code / cost mapping.
+//
+// One MasterProduct can have N vendors, each with its own item code, cost,
+// and case/pack configuration. Exactly one row per product is flagged
+// `isPrimary: true` — its `vendorItemCode` is mirrored back into
+// `MasterProduct.itemCode` so legacy readers (auto-order engine, product
+// catalog list, reports) keep working without being rewritten.
+//
+// Distinct from VendorProductMap above, which is OCR fuzzy-matching memory
+// (keyed on vendor NAME STRING with matchTier/confirmedCount tracking). This
+// one is the clean normalized relationship users maintain explicitly (or
+// that gets populated from invoice imports with a known `vendorId`).
+model ProductVendor {
+  id              Int      @id @default(autoincrement())
+  orgId           String
+  masterProductId Int
+  vendorId        Int
+
+  vendorItemCode  String?           // vendor's SKU/item number for this product
+  description     String?           // vendor's description (may differ from our name)
+  priceCost       Decimal? @db.Decimal(10, 4) // cost per sell unit
+  caseCost        Decimal? @db.Decimal(10, 4) // cost per full case (if known)
+  packInCase      Int?              // vendor's case-pack count (may differ from master)
+
+  isPrimary       Boolean  @default(false)
+  // Most recent invoice date that referenced this (product, vendor) pair —
+  // used by the auto-primary-on-first-import rule.
+  lastReceivedAt  DateTime?
+
+  notes           String?           // free-form (reorder preferences etc.)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product MasterProduct @relation(fields: [masterProductId], references: [id], onDelete: Cascade)
+  vendor  Vendor        @relation(fields: [vendorId],        references: [id], onDelete: Cascade)
+
+  @@unique([orgId, masterProductId, vendorId])
+  @@index([orgId, vendorId])
+  @@index([orgId, masterProductId, isPrimary])
+  @@map("product_vendors")
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -113,6 +113,10 @@ export const useCartStore = create((set, get) => ({
         qty:              1,
         unitPrice:        Number(product.retailPrice || 0),
         taxable:          product.taxable ?? true,
+        // Session 40 Phase 1 — strict-FK tax. `taxRuleId` is authoritative;
+        // `taxClass` kept as the legacy fallback matcher. selectTotals checks
+        // taxRuleId first, then dept-linked rule, then taxClass match.
+        taxRuleId:        product.taxRuleId || null,
         taxClass:         product.taxClass || 'grocery',
         ebtEligible:      product.ebtEligible || false,
         ageRequired:      product.ageRequired || null,
@@ -138,7 +142,7 @@ export const useCartStore = create((set, get) => ({
 
   // ── Open Item (manual entry — no catalog product) ────────────────────────
   // Used for misc items that don't have a barcode, like "Coffee" or custom amounts.
-  addOpenItem: ({ name, price, taxClass = 'standard', taxable = true, departmentId = null }) => {
+  addOpenItem: ({ name, price, taxRuleId = null, taxClass = 'standard', taxable = true, departmentId = null }) => {
     const { items, promotions } = get();
     const newItem = calcLine({
       lineId:           nanoid(8),
@@ -149,6 +153,10 @@ export const useCartStore = create((set, get) => ({
       qty:              1,
       unitPrice:        Number(price) || 0,
       taxable:          !!taxable,
+      // Open items can also carry an explicit taxRuleId if the UI supplies one
+      // (e.g. a "Generic Tobacco" quick-entry button). Otherwise falls through
+      // to the taxClass matcher as before.
+      taxRuleId:        taxRuleId || null,
       taxClass:         taxClass || 'standard',
       ebtEligible:      false,
       ageRequired:      null,
@@ -438,15 +446,21 @@ export function selectTotals(items, taxRules = [], orderDiscount = null, bagFeeI
   let taxTotal = 0;
   for (const item of items) {
     if (!item.taxable || item.ebtEligible) continue;
-    // Option B match order:
-    //   1. If ANY active rule has this item's departmentId in its departmentIds
-    //      → use that rule (dept-linked rules win)
-    //   2. Otherwise fall through to the legacy class matcher on appliesTo
-    // Both paths check `active`. The first matching rule wins in each tier.
-    const deptRule = item.departmentId
+    // Session 40 Phase 1 resolution order (strict-FK migration):
+    //   1. Product-level explicit FK: item.taxRuleId → rule (per-product override)
+    //   2. Department-linked rule via TaxRule.departmentIds[] (Option B)
+    //   3. Legacy string match on appliesTo ↔ item.taxClass
+    //   4. rate = 0 (no rule matched)
+    // Every tier requires the rule to be `active: true`.
+    const productRule = item.taxRuleId
+      ? taxRules.find(r => r.active && Number(r.id) === Number(item.taxRuleId))
+      : null;
+    const deptRule = !productRule && item.departmentId
       ? taxRules.find(r => r.active && Array.isArray(r.departmentIds) && r.departmentIds.includes(Number(item.departmentId)))
       : null;
-    const rule = deptRule || taxRules.find(r => r.active && (!r.departmentIds || r.departmentIds.length === 0) && matchTax(r.appliesTo, item.taxClass));
+    const rule = productRule
+      || deptRule
+      || taxRules.find(r => r.active && (!r.departmentIds || r.departmentIds.length === 0) && matchTax(r.appliesTo, item.taxClass));
     taxTotal += item.lineTotal * (rule ? parseFloat(rule.rate) : 0);
   }
   taxTotal = round2(taxTotal);
