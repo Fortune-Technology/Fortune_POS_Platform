@@ -21,6 +21,44 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Session 39 Round 5 — lazy-import HEIC converter so the backend starts
+// even if the package isn't installed (defence against a bad deploy).
+// Real upload request paths assert it exists when a HEIC file arrives.
+let _heicConvert = null;
+async function getHeicConverter() {
+  if (_heicConvert !== null) return _heicConvert;
+  try {
+    const mod = await import('heic-convert');
+    _heicConvert = mod.default || mod;
+  } catch {
+    _heicConvert = false; // distinct from null so we don't retry
+  }
+  return _heicConvert;
+}
+
+// iPhone photos arrive as HEIC/HEIF. Neither Azure Document Intelligence
+// nor OpenAI Vision accepts that format, so we transcode to JPEG before
+// running OCR. Returns { buffer, mimetype } — pass-through for non-HEIC.
+async function normalizeImageBuffer(buffer, mimetype) {
+  const mt = (mimetype || '').toLowerCase();
+  const isHeic = mt.includes('heic') || mt.includes('heif');
+  if (!isHeic) return { buffer, mimetype };
+  const convert = await getHeicConverter();
+  if (!convert) {
+    throw new Error(
+      'HEIC/HEIF image received but heic-convert is not installed on the server. ' +
+      'Run `npm install heic-convert` in backend/ and restart, or ask the user to export the photo as JPEG.'
+    );
+  }
+  try {
+    const jpegBuffer = await convert({ buffer, format: 'JPEG', quality: 0.9 });
+    console.log(`🖼  HEIC → JPEG converted (${buffer.length} → ${jpegBuffer.length} bytes)`);
+    return { buffer: Buffer.from(jpegBuffer), mimetype: 'image/jpeg' };
+  } catch (err) {
+    throw new Error(`HEIC decode failed: ${err.message}. Try exporting the photo as JPEG.`);
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
@@ -159,6 +197,12 @@ const extractWithAzure = async (buffer, mimetype) => {
     const p           = item.properties || {};
     const productCode = p.ProductCode?.value || "";
 
+    // Session 39 Round 5 — `discount` used to read p.Tax which is Azure's
+    // line-tax field (always 0 or the tax amount), NOT the discount. That
+    // caused the cost-proximity tier to compare invoice gross price to
+    // catalog cost. Azure's prebuilt-invoice model doesn't extract the
+    // DISC column cleanly — GPT enrichment fills it in from raw OCR text.
+    // Default to 0 here; enrichLineItems will populate from OCR.
     // Store numeric codes in both fields — many vendors use their item# as UPC
     return {
       upc:                  isLikelyUPC(productCode) ? productCode : "",
@@ -170,13 +214,13 @@ const extractWithAzure = async (buffer, mimetype) => {
       containerSize:        "",
       quantity:             Number(p.Quantity?.value  || 0),
       unitType:             p.Unit?.value             || "case",
-      caseCost:             p.UnitPrice?.value?.amount || 0,
-      netCost:              0,          // enriched by GPT
+      caseCost:             p.UnitPrice?.value?.amount || 0,  // ⚠ may be gross PRICE, not NET — enrichment prefers GPT's parsed value
+      netCost:              0,          // enriched by GPT from NET column
       unitCost:             0,          // recalculated after enrichment
-      depositAmount:        0,          // enriched by GPT
+      depositAmount:        0,          // enriched by GPT from DEP column
       totalAmount:          p.Amount?.value?.amount   || 0,
       suggestedRetailPrice: 0,          // enriched by GPT
-      discount:             p.Tax?.value?.amount      || 0,
+      discount:             0,          // enriched by GPT from DISC column
       transactionType:      "sale",
       category:             "Other",
       subCategory:          "",
@@ -201,7 +245,7 @@ const enrichLineItems = async (lineItems, rawContent) => {
       upc:         item.upc,
       itemCode:    item.itemCode,
       quantity:    item.quantity || 1,
-      caseCost:    item.caseCost,
+      azureCaseCost: item.caseCost, // labelled so GPT knows Azure's value may be gross PRICE
       totalAmount: item.totalAmount,
     })),
     null, 2
@@ -215,27 +259,42 @@ ${truncatedContent}
 ALREADY EXTRACTED LINE ITEMS (add missing fields to each):
 ${itemsJson}
 
+Beverage distributor invoices commonly use THIS column layout:
+  ITEM# | QTY | DESCRIPTION | PRICE | DISC | DEP | NET | EXT
+where PRICE is the gross case price, DISC is the per-case discount,
+DEP is the per-case bottle deposit, NET = PRICE - DISC, and
+EXT = (NET + DEP) × QTY. Your job is to distinguish PRICE from NET —
+Azure's extractor usually grabs PRICE which is WRONG as the cost.
+
 For each item, identify from the invoice text:
-1. upc — if invoice has a U.P.C./BARCODE column with a 12-13 digit value, put it here; otherwise leave ""
-2. itemCode — vendor's internal code (ITEM#, CODE, Item Number column); even if it looks numeric
-3. caseCost — wholesale case cost (NET, WHSL, COST, or Unit Price column)
-4. netCost — cost after discount/allowance if separate column, else 0
-5. depositAmount — deposit per case (DEP column), else 0
-6. suggestedRetailPrice — vendor's suggested shelf price (SSP, SRP column), else 0
-7. packUnits — from pack format like "6/12oz" = 6 (first number), else 0
-8. unitsPerPack — from pack format like "6/12oz" = 12 (second number), else 0
-9. containerSize — e.g. "12oz", "750ml", "1L", "1.5 QT"
-10. category — one of: Beer|Wine|Spirits|Bakery|Dairy|Produce|Beverage|Snacks|Tobacco|Candy|Frozen|Grocery|IceCream|Other
-11. transactionType — "credit" if quantity is negative or item is in a STALES/RETURNS section, else "sale"
-12. subCategory — optional, e.g. "IPA", "Lager", "Vanilla"
+1.  upc — if invoice has a dedicated U.P.C./BARCODE column with a 12-13 digit value, put it here; otherwise ""
+2.  itemCode — vendor's internal code (ITEM#, CODE, Item Number column); even if numeric
+3.  caseCost — the GROSS case price (PRICE column, before any discount). If the invoice only has one
+                price column, use that value.
+4.  discount — the per-case DISC/DISCOUNT/ALLOW column value, else 0
+5.  netCost — the NET case cost (caseCost - discount). If a NET column is printed on the invoice,
+              use that value directly. If no explicit NET column, compute caseCost - discount.
+6.  depositAmount — per-case bottle deposit (DEP column), else 0
+7.  suggestedRetailPrice — vendor's suggested shelf price (SSP, SRP column), else 0
+8.  packUnits — from pack format like "6/12oz" or "2-12/12OZ" = first number (6 or 2), else 0
+9.  unitsPerPack — e.g. "6/12oz" → 12, "18/12OZ" → 12 (the last "per-unit" size number), else 0
+10. containerSize — e.g. "12oz", "750ml", "1L", "24oz"
+11. category — one of: Beer|Wine|Spirits|Bakery|Dairy|Produce|Beverage|Snacks|Tobacco|Candy|Frozen|Grocery|IceCream|Other
+12. transactionType — "credit" if quantity is negative or item is in a STALES/RETURNS/DAMAGED section, else "sale"
+13. subCategory — optional, e.g. "IPA", "Lager", "Vanilla"
 
 RULES:
-- Item Number / CODE column → itemCode. If it is purely numeric (7+ digits), ALSO copy it to upc (many vendors like Hershey's use their item# as their UPC barcode).
+- ITEM# / CODE column → itemCode. If it is purely numeric (7+ digits), ALSO copy it to upc
+  (many vendors like Hershey's use their item# as their UPC barcode).
 - If there is a separate dedicated UPC/BARCODE column, that takes priority for the upc field.
-- If no DEP column exists, depositAmount = 0
+- If the invoice has a DAMAGED / OUT OF STOCK / DECLINED marker for a line, set
+  transactionType="credit" and keep the visible quantity (e.g. -1).
+- If no DEP column exists, depositAmount = 0. If no DISC column, discount = 0.
+- Always populate BOTH caseCost (gross) AND netCost (after discount) when you can. They may
+  be equal if there is no discount, or a standalone NET column is the only price column.
 
 Return JSON only:
-{"enrichments": [{"index": 0, "upc": "...", "itemCode": "...", "caseCost": 0, "netCost": 0, "depositAmount": 0, "suggestedRetailPrice": 0, "packUnits": 0, "unitsPerPack": 0, "containerSize": "...", "category": "...", "transactionType": "sale", "subCategory": "..."}]}`;
+{"enrichments": [{"index": 0, "upc": "...", "itemCode": "...", "caseCost": 0, "discount": 0, "netCost": 0, "depositAmount": 0, "suggestedRetailPrice": 0, "packUnits": 0, "unitsPerPack": 0, "containerSize": "...", "category": "...", "transactionType": "sale", "subCategory": "..."}]}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -257,9 +316,31 @@ Return JSON only:
 
       if (e.upc             !== undefined && e.upc         !== "") item.upc                  = e.upc;
       if (e.itemCode        !== undefined && e.itemCode    !== "") item.itemCode              = e.itemCode;
-      if (e.caseCost)                                               item.caseCost             = Number(e.caseCost);
-      if (e.netCost)                                                item.netCost              = Number(e.netCost);
-      if (e.depositAmount)                                          item.depositAmount        = Number(e.depositAmount);
+
+      // Session 39 Round 5 — tighter caseCost merge.
+      // Azure often extracts the GROSS price column (~18.10 on a $16 NET line);
+      // GPT reads the invoice layout and picks the real PRICE. Trust GPT's
+      // value when it differs from Azure's by more than 5% — that's the
+      // tell that Azure grabbed the wrong column.
+      if (e.caseCost != null && Number(e.caseCost) > 0) {
+        const gptCost = Number(e.caseCost);
+        const azureCost = Number(item.caseCost || 0);
+        if (!azureCost || Math.abs(gptCost - azureCost) / Math.max(azureCost, gptCost) > 0.05) {
+          item.caseCost = gptCost;
+        }
+      }
+
+      // Discount — always overwrite (Azure never captures this correctly)
+      if (e.discount != null)                                       item.discount             = Number(e.discount) || 0;
+
+      // netCost — prefer GPT's value. If GPT didn't give one, derive from caseCost - discount.
+      if (e.netCost != null && Number(e.netCost) > 0) {
+        item.netCost = Number(e.netCost);
+      } else if (item.caseCost && item.discount) {
+        item.netCost = Math.max(0, Number(item.caseCost) - Number(item.discount));
+      }
+
+      if (e.depositAmount != null)                                  item.depositAmount        = Number(e.depositAmount) || 0;
       if (e.suggestedRetailPrice)                                   item.suggestedRetailPrice = Number(e.suggestedRetailPrice);
       if (e.packUnits)                                              item.packUnits            = Number(e.packUnits);
       if (e.unitsPerPack)                                           item.unitsPerPack         = Number(e.unitsPerPack);
@@ -345,8 +426,13 @@ CRITICAL RULES:
 - quantity: if the Ordered/Qty column is partially cut off or unreadable, default to 1
 - itemCode = the Item Number / vendor code column (e.g. 2468200901). Do NOT put this in upc.
 - upc = only real 12-13 digit UPC barcodes. If there is no barcode column, leave "" for all items.
-- caseCost = the per-case wholesale price (Unit Price column)
-- totalAmount = the Price/Total column for that line. If blank, use caseCost × quantity.
+- caseCost = the GROSS case price (PRICE column, before any discount)
+- discount = the DISC/DISCOUNT/ALLOW column value per case, else 0
+- netCost = the NET case cost (caseCost - discount). If invoice prints a NET column, use that.
+            Always fill BOTH caseCost AND netCost. They may be equal when there is no discount.
+- depositAmount = the DEP / BOTTLE DEPOSIT column per case, else 0
+- totalAmount = the EXT / Total / Amount column for that line. If blank, use (netCost + depositAmount) × quantity.
+- transactionType = "credit" if quantity is negative OR the line says DAMAGED/RETURN/CREDIT/STALES. Keep the visible qty sign.
 - If invoice says "*** CONTINUED ***" that means this is page 1 — extract everything visible
 - NEVER return an empty lineItems array if you can see product rows in the image
 - Return only valid JSON, no markdown`;
@@ -374,27 +460,37 @@ CRITICAL RULES:
   const raw = JSON.parse(response.choices[0].message.content);
 
   const vendor    = raw.vendor    || {};
-  const lineItems = (raw.lineItems || []).map((item) => ({
-    upc:                  item.upc                  || "",
-    itemCode:             item.itemCode             || "",
-    plu:                  item.plu                  || "",
-    description:          item.description          || "",
-    packUnits:            Number(item.packUnits      || 0),
-    unitsPerPack:         Number(item.unitsPerPack   || 0),
-    containerSize:        item.containerSize         || "",
-    quantity:             Number(item.quantity        || 1),
-    unitType:             "case",
-    caseCost:             Number(item.caseCost        || 0),
-    netCost:              Number(item.netCost         || 0),
-    unitCost:             0,
-    depositAmount:        Number(item.depositAmount   || 0),
-    totalAmount:          Number(item.totalAmount     || 0),
-    suggestedRetailPrice: Number(item.suggestedRetailPrice || 0),
-    discount:             Number(item.discount        || 0),
-    transactionType:      item.transactionType        || "sale",
-    category:             item.category               || "Other",
-    subCategory:          item.subCategory            || "",
-  }));
+  const lineItems = (raw.lineItems || []).map((item) => {
+    const caseCost = Number(item.caseCost || 0);
+    const discount = Number(item.discount || 0);
+    // Prefer explicit netCost from the invoice; fall back to caseCost - discount
+    // (Session 39 Round 5 — ensures the cost-proximity tier compares against the
+    // real post-discount price the store actually pays).
+    const netCost = item.netCost != null && Number(item.netCost) > 0
+      ? Number(item.netCost)
+      : Math.max(0, caseCost - discount);
+    return {
+      upc:                  item.upc                  || "",
+      itemCode:             item.itemCode             || "",
+      plu:                  item.plu                  || "",
+      description:          item.description          || "",
+      packUnits:            Number(item.packUnits      || 0),
+      unitsPerPack:         Number(item.unitsPerPack   || 0),
+      containerSize:        item.containerSize         || "",
+      quantity:             Number(item.quantity        || 1),
+      unitType:             "case",
+      caseCost,
+      netCost,
+      unitCost:             0,
+      depositAmount:        Number(item.depositAmount   || 0),
+      totalAmount:          Number(item.totalAmount     || 0),
+      suggestedRetailPrice: Number(item.suggestedRetailPrice || 0),
+      discount,
+      transactionType:      item.transactionType        || "sale",
+      category:             item.category               || "Other",
+      subCategory:          item.subCategory            || "",
+    };
+  });
 
   console.log(`✅ GPT-4o vision extracted: vendor="${vendor.vendorName || '?'}", ${lineItems.length} line items`);
 
@@ -473,6 +569,12 @@ const generateDisplayPages = async (buffer, mimetype) => {
  */
 export const extractInvoiceData = async (buffer, mimetype) => {
   try {
+    // Session 39 Round 5 — transcode HEIC/HEIF to JPEG before anything
+    // touches the buffer. Azure + OpenAI Vision both reject HEIC directly.
+    const normalizedInput = await normalizeImageBuffer(buffer, mimetype);
+    buffer   = normalizedInput.buffer;
+    mimetype = normalizedInput.mimetype;
+
     // Run page generation in parallel with extraction (display only)
     const pagesPromise = generateDisplayPages(buffer, mimetype);
 
@@ -591,6 +693,16 @@ export const extractInvoiceData = async (buffer, mimetype) => {
  * Returns { data: { vendor, lineItems }, pages: string[] }
  */
 export const extractMultiplePages = async (files) => {
+  // Session 39 Round 5 — normalise every input file to JPEG/PDF before
+  // extraction so HEIC/HEIF photos don't silently fail mid-batch.
+  const normalized = await Promise.all(
+    files.map(async (f) => {
+      try { return await normalizeImageBuffer(f.buffer, f.mimetype); }
+      catch (e) { console.warn('⚠️ Image normalize failed for one page:', e.message); return f; }
+    })
+  );
+  files = normalized;
+
   // Generate display pages for every file in parallel
   const pagesResults = await Promise.all(
     files.map(({ buffer, mimetype }) => generateDisplayPages(buffer, mimetype).catch(() => []))

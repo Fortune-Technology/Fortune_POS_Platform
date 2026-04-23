@@ -14,6 +14,21 @@ import { useAuthStore } from '../stores/useAuthStore.js';
 import { useSyncStore } from '../stores/useSyncStore.js';
 import { normalizeUPC } from '../utils/upc.js';
 
+// Session 39 Round 5 — defensive deposit flattener.
+// The backend now flattens `depositAmount` server-side (catalogController.js
+// flattenDeposit), but if an older backend is still deployed, this ensures
+// the cashier cart never silently drops the deposit on a cache-miss scan.
+// Mirrors the same priority the backend uses.
+const ensureDepositAmount = (p) => {
+  if (!p) return p;
+  if (p.depositAmount != null) return p;
+  const computed =
+    p.depositPerUnit != null ? Number(p.depositPerUnit) :
+    p.depositRule              ? Number(p.depositRule.depositAmount) * (p.sellUnitSize || 1) :
+    null;
+  return { ...p, depositAmount: computed };
+};
+
 export function useProductLookup() {
   const storeId  = useAuthStore(s => s.cashier?.storeId || s.cashier?.stores?.[0]?.storeId);
   const isOnline = useSyncStore(s => s.isOnline);
@@ -26,7 +41,11 @@ export function useProductLookup() {
 
     // 1. Try IndexedDB (handles format variants internally)
     const cached = await lookupByUPC(upc, storeId);
-    if (cached) return { product: cached, source: 'cache' };
+    // Session 39 Round 5 — self-heal any cached row that was synced before
+    // the backend started flattening depositAmount. Without this, products
+    // cached by an older build silently drop the deposit on every scan
+    // until the next full re-sync.
+    if (cached) return { product: ensureDepositAmount(cached), source: 'cache' };
 
     // 2. API fallback (online only) — send normalized UPC so the backend
     //    variant-matching logic works on clean input.
@@ -34,20 +53,23 @@ export function useProductLookup() {
       try {
         const remote = await lookupProductByUPC(upc, storeId);
         if (remote) {
+          // Session 39 Round 5 — ensure depositAmount is populated BEFORE
+          // we cache the row, so the cart + all future cache hits see it.
+          const withDeposit = ensureDepositAmount(remote);
           // Cache with normalized UPC so future scans hit IndexedDB
           await upsertProducts([{
-            ...remote,
-            id:          remote.id,
-            upc:         normalizeUPC(remote.upc) || remote.upc,
-            retailPrice: Number(remote.defaultRetailPrice || 0),
+            ...withDeposit,
+            id:          withDeposit.id,
+            upc:         normalizeUPC(withDeposit.upc) || withDeposit.upc,
+            retailPrice: Number(withDeposit.defaultRetailPrice || 0),
             storeId:     storeId || null,
-            orgId:       remote.orgId,
-            updatedAt:   remote.updatedAt || new Date().toISOString(),
+            orgId:       withDeposit.orgId,
+            updatedAt:   withDeposit.updatedAt || new Date().toISOString(),
           }]);
           // Apply Product → Department taxClass fallback so the first-scan
           // API path gets the same tax inheritance as the cached-scan path.
           // Subsequent scans hit Dexie and are decorated inside lookupByUPC.
-          const decorated = await decorateProductWithDeptTaxClass(remote);
+          const decorated = await decorateProductWithDeptTaxClass(withDeposit);
           return { product: decorated, source: 'api' };
         }
       } catch { /* network error — fall through */ }

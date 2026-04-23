@@ -10,6 +10,11 @@ import {
   clearPOSCache,
   loadCatalogProductsForMatching,
 } from '../services/matchingService.js';
+// Session 40: parallel writes to the clean per-vendor-cost mapping table.
+// VendorProductMap above is for OCR fuzzy-matching memory (vendorName string).
+// ProductVendor is for the user-facing authoritative (vendor, product) mapping
+// with real FK IDs.
+import { upsertProductVendor } from './catalogController.js';
 import fs from 'fs/promises';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -543,6 +548,40 @@ export const confirmInvoice = async (req, res) => {
 
     // ── Save confirmed mappings (store-specific + global) ────────────────────
     await saveConfirmedMappings(lineItems, vendorName, req.orgId);
+
+    // ── Parallel write: authoritative ProductVendor mappings (Session 40) ────
+    // The saveConfirmedMappings call above writes to VendorProductMap for OCR
+    // fuzzy-match memory. Here we populate the clean ProductVendor table keyed
+    // on real FKs so the ProductForm's per-vendor cost table stays in sync.
+    // First invoice to reference a product auto-sets it primary.
+    try {
+      const vId = existing.vendorId || null;
+      if (vId) {
+        for (const item of (lineItems || [])) {
+          if (!['matched', 'manual'].includes(item.mappingStatus)) continue;
+          if (!item.linkedProductId) continue;
+          const mpId = parseInt(item.linkedProductId);
+          if (!mpId) continue;
+          // Pull unit cost from the confirmed line: prefer `unitCost` else derive
+          // from caseCost / packUnits; fall back to originalUnitCost if present.
+          const unitCost = item.unitCost != null ? Number(item.unitCost)
+                         : (item.caseCost && item.packUnits > 0 ? Number(item.caseCost) / Number(item.packUnits) : null);
+          await upsertProductVendor(req.orgId, mpId, vId, {
+            vendorItemCode: item.originalItemCode || null,
+            description:    item.originalVendorDescription || null,
+            priceCost:      unitCost,
+            caseCost:       item.caseCost != null ? Number(item.caseCost) : null,
+            packInCase:     item.packUnits ? parseInt(item.packUnits) : null,
+            lastReceivedAt: invoiceDate ? new Date(invoiceDate) : new Date(),
+          }).catch(e => {
+            console.warn('[confirmInvoice] ProductVendor upsert failed:', e.message);
+          });
+        }
+      }
+    } catch (e) {
+      // Never let this block invoice confirmation — OCR path is primary.
+      console.warn('[confirmInvoice] ProductVendor sync pass error:', e.message);
+    }
 
     // ── Compute and save match stats ─────────────────────────────────────────
     try {

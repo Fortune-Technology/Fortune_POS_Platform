@@ -58,6 +58,28 @@ try {
 const getOrgId = (req) => req.tenantId || req.user?.tenantId || req.user?.orgId;
 const getStoreId = (req) => req.storeId;
 
+// ─────────────────────────────────────────────────
+// Deposit flattener — normalises every product payload so downstream
+// consumers (cashier cart, portal table, reports) can read a single
+// `depositAmount` field regardless of whether the deposit was set via
+// the new `MasterProduct.depositPerUnit` scalar or the legacy nested
+// DepositRule. Must stay in lockstep with the formula in
+// posTerminalController.js → getCatalogSnapshot.
+//
+// Session 39 Round 5 — previously only the snapshot endpoint flattened
+// this; the online-scan fallback (searchMasterProducts, getMasterProduct)
+// returned raw Prisma rows so the cashier cart read `undefined` and
+// silently dropped the deposit on any cache-miss scan.
+// ─────────────────────────────────────────────────
+const flattenDeposit = (p) => {
+  if (!p) return p;
+  const depositAmount =
+    p.depositPerUnit != null ? Number(p.depositPerUnit) :
+    p.depositRule              ? Number(p.depositRule.depositAmount) * (p.sellUnitSize || 1) :
+    null;
+  return { ...p, depositAmount };
+};
+
 const paginationParams = (query) => {
   const page  = Math.max(1, parseInt(query.page)  || 1);
   const limit = Math.min(500, Math.max(1, parseInt(query.limit) || 50));
@@ -184,11 +206,43 @@ export const deleteDepartment = async (req, res) => {
   try {
     const orgId = getOrgId(req);
     const id = parseInt(req.params.id);
+    const force = req.query.force === 'true';
+
+    // Check for active product assignments before deactivating. This prevents
+    // the silent-data-loss bug where a user deactivates a dept, then later
+    // edits a product whose dept is no longer in the dropdown, saves, and
+    // loses the assignment entirely.
+    const usageCount = await prisma.masterProduct.count({
+      where: { orgId, departmentId: id, deleted: false },
+    });
+    if (usageCount > 0 && !force) {
+      return res.status(409).json({
+        success: false,
+        code: 'IN_USE',
+        error: `Cannot delete: ${usageCount} product(s) are assigned to this department. ` +
+               `Reassign them first, or retry with ?force=true to detach them.`,
+        usageCount,
+      });
+    }
+    if (force && usageCount > 0) {
+      // User opted into cascade — clear FK on every product referencing this
+      // department so nothing breaks on future edits.
+      await prisma.masterProduct.updateMany({
+        where: { orgId, departmentId: id },
+        data:  { departmentId: null },
+      });
+    }
 
     // Soft delete — set active: false
     await prisma.department.update({ where: { id, orgId }, data: { active: false } });
     emitDepartmentSync(orgId, id, 'delete');
-    res.json({ success: true, message: 'Department deactivated' });
+    res.json({
+      success: true,
+      message: force && usageCount > 0
+        ? `Department deactivated; ${usageCount} product(s) detached`
+        : 'Department deactivated',
+      detachedCount: force ? usageCount : 0,
+    });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Department not found' });
     res.status(500).json({ success: false, error: err.message });
@@ -465,8 +519,39 @@ export const deleteTaxRule = async (req, res) => {
   try {
     const orgId = getOrgId(req);
     const id = parseInt(req.params.id);
+    const force = req.query.force === 'true';
+
+    // Session 40 Phase 1 — same FK-usage safeguard as deleteDepartment /
+    // deleteVendor. Blocks deactivation when products have a hard FK to this
+    // rule; `?force=true` cascades by clearing taxRuleId on all referencing
+    // products (falls back to the legacy taxClass match afterwards).
+    const usageCount = await prisma.masterProduct.count({
+      where: { orgId, taxRuleId: id, deleted: false },
+    });
+    if (usageCount > 0 && !force) {
+      return res.status(409).json({
+        success: false,
+        code: 'IN_USE',
+        error: `Cannot delete: ${usageCount} product(s) have this as their explicit tax rule. ` +
+               `Reassign them first, or retry with ?force=true to detach them (they'll fall back to the legacy taxClass matcher).`,
+        usageCount,
+      });
+    }
+    if (force && usageCount > 0) {
+      await prisma.masterProduct.updateMany({
+        where: { orgId, taxRuleId: id },
+        data:  { taxRuleId: null },
+      });
+    }
+
     await prisma.taxRule.update({ where: { id, orgId }, data: { active: false } });
-    res.json({ success: true, message: 'Tax rule deactivated' });
+    res.json({
+      success: true,
+      message: force && usageCount > 0
+        ? `Tax rule deactivated; ${usageCount} product(s) detached`
+        : 'Tax rule deactivated',
+      detachedCount: force ? usageCount : 0,
+    });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Tax rule not found' });
     res.status(500).json({ success: false, error: err.message });
@@ -585,9 +670,27 @@ export const updateVendor = async (req, res) => {
     const orgId = getOrgId(req);
     const id = parseInt(req.params.id);
 
+    // Explicit whitelist — don't pass req.body straight into data. Previously
+    // any client could include orgId/id/aliases and have them overwritten
+    // silently (tenant-hopping risk). Now every field is individually validated
+    // and coerced; unknown keys are ignored.
+    const body = req.body || {};
+    const updates = {};
+    if (body.name        !== undefined) updates.name        = body.name;
+    if (body.code        !== undefined) updates.code        = body.code || null;
+    if (body.contactName !== undefined) updates.contactName = body.contactName || null;
+    if (body.email       !== undefined) updates.email       = body.email || null;
+    if (body.phone       !== undefined) updates.phone       = body.phone || null;
+    if (body.address     !== undefined) updates.address     = body.address || null;
+    if (body.website     !== undefined) updates.website     = body.website || null;
+    if (body.terms       !== undefined) updates.terms       = body.terms || null;
+    if (body.accountNo   !== undefined) updates.accountNo   = body.accountNo || null;
+    if (body.aliases     !== undefined) updates.aliases     = Array.isArray(body.aliases) ? body.aliases : [];
+    if (body.active      !== undefined) updates.active      = Boolean(body.active);
+
     const vendor = await prisma.vendor.update({
       where: { id, orgId },
-      data: req.body,
+      data: updates,
     });
 
     res.json({ success: true, data: vendor });
@@ -601,8 +704,38 @@ export const deleteVendor = async (req, res) => {
   try {
     const orgId = getOrgId(req);
     const id = parseInt(req.params.id);
+    const force = req.query.force === 'true';
+
+    // Same FK-usage safeguard as deleteDepartment. Prevents silent loss of
+    // vendor assignments when a product with a now-deactivated vendor is
+    // later edited and saved.
+    const usageCount = await prisma.masterProduct.count({
+      where: { orgId, vendorId: id, deleted: false },
+    });
+    if (usageCount > 0 && !force) {
+      return res.status(409).json({
+        success: false,
+        code: 'IN_USE',
+        error: `Cannot delete: ${usageCount} product(s) are assigned to this vendor. ` +
+               `Reassign them first, or retry with ?force=true to detach them.`,
+        usageCount,
+      });
+    }
+    if (force && usageCount > 0) {
+      await prisma.masterProduct.updateMany({
+        where: { orgId, vendorId: id },
+        data:  { vendorId: null },
+      });
+    }
+
     await prisma.vendor.update({ where: { id, orgId }, data: { active: false } });
-    res.json({ success: true, message: 'Vendor deactivated' });
+    res.json({
+      success: true,
+      message: force && usageCount > 0
+        ? `Vendor deactivated; ${usageCount} product(s) detached`
+        : 'Vendor deactivated',
+      detachedCount: force ? usageCount : 0,
+    });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Vendor not found' });
     res.status(500).json({ success: false, error: err.message });
@@ -627,6 +760,332 @@ export const getVendor = async (req, res) => {
     if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found' });
     res.json({ success: true, data: vendor });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT-VENDOR MAPPINGS — per-vendor item code + cost + primary flag
+// ═══════════════════════════════════════════════════════════════════════════
+// One MasterProduct × many vendors. Each (product, vendor) pair gets its own
+// item code / cost / optional case-pack override. Exactly one mapping per
+// product is flagged `isPrimary: true`; that mapping's vendorItemCode is
+// mirrored back into `MasterProduct.itemCode` for legacy readers.
+
+/**
+ * Internal helper: ensure primary invariant.
+ * After any mutation that changes the primary set for a product, this runs
+ * within the same transaction:
+ *   - If the target mapping is being set primary, clear isPrimary on all
+ *     other mappings for that product.
+ *   - Mirror the (new) primary's vendorItemCode back into MasterProduct.itemCode.
+ *   - If no primary exists after the mutation (e.g. deleted the only primary),
+ *     pick the mapping with the most recent lastReceivedAt (falling back to
+ *     newest createdAt) and promote it. This preserves the invariant that
+ *     every product with ≥1 mapping has exactly one primary.
+ */
+async function _reconcilePrimary(tx, orgId, masterProductId) {
+  const mappings = await tx.productVendor.findMany({
+    where: { orgId, masterProductId },
+    orderBy: [
+      { isPrimary: 'desc' },
+      { lastReceivedAt: 'desc' },
+      { createdAt: 'desc' },
+    ],
+  });
+  if (mappings.length === 0) {
+    // No mappings left — clear itemCode to match.
+    await tx.masterProduct.update({
+      where: { id: masterProductId, orgId },
+      data:  { itemCode: null },
+    }).catch(() => {});
+    return;
+  }
+  const primaries = mappings.filter(m => m.isPrimary);
+  let primary;
+  if (primaries.length === 1) {
+    primary = primaries[0];
+  } else if (primaries.length === 0) {
+    // No primary — promote the top of the ordered list (latest invoice).
+    primary = mappings[0];
+    await tx.productVendor.update({
+      where: { id: primary.id },
+      data:  { isPrimary: true },
+    });
+  } else {
+    // More than one primary — keep the first (ordered by lastReceivedAt
+    // desc) and clear the rest.
+    primary = primaries[0];
+    await tx.productVendor.updateMany({
+      where: { orgId, masterProductId, isPrimary: true, NOT: { id: primary.id } },
+      data:  { isPrimary: false },
+    });
+  }
+  // Mirror back to MasterProduct.itemCode
+  await tx.masterProduct.update({
+    where: { id: masterProductId, orgId },
+    data:  { itemCode: primary.vendorItemCode || null },
+  }).catch(() => {});
+}
+
+/**
+ * Upsert-on-receive — called from invoice import post-processing and bulk CSV.
+ * Ensures there's a ProductVendor row for (product, vendor) and updates
+ * lastReceivedAt. When the product has no primary yet, this upsert's row
+ * becomes primary (first-invoice-wins rule per user spec).
+ *
+ * Exported so invoiceController + importService can call it directly.
+ *
+ * @param {string} orgId
+ * @param {number} masterProductId
+ * @param {number} vendorId
+ * @param {object} data  - { vendorItemCode?, description?, priceCost?, caseCost?, packInCase?, lastReceivedAt? }
+ * @param {object} [opts] - { tx? } to reuse an existing transaction
+ */
+export async function upsertProductVendor(orgId, masterProductId, vendorId, data = {}, opts = {}) {
+  const db = opts.tx || prisma;
+  const {
+    vendorItemCode, description, priceCost, caseCost, packInCase,
+    lastReceivedAt,
+  } = data;
+
+  // Find existing
+  const existing = await db.productVendor.findUnique({
+    where: { orgId_masterProductId_vendorId: { orgId, masterProductId, vendorId } },
+  });
+
+  // Decide primary: if no mapping exists for this product yet, this one
+  // becomes primary. Otherwise, preserve whatever the current primary is.
+  let shouldBecomePrimary = false;
+  if (!existing) {
+    const anyMapping = await db.productVendor.findFirst({
+      where: { orgId, masterProductId },
+      select: { id: true },
+    });
+    if (!anyMapping) shouldBecomePrimary = true;
+  }
+
+  const upsertData = {
+    ...(vendorItemCode !== undefined && { vendorItemCode: vendorItemCode || null }),
+    ...(description    !== undefined && { description:    description || null }),
+    ...(priceCost      !== undefined && { priceCost:      priceCost != null && priceCost !== '' ? parseFloat(priceCost) : null }),
+    ...(caseCost       !== undefined && { caseCost:       caseCost  != null && caseCost  !== '' ? parseFloat(caseCost)  : null }),
+    ...(packInCase     !== undefined && { packInCase:     packInCase != null && packInCase !== '' ? parseInt(packInCase) : null }),
+    ...(lastReceivedAt !== undefined && { lastReceivedAt: lastReceivedAt ? new Date(lastReceivedAt) : null }),
+  };
+
+  const row = await db.productVendor.upsert({
+    where: { orgId_masterProductId_vendorId: { orgId, masterProductId, vendorId } },
+    create: {
+      orgId, masterProductId, vendorId,
+      ...upsertData,
+      isPrimary: shouldBecomePrimary,
+    },
+    update: upsertData,  // don't touch isPrimary on re-upsert — user controls it
+  });
+
+  // If this upsert created the first mapping, backfill MasterProduct.itemCode
+  // to the new vendorItemCode so auto-order + catalog list still show something.
+  if (shouldBecomePrimary && row.vendorItemCode) {
+    await db.masterProduct.update({
+      where: { id: masterProductId, orgId },
+      data:  { itemCode: row.vendorItemCode },
+    }).catch(() => {});
+  }
+
+  return row;
+}
+
+/** GET /api/catalog/products/:id/vendor-mappings */
+export const listProductVendors = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const masterProductId = parseInt(req.params.id);
+    const mappings = await prisma.productVendor.findMany({
+      where: { orgId, masterProductId },
+      include: { vendor: { select: { id: true, name: true, code: true } } },
+      orderBy: [
+        { isPrimary: 'desc' },
+        { lastReceivedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    });
+    res.json({ success: true, data: mappings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/** POST /api/catalog/products/:id/vendor-mappings */
+export const createProductVendor = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const masterProductId = parseInt(req.params.id);
+    const { vendorId, vendorItemCode, description, priceCost, caseCost, packInCase, notes, isPrimary } = req.body;
+
+    if (!vendorId) return res.status(400).json({ success: false, error: 'vendorId is required' });
+
+    // Make sure the product exists and belongs to this org — prevents creating
+    // orphan mappings via direct API.
+    const product = await prisma.masterProduct.findFirst({
+      where: { id: masterProductId, orgId },
+      select: { id: true },
+    });
+    if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
+
+    // Same for vendor.
+    const vendor = await prisma.vendor.findFirst({
+      where: { id: parseInt(vendorId), orgId },
+      select: { id: true },
+    });
+    if (!vendor) return res.status(404).json({ success: false, error: 'Vendor not found' });
+
+    const row = await prisma.$transaction(async (tx) => {
+      // Does any mapping exist for this product yet? Relevant for auto-primary.
+      const anyExisting = await tx.productVendor.findFirst({
+        where: { orgId, masterProductId },
+        select: { id: true },
+      });
+
+      const created = await tx.productVendor.create({
+        data: {
+          orgId,
+          masterProductId,
+          vendorId: parseInt(vendorId),
+          vendorItemCode: vendorItemCode || null,
+          description:    description    || null,
+          priceCost:      priceCost != null && priceCost !== '' ? parseFloat(priceCost) : null,
+          caseCost:       caseCost  != null && caseCost  !== '' ? parseFloat(caseCost)  : null,
+          packInCase:     packInCase != null && packInCase !== '' ? parseInt(packInCase) : null,
+          notes:          notes || null,
+          // First mapping auto-primary; otherwise respect explicit isPrimary flag.
+          isPrimary: anyExisting ? Boolean(isPrimary) : true,
+        },
+        include: { vendor: { select: { id: true, name: true, code: true } } },
+      });
+
+      await _reconcilePrimary(tx, orgId, masterProductId);
+      return created;
+    });
+
+    res.status(201).json({ success: true, data: row });
+  } catch (err) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ success: false, error: 'This vendor already has a mapping for this product' });
+    }
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/** PUT /api/catalog/products/:id/vendor-mappings/:mappingId */
+export const updateProductVendor = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const masterProductId = parseInt(req.params.id);
+    const mappingId = parseInt(req.params.mappingId);
+    const body = req.body || {};
+
+    const updates = {};
+    if (body.vendorItemCode !== undefined) updates.vendorItemCode = body.vendorItemCode || null;
+    if (body.description    !== undefined) updates.description    = body.description || null;
+    if (body.priceCost      !== undefined) updates.priceCost      = body.priceCost != null && body.priceCost !== '' ? parseFloat(body.priceCost) : null;
+    if (body.caseCost       !== undefined) updates.caseCost       = body.caseCost  != null && body.caseCost  !== '' ? parseFloat(body.caseCost)  : null;
+    if (body.packInCase     !== undefined) updates.packInCase     = body.packInCase != null && body.packInCase !== '' ? parseInt(body.packInCase) : null;
+    if (body.notes          !== undefined) updates.notes          = body.notes || null;
+    // isPrimary is handled via a dedicated endpoint — ignore it here.
+
+    const row = await prisma.$transaction(async (tx) => {
+      // Ownership check
+      const found = await tx.productVendor.findFirst({
+        where: { id: mappingId, orgId, masterProductId },
+        select: { id: true, isPrimary: true },
+      });
+      if (!found) throw Object.assign(new Error('Mapping not found'), { status: 404 });
+
+      const updated = await tx.productVendor.update({
+        where: { id: mappingId },
+        data:  updates,
+        include: { vendor: { select: { id: true, name: true, code: true } } },
+      });
+
+      // If primary's vendorItemCode changed, mirror to MasterProduct.itemCode.
+      if (found.isPrimary && updates.vendorItemCode !== undefined) {
+        await tx.masterProduct.update({
+          where: { id: masterProductId, orgId },
+          data:  { itemCode: updated.vendorItemCode || null },
+        });
+      }
+
+      return updated;
+    });
+
+    res.json({ success: true, data: row });
+  } catch (err) {
+    if (err.status === 404) return res.status(404).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/** DELETE /api/catalog/products/:id/vendor-mappings/:mappingId */
+export const deleteProductVendor = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const masterProductId = parseInt(req.params.id);
+    const mappingId = parseInt(req.params.mappingId);
+
+    await prisma.$transaction(async (tx) => {
+      const found = await tx.productVendor.findFirst({
+        where: { id: mappingId, orgId, masterProductId },
+        select: { id: true },
+      });
+      if (!found) throw Object.assign(new Error('Mapping not found'), { status: 404 });
+
+      await tx.productVendor.delete({ where: { id: mappingId } });
+      // _reconcilePrimary auto-promotes the next-best mapping if we just
+      // deleted the primary, and mirrors itemCode back to MasterProduct.
+      await _reconcilePrimary(tx, orgId, masterProductId);
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    if (err.status === 404) return res.status(404).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/** POST /api/catalog/products/:id/vendor-mappings/:mappingId/make-primary */
+export const makeProductVendorPrimary = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const masterProductId = parseInt(req.params.id);
+    const mappingId = parseInt(req.params.mappingId);
+
+    const row = await prisma.$transaction(async (tx) => {
+      const target = await tx.productVendor.findFirst({
+        where: { id: mappingId, orgId, masterProductId },
+        select: { id: true },
+      });
+      if (!target) throw Object.assign(new Error('Mapping not found'), { status: 404 });
+
+      // Clear any other primaries for this product; set target primary.
+      await tx.productVendor.updateMany({
+        where: { orgId, masterProductId, NOT: { id: mappingId } },
+        data:  { isPrimary: false },
+      });
+      await tx.productVendor.update({
+        where: { id: mappingId },
+        data:  { isPrimary: true },
+      });
+      await _reconcilePrimary(tx, orgId, masterProductId);
+      return tx.productVendor.findUnique({
+        where: { id: mappingId },
+        include: { vendor: { select: { id: true, name: true, code: true } } },
+      });
+    });
+
+    res.json({ success: true, data: row });
+  } catch (err) {
+    if (err.status === 404) return res.status(404).json({ success: false, error: err.message });
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -788,6 +1247,156 @@ export const updateRebateProgram = async (req, res) => {
 // MASTER PRODUCTS
 // ═══════════════════════════════════════════════════════
 
+/**
+ * GET /api/catalog/products/tax-unmapped
+ *
+ * Admin-facing report for Phase 2 of the taxClass → taxRuleId strict-FK
+ * migration. Returns every non-deleted product that falls into one of three
+ * attention-needed buckets:
+ *
+ *   status='STALE_FK' → taxRuleId is set but the referenced rule is inactive
+ *                       or deleted. Product page shows an amber warning for
+ *                       this case; this endpoint surfaces them as a list so
+ *                       admins can bulk-resolve.
+ *   status='UNMAPPED' → legacy taxClass string with no matching active rule.
+ *                       The cashier falls through to 0% — admins need to
+ *                       either create a matching rule or pick an existing one.
+ *   status='AMBIGUOUS' → legacy taxClass matches multiple active rules (e.g.
+ *                        two rules both appliesTo='alcohol' with different
+ *                        rates). Auto-match skipped; admin disambiguates.
+ *
+ * Paginated; rolls up a small `summary` block at the top. The CLI
+ * `migrateTaxRules.js` script emits the same data as a CSV for bulk review.
+ */
+export const getTaxUnmappedProducts = async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    const { skip, take } = paginationParams(req.query);
+
+    // Active rules for this org, indexed for fast matching.
+    const rules = await prisma.taxRule.findMany({
+      where: { orgId, active: true },
+      select: { id: true, name: true, appliesTo: true, rate: true },
+    });
+    const ruleIds        = new Set(rules.map(r => r.id));
+    const byName         = new Map();
+    const byAppliesTo    = new Map();
+    const byRate         = new Map();
+    for (const r of rules) {
+      const nk = String(r.name).toLowerCase().trim();
+      const ak = String(r.appliesTo).toLowerCase().trim();
+      if (nk && !byName.has(nk)) byName.set(nk, r);
+      if (ak) {
+        if (!byAppliesTo.has(ak)) byAppliesTo.set(ak, []);
+        byAppliesTo.get(ak).push(r);
+      }
+      const rk = Number(r.rate).toFixed(4);
+      if (!byRate.has(rk)) byRate.set(rk, []);
+      byRate.get(rk).push(r);
+    }
+
+    // Walk all products — cheaper to classify in JS than to SQL-express this.
+    const products = await prisma.masterProduct.findMany({
+      where: { orgId, deleted: false },
+      select: { id: true, name: true, upc: true, taxClass: true, taxRuleId: true, departmentId: true },
+    });
+
+    const unmapped = [];
+    let countsByStatus = { STALE_FK: 0, UNMAPPED: 0, AMBIGUOUS: 0, OK: 0 };
+
+    for (const p of products) {
+      // Stale FK: product points at a rule no longer active.
+      if (p.taxRuleId && !ruleIds.has(p.taxRuleId)) {
+        unmapped.push({
+          id: p.id, name: p.name, upc: p.upc, departmentId: p.departmentId,
+          taxClass: p.taxClass, taxRuleId: p.taxRuleId,
+          status: 'STALE_FK',
+          suggestions: [],
+          reason: 'taxRuleId points at a rule that is inactive or no longer exists',
+        });
+        countsByStatus.STALE_FK++;
+        continue;
+      }
+      // FK already valid → nothing to do.
+      if (p.taxRuleId) { countsByStatus.OK++; continue; }
+
+      // No taxClass and no FK → treated as "use default" (not a problem).
+      if (!p.taxClass) { countsByStatus.OK++; continue; }
+
+      const tc = String(p.taxClass).toLowerCase().trim();
+
+      // Name match (winner) — single rule → OK.
+      if (byName.has(tc)) { countsByStatus.OK++; continue; }
+
+      // appliesTo match — single rule → OK; multiple → AMBIGUOUS.
+      const apHits = byAppliesTo.get(tc);
+      if (apHits) {
+        if (apHits.length === 1) { countsByStatus.OK++; continue; }
+        unmapped.push({
+          id: p.id, name: p.name, upc: p.upc, departmentId: p.departmentId,
+          taxClass: p.taxClass, taxRuleId: null,
+          status: 'AMBIGUOUS',
+          suggestions: apHits.map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) })),
+          reason: `${apHits.length} active rules match appliesTo="${tc}"`,
+        });
+        countsByStatus.AMBIGUOUS++;
+        continue;
+      }
+
+      // Percentage parse → rate match.
+      const cleaned = p.taxClass.replace(/[%$,\s]/g, '').trim();
+      const n = parseFloat(cleaned);
+      if (!isNaN(n) && n >= 0) {
+        const dec = n <= 1 ? n : n / 100;
+        const rk = dec.toFixed(4);
+        const rateHits = byRate.get(rk);
+        if (rateHits?.length === 1) { countsByStatus.OK++; continue; }
+        if (rateHits?.length > 1) {
+          unmapped.push({
+            id: p.id, name: p.name, upc: p.upc, departmentId: p.departmentId,
+            taxClass: p.taxClass, taxRuleId: null,
+            status: 'AMBIGUOUS',
+            suggestions: rateHits.map(r => ({ id: r.id, name: r.name, rate: Number(r.rate) })),
+            reason: `${rateHits.length} active rules match rate ${(dec * 100).toFixed(2)}%`,
+          });
+          countsByStatus.AMBIGUOUS++;
+          continue;
+        }
+      }
+
+      // No match at any tier.
+      unmapped.push({
+        id: p.id, name: p.name, upc: p.upc, departmentId: p.departmentId,
+        taxClass: p.taxClass, taxRuleId: null,
+        status: 'UNMAPPED',
+        suggestions: [],
+        reason: `No active rule matches taxClass="${p.taxClass}"`,
+      });
+      countsByStatus.UNMAPPED++;
+    }
+
+    const total = unmapped.length;
+    const paged = unmapped.slice(skip, skip + take);
+
+    res.json({
+      success: true,
+      summary: {
+        totalProducts: products.length,
+        okCount:       countsByStatus.OK,
+        unmappedCount: countsByStatus.UNMAPPED,
+        ambiguousCount: countsByStatus.AMBIGUOUS,
+        staleFkCount:  countsByStatus.STALE_FK,
+        activeRuleCount: rules.length,
+      },
+      total,
+      skip, take,
+      data: paged,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 export const getMasterProducts = async (req, res) => {
   try {
     const orgId = getOrgId(req);
@@ -850,10 +1459,10 @@ export const getMasterProducts = async (req, res) => {
     // Resolve images from global cache for products missing imageUrl
     const imageMap = await batchResolveProductImages(products);
 
-    // Flatten per-store fields + resolve images
+    // Flatten per-store fields + resolve images + deposit (Session 39 Round 5)
     const enriched = products.map(p => {
       const sp = storeId ? p.storeProducts?.[0] : null;
-      return {
+      return flattenDeposit({
         ...p,
         imageUrl: p.imageUrl || imageMap.get(p.id) || null,
         ...(sp ? {
@@ -862,7 +1471,7 @@ export const getMasterProducts = async (req, res) => {
           storeCostPrice: sp.costPrice != null ? Number(sp.costPrice) : null,
           inStock: sp.inStock ?? null,
         } : {}),
-      };
+      });
     });
 
     res.json({
@@ -1088,7 +1697,9 @@ export const searchMasterProducts = async (req, res) => {
           const imgMap = await batchResolveProductImages([exact]);
           if (imgMap.has(exact.id)) exact.imageUrl = imgMap.get(exact.id);
         }
-        return res.json({ success: true, data: [exact], pagination: { page: 1, limit: 1, total: 1, pages: 1 } });
+        // Session 39 Round 5 — flatten deposit so cashier cart reads the
+        // same `depositAmount` field the catalog snapshot provides.
+        return res.json({ success: true, data: [flattenDeposit(exact)], pagination: { page: 1, limit: 1, total: 1, pages: 1 } });
       }
     }
 
@@ -1131,7 +1742,7 @@ export const searchMasterProducts = async (req, res) => {
 
     // Resolve images from global cache for products missing imageUrl
     const imageMap = await batchResolveProductImages(products);
-    const enriched = products.map(p => ({
+    const enriched = products.map(p => flattenDeposit({
       ...p,
       imageUrl: p.imageUrl || imageMap.get(p.id) || null,
     }));
@@ -1157,9 +1768,23 @@ export const getMasterProduct = async (req, res) => {
         department:   true,
         vendor:       true,
         depositRule:  true,
+        // Session 40 Phase 1 — strict-FK tax linkage. ProductForm uses the
+        // populated `taxRule` relation to show "⚠ rule no longer exists"
+        // when taxRuleId points to a soft-deleted/inactive rule.
+        taxRule:      { select: { id: true, name: true, rate: true, appliesTo: true, active: true } },
         storeProducts:{ select: { id: true, storeId: true, retailPrice: true, quantityOnHand: true, active: true } },
         upcs:         { select: { id: true, upc: true, label: true, isDefault: true }, orderBy: { isDefault: 'desc' } },
         packSizes:    { orderBy: { sortOrder: 'asc' } },
+        // Session 40 — per-vendor item-code / cost mappings. Primary first,
+        // then most-recently-received. UI renders a table in Classification.
+        vendorMappings: {
+          include: { vendor: { select: { id: true, name: true, code: true } } },
+          orderBy: [
+            { isPrimary: 'desc' },
+            { lastReceivedAt: 'desc' },
+            { createdAt: 'desc' },
+          ],
+        },
       },
     });
 
@@ -1171,7 +1796,8 @@ export const getMasterProduct = async (req, res) => {
       if (imgMap.has(product.id)) product.imageUrl = imgMap.get(product.id);
     }
 
-    res.json({ success: true, data: product });
+    // Session 39 Round 5 — flatten deposit for cashier cart consumers
+    res.json({ success: true, data: flattenDeposit(product) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1220,18 +1846,45 @@ export const createMasterProduct = async (req, res) => {
     const {
       upc, plu, sku, itemCode, name, description, brand, imageUrl,
       size, sizeUnit, pack, casePacks, sellUnitSize, sellUnit, innerPack, unitsPerPack, weight,
+      // Shipping dimensions (imperial: inches). Used by ecom storefront + carrier rate quotes.
+      shipLengthIn, shipWidthIn, shipHeightIn,
       unitPack, packInCase, depositPerUnit,
       departmentId, vendorId, depositRuleId, containerType, containerVolumeOz,
-      taxClass, defaultCostPrice, defaultRetailPrice, defaultCasePrice,
+      // Session 40 Phase 1: strict-FK tax linkage. `taxRuleId` is authoritative
+      // when set; `taxClass` is the legacy string fallback for backward compat.
+      taxRuleId, taxClass,
+      defaultCostPrice, defaultRetailPrice, defaultCasePrice,
       byWeight, byUnit,
       ebtEligible, ageRequired, taxable, discountEligible, foodstamp,
       trackInventory, reorderPoint, reorderQty,
       hideFromEcom, ecomDescription, ecomTags,
+      // Previously destructured-and-ignored — now fully wired so ProductForm ecom fields persist.
+      ecomExternalId, ecomPackWeight, ecomPrice, ecomSalePrice, ecomOnSale, ecomSummary,
       attributes,
       active,
     } = req.body;
 
     if (!name) return res.status(400).json({ success: false, error: 'name is required' });
+
+    // ── taxRuleId validation + auto-mirror taxClass (Session 40 Phase 1) ──
+    // If a taxRuleId is supplied, verify it belongs to this org and (when
+    // taxClass wasn't explicitly set) mirror the rule's `appliesTo` into
+    // `taxClass` for backward compat with older cashier-app builds.
+    let resolvedTaxRuleId = null;
+    if (taxRuleId != null && taxRuleId !== '') {
+      const rule = await prisma.taxRule.findFirst({
+        where: { id: parseInt(taxRuleId), orgId },
+        select: { id: true, appliesTo: true },
+      });
+      if (!rule) {
+        return res.status(400).json({ success: false, error: `taxRuleId ${taxRuleId} not found for this org` });
+      }
+      resolvedTaxRuleId = rule.id;
+      // Mirror appliesTo → taxClass unless the caller explicitly passed one
+      if (taxClass == null) {
+        taxClass = rule.appliesTo;
+      }
+    }
 
     // ── Department-level default cascading ────────────────────────────────
     // If a department is selected and classification/compliance fields are
@@ -1284,6 +1937,7 @@ export const createMasterProduct = async (req, res) => {
         depositRuleId:      depositRuleId? parseInt(depositRuleId): null,
         containerType:      containerType || null,
         containerVolumeOz:  containerVolumeOz ? parseFloat(containerVolumeOz) : null,
+        taxRuleId:          resolvedTaxRuleId,
         taxClass:           (taxClass ?? deptDefaults.taxClass) || null,
         defaultCostPrice:   toPrice(defaultCostPrice,   'defaultCostPrice'),
         defaultRetailPrice: toPrice(defaultRetailPrice, 'defaultRetailPrice'),
@@ -1301,6 +1955,18 @@ export const createMasterProduct = async (req, res) => {
         hideFromEcom:       Boolean(hideFromEcom),
         ecomDescription:    ecomDescription || null,
         ecomTags:           Array.isArray(ecomTags) ? ecomTags : [],
+        // E-Commerce extended fields — ship weight already above (`ecomPackWeight`
+        // not used here; `weight` column stores ship weight in lbs).
+        ecomExternalId:     ecomExternalId || null,
+        ecomPackWeight:     ecomPackWeight ? parseFloat(ecomPackWeight) : null,
+        ecomPrice:          toPrice(ecomPrice, 'ecomPrice'),
+        ecomSalePrice:      toPrice(ecomSalePrice, 'ecomSalePrice'),
+        ecomOnSale:         Boolean(ecomOnSale),
+        ecomSummary:        ecomSummary || null,
+        // Shipping dimensions (inches)
+        shipLengthIn:       shipLengthIn != null && shipLengthIn !== '' ? parseFloat(shipLengthIn) : null,
+        shipWidthIn:        shipWidthIn  != null && shipWidthIn  !== '' ? parseFloat(shipWidthIn)  : null,
+        shipHeightIn:       shipHeightIn != null && shipHeightIn !== '' ? parseFloat(shipHeightIn) : null,
         attributes:         (attributes && typeof attributes === 'object' && !Array.isArray(attributes)) ? attributes : {},
         active:             active !== false,
       },
@@ -1425,6 +2091,22 @@ export const updateMasterProduct = async (req, res) => {
     if (body.depositRuleId !== undefined) updates.depositRuleId = body.depositRuleId ? parseInt(body.depositRuleId) : null;
     if (body.containerType !== undefined) updates.containerType = body.containerType || null;
     if (body.containerVolumeOz !== undefined) updates.containerVolumeOz = body.containerVolumeOz ? parseFloat(body.containerVolumeOz) : null;
+    // Session 40 Phase 1 — strict-FK tax linkage with legacy taxClass mirror.
+    if (body.taxRuleId     !== undefined) {
+      if (body.taxRuleId === null || body.taxRuleId === '') {
+        updates.taxRuleId = null;
+      } else {
+        const rule = await prisma.taxRule.findFirst({
+          where: { id: parseInt(body.taxRuleId), orgId },
+          select: { id: true, appliesTo: true },
+        });
+        if (!rule) return res.status(400).json({ success: false, error: `taxRuleId ${body.taxRuleId} not found for this org` });
+        updates.taxRuleId = rule.id;
+        // Auto-mirror appliesTo → taxClass when caller didn't pass one.
+        // Keeps older cashier-app builds (that only read taxClass) in sync.
+        if (body.taxClass === undefined) updates.taxClass = rule.appliesTo;
+      }
+    }
     if (body.taxClass      !== undefined) updates.taxClass      = body.taxClass || null;
     if (body.defaultCostPrice   !== undefined) updates.defaultCostPrice   = toPrice(body.defaultCostPrice,   'defaultCostPrice');
     if (body.defaultRetailPrice !== undefined) updates.defaultRetailPrice = toPrice(body.defaultRetailPrice, 'defaultRetailPrice');
@@ -1440,7 +2122,23 @@ export const updateMasterProduct = async (req, res) => {
     if (body.reorderQty    !== undefined) updates.reorderQty    = body.reorderQty   ? parseInt(body.reorderQty)   : null;
     if (body.active        !== undefined) updates.active        = Boolean(body.active);
     if (body.hideFromEcom  !== undefined) updates.hideFromEcom  = Boolean(body.hideFromEcom);
+    if (body.ecomDescription !== undefined) updates.ecomDescription = body.ecomDescription || null;
     if (body.ecomTags      !== undefined) updates.ecomTags      = Array.isArray(body.ecomTags) ? body.ecomTags : [];
+    // E-Commerce extended fields — previously only wired on create. Now fully
+    // persisted on update too so ProductForm edits actually save.
+    if (body.ecomExternalId !== undefined) updates.ecomExternalId = body.ecomExternalId || null;
+    if (body.ecomPackWeight !== undefined) updates.ecomPackWeight = body.ecomPackWeight ? parseFloat(body.ecomPackWeight) : null;
+    if (body.ecomPrice      !== undefined) updates.ecomPrice      = toPrice(body.ecomPrice,      'ecomPrice');
+    if (body.ecomSalePrice  !== undefined) updates.ecomSalePrice  = toPrice(body.ecomSalePrice,  'ecomSalePrice');
+    if (body.ecomOnSale     !== undefined) updates.ecomOnSale     = Boolean(body.ecomOnSale);
+    if (body.ecomSummary    !== undefined) updates.ecomSummary    = body.ecomSummary || null;
+    // Shipping dimensions (inches — imperial only for now)
+    if (body.shipLengthIn   !== undefined) updates.shipLengthIn   = body.shipLengthIn != null && body.shipLengthIn !== '' ? parseFloat(body.shipLengthIn) : null;
+    if (body.shipWidthIn    !== undefined) updates.shipWidthIn    = body.shipWidthIn  != null && body.shipWidthIn  !== '' ? parseFloat(body.shipWidthIn)  : null;
+    if (body.shipHeightIn   !== undefined) updates.shipHeightIn   = body.shipHeightIn != null && body.shipHeightIn !== '' ? parseFloat(body.shipHeightIn) : null;
+    // Image URL + physical weight were also missing from the update whitelist.
+    if (body.imageUrl       !== undefined) updates.imageUrl       = body.imageUrl || null;
+    if (body.weight         !== undefined) updates.weight         = body.weight ? parseFloat(body.weight) : null;
     if (body.attributes    !== undefined) updates.attributes    = (body.attributes && typeof body.attributes === 'object' && !Array.isArray(body.attributes)) ? body.attributes : {};
     if (body.unitPack      !== undefined) updates.unitPack      = body.unitPack   ? parseInt(body.unitPack)         : null;
     if (body.packInCase    !== undefined) updates.packInCase    = body.packInCase ? parseInt(body.packInCase)       : null;

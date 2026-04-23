@@ -44,6 +44,12 @@ import {
   getVendorProducts,
   getVendorPayouts,
   getVendorStats,
+  // Product-Vendor mappings (per-vendor item code + cost per product)
+  listProductVendors,
+  createProductVendor,
+  updateProductVendor,
+  deleteProductVendor,
+  makeProductVendorPrimary,
   // Rebate Programs
   getRebatePrograms,
   createRebateProgram,
@@ -52,6 +58,7 @@ import {
   getMasterProducts,
   searchMasterProducts,
   getMasterProduct,
+  getTaxUnmappedProducts,
   createMasterProduct,
   updateMasterProduct,
   deleteMasterProduct,
@@ -178,6 +185,9 @@ router.post('/groups/:id/remove-products', requirePermission('products.edit'),  
 
 router.get('/products/search',           requirePermission('products.view'),   searchMasterProducts);
 router.get('/products/export',           requirePermission('products.view'),   exportMasterProducts);
+// Session 40 Phase 2 — products needing admin attention in the tax migration.
+// MUST be declared before `/products/:id` so Express doesn't match "tax-unmapped" as an :id param.
+router.get('/products/tax-unmapped',     requirePermission('products.view'),   getTaxUnmappedProducts);
 router.get('/products/bulk',             requirePermission('products.view'),   getMasterProducts);
 router.post('/products/bulk-update',     requirePermission('products.edit'),   bulkUpdateMasterProducts);
 router.post('/products/bulk-delete',     requirePermission('products.delete'), bulkDeleteMasterProducts);
@@ -250,6 +260,16 @@ router.post('/products/:id/pack-sizes',                requirePermission('produc
 router.put('/products/:id/pack-sizes/bulk-replace',    requirePermission('products.edit'), bulkReplacePackSizes);
 router.put('/products/:id/pack-sizes/:sizeId',         requirePermission('products.edit'), updateProductPackSize);
 router.delete('/products/:id/pack-sizes/:sizeId',      requirePermission('products.edit'), deleteProductPackSize);
+
+// ─── Product-Vendor mappings (per-vendor item code + cost) ───────────────────
+// One MasterProduct × many vendors. Each (product, vendor) pair has its own
+// item code, cost, and optional pack configuration. The `isPrimary` mapping's
+// vendorItemCode mirrors back into MasterProduct.itemCode for legacy readers.
+router.get('/products/:id/vendor-mappings',                              requirePermission('products.view'), listProductVendors);
+router.post('/products/:id/vendor-mappings',                             requirePermission('products.edit'), createProductVendor);
+router.put('/products/:id/vendor-mappings/:mappingId',                   requirePermission('products.edit'), updateProductVendor);
+router.delete('/products/:id/vendor-mappings/:mappingId',                requirePermission('products.edit'), deleteProductVendor);
+router.post('/products/:id/vendor-mappings/:mappingId/make-primary',     requirePermission('products.edit'), makeProductVendorPrimary);
 
 // ─── Store Products ──────────────────────────────────────
 router.get('/store-products',        requirePermission('products.view'),   getStoreProducts);

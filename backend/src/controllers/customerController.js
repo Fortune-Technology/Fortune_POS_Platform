@@ -18,6 +18,7 @@ import prisma from '../config/postgres.js';
 import { validateEmail, validatePhone, parsePrice } from '../utils/validators.js';
 import { tryParseDate } from '../utils/safeDate.js';
 import { logAudit } from '../services/auditService.js';
+import { awardWelcomeBonus } from '../services/loyaltyService.js';
 
 /**
  * Normalize a phone number to an E.164-ish canonical form for storage.
@@ -174,6 +175,25 @@ export const createCustomer = async (req, res, next) => {
       name: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || customer.phone,
       email: customer.email, phone: customer.phone,
     });
+
+    // Welcome bonus — auto-award if program enabled + welcomeBonus > 0.
+    // Skipped silently when no storeId is set (e.g. org-wide customer).
+    // We only award if the user didn't supply an explicit starting points
+    // value — otherwise we'd double-count.
+    if (!loyaltyPoints && customer.storeId) {
+      try {
+        const awarded = await awardWelcomeBonus({
+          orgId: req.orgId, customerId: customer.id, storeId: customer.storeId,
+        });
+        if (awarded > 0) {
+          // Re-read the customer so the response reflects the updated balance
+          const fresh = await prisma.customer.findUnique({ where: { id: customer.id } });
+          return res.status(201).json(fresh);
+        }
+      } catch (err) {
+        console.error('[loyalty] welcome bonus error:', err.message);
+      }
+    }
 
     res.status(201).json(customer);
   } catch (err) {

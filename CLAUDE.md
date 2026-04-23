@@ -260,6 +260,71 @@ PUT    /settings             — upsert store lottery settings
 
 ---
 
+## 🏷 Deal / Promotion Resolution — lowest wins
+
+**File:** [`cashier-app/src/utils/promoEngine.js`](cashier-app/src/utils/promoEngine.js)
+
+### The rule
+When a cart line has multiple active promotions that could apply to it, the **lowest effective price wins** (equivalently: the promotion giving the biggest saving per line). No manual "deal slot" order, no fixed type priority — whichever actually makes the customer pay less is the one that applies.
+
+### What counts as "active"
+A Promotion row is eligible when ALL of:
+1. `active: true` on the row itself
+2. `startDate` is null OR `<= now`
+3. `endDate` is null OR `>= now`
+4. The cart item is in-scope — either:
+   - `promo.productIds[]` includes the item's `productId`, OR
+   - `promo.departmentIds[]` includes the item's `departmentId`, OR
+   - **Neither scope array is set → applies to every item** (store-/org-wide deal)
+5. The item has `discountEligible !== false`
+
+### Example scenarios (all verified against the engine)
+
+**Scenario A — two overlapping same-type sales**
+> $100 product on sale Jan–May for $80, AND same product on sale April 8–14 for $40.
+> At checkout on April 10: both Promotion rows match → engine computes savings per row → $40 wins (bigger saving).
+
+**Scenario B — competing multi-buy deals**
+> $3 product at "2 for $5" Jan–March, AND "5 for $5" week of April 14.
+> At checkout on April 15 buying 5 units: engine computes `applyMixMatch` for each → 5-for-$5 yields higher per-unit saving → 5-for-$5 applies.
+
+**Scenario C — sale vs multi-buy for the same product**
+> $4 product at flat $2.50 Jan–March, AND "2 for $3" week of March 25.
+> At checkout on March 30 buying 2 units: sale gives $5 total, multi-buy gives $3 → multi-buy wins.
+
+**Scenario D — product + department + store-wide stacked**
+> Product-level 10% off, department-level $0.50 off, store-wide 5% off — all active.
+> All three are evaluated as independent candidates; the one with the highest line saving wins. No stacking (single adjustment per line, the best one).
+
+### How the engine chooses
+[`evaluatePromotions`](cashier-app/src/utils/promoEngine.js) iterates every valid promo, dispatches to the right handler (`applySale` / `applyBOGO` / `applyVolume` / `applyMixMatch` / `applyCombo`), and merges the per-line results:
+
+```js
+// lines 59-69
+for (const [lineId, adj] of Object.entries(result.lineAdjustments)) {
+  const existing = lineAdjustments[lineId];
+  const newSav = calcLineSaving(item, adj);
+  const exSav  = existing ? calcLineSaving(item, existing) : -1;
+  if (newSav > exSav) lineAdjustments[lineId] = adj;   // best saving wins
+}
+```
+
+The **scope-filter** step at [`getQualifyingItems`](cashier-app/src/utils/promoEngine.js) handles the hierarchy: product-level promos only see matching items, dept-level promos only see items in matching depts, no-scope promos see everything. No priority ordering — scope is just a filter, and once a promo qualifies for a line, it competes against every other qualifying promo on saving alone.
+
+### Where promos are created
+- **Per-product**: ProductForm → Deals section → `createCatalogPromotion` (sets `productIds: [this product's id]`)
+- **Per-department**: Promotions page → pick department scope (sets `departmentIds: [deptId]`)
+- **Store-/org-wide**: Promotions page → leave both scope arrays empty
+- **Per-CSV-import**: inline Promotion / TPR / Future fields in the import dropdown stage separate Promotion rows at import time (see `docs/multipack-import.md`)
+
+### Rules worth remembering
+- **Lowest-wins is per-line, not per-cart.** A cart with 5 products gets 5 independent evaluations; each line can apply a different promo.
+- **Saving comparison is dollar-for-dollar.** A 50%-off on a $2 product ($1 saving) loses to a $1.50 flat discount ($1.50 saving).
+- **No combo stacking** — exactly one adjustment applies per line. If customers should pay the compounded discount, model it as a `combo` promo type explicitly.
+- **Free-form = unlimited.** No cap on promotions per product. If three "Special Price" rows all target the same product with overlapping date ranges, they all compete; the active-lowest wins at each moment in time.
+
+---
+
 ## 🖥 POS Cart & Tender Architecture
 
 ### Cart Item Types

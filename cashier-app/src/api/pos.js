@@ -168,14 +168,20 @@ export const getCatalogProduct       = (id)            => api.get(`/catalog/prod
 export const createCatalogProduct    = (data)          => api.post('/catalog/products', data).then(r => r.data);
 export const updateCatalogProduct    = (id, data)      => api.put(`/catalog/products/${id}`, data).then(r => r.data);
 export const duplicateCatalogProduct = (id)            => api.post(`/catalog/products/${id}/duplicate`).then(r => r.data);
-export const getProduct52WeekStats   = (id)            => api.get(`/catalog/products/${id}/stats`).then(r => r.data).catch(() => ({ weeks: [] }));
+// 52-week stats live on the SALES router, not catalog. Accepts a params object
+// (e.g. { upc } or { productId }) just like the portal helper. Previously this
+// pointed at /catalog/products/:id/stats which 404'd and got silently caught.
+export const getProduct52WeekStats   = (params)        => api.get('/sales/products/52week-stats', { params }).then(r => r.data).catch(() => ({ weeks: [] }));
 
 // Departments
 export const getCatalogDepartments    = ()             => api.get('/catalog/departments').then(r => r.data);
 export const createCatalogDepartment  = (data)         => api.post('/catalog/departments', data).then(r => r.data);
 export const updateCatalogDepartment  = (id, data)     => api.put(`/catalog/departments/${id}`, data).then(r => r.data);
 export const deleteCatalogDepartment  = (id)           => api.delete(`/catalog/departments/${id}`).then(r => r.data);
-export const getDepartmentAttributes  = (id)           => api.get(`/catalog/departments/${id}/attributes`).then(r => r.data).catch(() => ({ attributes: [] }));
+// Backend route is /catalog/department-attributes?departmentId=X — a flat list
+// endpoint, not nested under /departments/:id. Previously the cashier called
+// /catalog/departments/:id/attributes which 404'd and was silently caught.
+export const getDepartmentAttributes  = (departmentId) => api.get('/catalog/department-attributes', { params: { departmentId } }).then(r => r.data).catch(() => ({ attributes: [] }));
 
 // Vendors (CRUD — the paid-out helper above hits /pos-terminal/vendors read-only)
 export const getCatalogVendors        = ()             => api.get('/catalog/vendors').then(r => r.data);
@@ -200,7 +206,10 @@ export const addProductUpc            = (id, data)     => api.post(`/catalog/pro
 export const deleteProductUpc         = (id, upcId)    => api.delete(`/catalog/products/${id}/upcs/${upcId}`).then(r => r.data);
 
 export const getProductPackSizes      = (id)           => api.get(`/catalog/products/${id}/pack-sizes`).then(r => r.data);
-export const bulkReplaceProductPackSizes = (id, sizes) => api.put(`/catalog/products/${id}/pack-sizes`, { sizes }).then(r => r.data);
+// Backend route requires the /bulk-replace suffix. Without it this used to
+// 404 — and the form-save swallowed the rejection so pack sizes were silently
+// not persisted when created from the cashier-app.
+export const bulkReplaceProductPackSizes = (id, sizes) => api.put(`/catalog/products/${id}/pack-sizes/bulk-replace`, { sizes }).then(r => r.data);
 
 // Product groups (Session 9 grouping)
 export const listProductGroups        = ()             => api.get('/catalog/product-groups').then(r => r.data);

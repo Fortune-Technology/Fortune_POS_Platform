@@ -86,7 +86,12 @@
       "WebFetch(domain:www.masslottery.com)",
       "Bash(grep -n \"listShifts\\\\|\\\\\\\\bguard\\\\\\\\b\\\\\\\\|open.*shift\\\\\\\\|shift/active\" \"/c/Users/nishn/Desktop/Future Foods/Portal/Storv_POS_All/Storv_POS_All/backend/src/routes/posTerminalRoutes.js\")",
       "Bash(node)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -nA 30 \"^model VendorProductMap\" backend/prisma/schema.prisma)",
+      "Bash(grep -nA 20 \"^model Vendor \" backend/prisma/schema.prisma)",
+      "Bash(grep -n \"getCatalogVendors, createCatalogVendor\\\\|import \\\\{$\" frontend/src/pages/ProductForm.jsx)",
+      "Bash(grep -nA 18 \"^model TaxRule\\\\b\" backend/prisma/schema.prisma)",
+      "Bash(PGPASSWORD=password psql -h localhost -U postgres -d futurefoods_portal -c \"SELECT column_name FROM information_schema.columns WHERE table_name='master_products' AND column_name IN \\('taxRuleId','shipLengthIn','shipWidthIn','shipHeightIn','weight'\\) ORDER BY column_name;\")"
     ]
   }
 }

@@ -43,23 +43,69 @@ const storage = multer.diskStorage({
   },
 });
 
+// Session 39 Round 5 — accepted file types. HEIC/HEIF is common on iPhones
+// (iOS default camera format) and was previously silently rejected; it's
+// now converted to JPEG server-side in gptService before OCR.
+const ALLOWED_MIMES = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+]);
+const ALLOWED_EXTS = /^(pdf|png|jpe?g|heic|heif)$/i;
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  // 20 MB — phone cameras routinely produce 6–15 MB photos. Previous 10 MB
+  // limit was rejecting large iPhone/Galaxy captures with a generic 500.
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = /pdf|png|jpg|jpeg/;
-    const ext = file.originalname.split('.').pop().toLowerCase();
-    if (allowed.test(file.mimetype) && allowed.test(ext)) return cb(null, true);
-    cb(new Error('Only PDF, PNG, JPG and JPEG files are allowed'));
+    const ext = (file.originalname.split('.').pop() || '').toLowerCase();
+    const mimeOk = ALLOWED_MIMES.has(file.mimetype.toLowerCase());
+    const extOk  = ALLOWED_EXTS.test(ext);
+    if (mimeOk || extOk) return cb(null, true);
+    // Attach an error code multer forwards to the route-level handler
+    const err = new Error(`Unsupported file type: ${file.originalname} (${file.mimetype}). Accepted: PDF, PNG, JPG/JPEG, HEIC/HEIF.`);
+    err.code = 'UNSUPPORTED_FILE_TYPE';
+    cb(err);
   },
 });
+
+// Session 39 Round 5 — per-route wrapper that translates multer errors into
+// descriptive JSON responses instead of the generic 500 the user was seeing.
+// Previously a 10 MB photo or a HEIC file both hit "Unhandled error: ..."
+// with no clue what was wrong. Now the upload UI gets a specific message.
+const handleMulterError = (uploader) => (req, res, next) => {
+  uploader(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: 'File too large',
+        detail: `One of the uploaded files exceeds the 20 MB limit. Reduce the image resolution or use PDF.`,
+        code: 'FILE_TOO_LARGE',
+      });
+    }
+    if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(415).json({ error: err.message, code: 'UNSUPPORTED_FILE_TYPE' });
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'Unexpected file field', code: 'UNEXPECTED_FIELD' });
+    }
+    // Anything else — surface the message
+    return res.status(500).json({ error: err.message || 'Upload failed', code: err.code || 'UPLOAD_ERROR' });
+  });
+};
 
 router.use(protect);
 
 // Writes (upload / confirm / rematch / draft)
-router.post('/queue',           requirePermission('invoices.create'), upload.array('invoices'), queueUpload);
-router.post('/queue-multipage', requirePermission('invoices.create'), upload.array('invoices'), queueMultipageUpload);
-router.post('/upload',          requirePermission('invoices.create'), upload.array('invoices'), uploadInvoices);
+router.post('/queue',           requirePermission('invoices.create'), handleMulterError(upload.array('invoices')), queueUpload);
+router.post('/queue-multipage', requirePermission('invoices.create'), handleMulterError(upload.array('invoices')), queueMultipageUpload);
+router.post('/upload',          requirePermission('invoices.create'), handleMulterError(upload.array('invoices')), uploadInvoices);
 router.post('/confirm',         requirePermission('invoices.edit'),   confirmInvoice);
 router.post('/clear-pos-cache', requirePermission('invoices.edit'),   clearInvoicePOSCache);
 router.patch('/:id/draft',      requirePermission('invoices.edit'),   saveDraft);

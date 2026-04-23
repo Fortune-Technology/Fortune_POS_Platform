@@ -75,6 +75,12 @@ export default function CustomerLookupModal({ onClose }) {
       name: c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Customer',
       phone: c.phone || null, email: c.email || null,
       loyaltyPoints: c.loyaltyPoints ?? null, cardNo: c.cardNo || null, discount: c.discount ?? null,
+      // Charge-account fields — required by TenderModal to show the Charge tile
+      // and enforce the customer's balanceLimit. Without these, the cashier
+      // can never charge to a house account even when enabled in the portal.
+      instoreChargeEnabled: !!c.instoreChargeEnabled,
+      balance:              c.balance != null      ? Number(c.balance)      : 0,
+      balanceLimit:         c.balanceLimit != null ? Number(c.balanceLimit) : 0,
     });
     removeLoyaltyRedemption();
     onClose();
