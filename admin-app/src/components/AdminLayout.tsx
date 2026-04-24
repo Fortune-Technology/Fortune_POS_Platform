@@ -1,8 +1,12 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import AdminSidebar from './AdminSidebar';
 import AIAssistantWidget from './AIAssistantWidget';
 
-const AdminLayout = ({ children }) => (
+interface AdminLayoutProps {
+  children: ReactNode;
+}
+
+const AdminLayout = ({ children }: AdminLayoutProps) => (
   <div className="layout-container">
     <AdminSidebar />
     <main className="main-content admin-page">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Users, Building2, Store, Receipt, Loader, BarChart2 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -7,7 +7,14 @@ import { toast } from 'react-toastify';
 import '../styles/admin.css';
 import './AdminAnalytics.css';
 
-const StatCard = ({ icon, label, value, color }) => (
+interface StatCardProps {
+  icon: ReactNode;
+  label: string;
+  value?: ReactNode;
+  color: string;
+}
+
+const StatCard = ({ icon, label, value, color }: StatCardProps) => (
   <div className="admin-stat-card">
     <div className="admin-stat-header">
       <div className="admin-stat-icon" style={{ background: `${color}15`, color }}>
@@ -19,22 +26,22 @@ const StatCard = ({ icon, label, value, color }) => (
   </div>
 );
 
-const TICKET_COLORS = { open: '#3b82f6', in_progress: '#f59e0b', resolved: '#10b981', closed: '#6b7280' };
-const TICKET_LABELS = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
+const TICKET_COLORS: Record<string, string> = { open: '#3b82f6', in_progress: '#f59e0b', resolved: '#10b981', closed: '#6b7280' };
+const TICKET_LABELS: Record<string, string> = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
 
 const AdminAnalytics = () => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getAdminAnalyticsDashboard()
-      .then(r => setData(r.data))
+      .then((r: any) => setData(r.data))
       .catch(() => toast.error('Failed to load analytics'))
       .finally(() => setLoading(false));
   }, []);
 
   const ticketData = data?.ticketStats
-    ? Object.entries(data.ticketStats).map(([key, value]) => ({ name: TICKET_LABELS[key] || key, value, color: TICKET_COLORS[key] || '#6b7280' }))
+    ? Object.entries(data.ticketStats).map(([key, value]) => ({ name: TICKET_LABELS[key] || key, value: value as number, color: TICKET_COLORS[key] || '#6b7280' }))
     : [];
 
   return (

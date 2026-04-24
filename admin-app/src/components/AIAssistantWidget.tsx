@@ -7,7 +7,7 @@
  * they can mention its id/name and (future) pick it from a dropdown.
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { Sparkles, X, Send, Plus, ThumbsUp, ThumbsDown, Loader2, History, Building2 } from 'lucide-react';
 import {
   listAiConversations,
@@ -22,14 +22,14 @@ import './AIAssistantWidget.css';
 const SESSION_KEY = 'adminAiConversationId';
 const ORG_KEY     = 'adminAiTargetOrgId';
 
-const EXAMPLE_PROMPTS = [
+const EXAMPLE_PROMPTS: string[] = [
   'How do I approve a pending user?',
   'Explain the RBAC model',
   "What's in the review queue?",
   'Summarize the KB categories',
 ];
 
-const TOOL_LABELS = {
+const TOOL_LABELS: Record<string, string> = {
   get_store_summary:            'Sales summary',
   get_inventory_status:         'Inventory check',
   get_recent_transactions:      'Recent transactions',
@@ -47,7 +47,44 @@ const TOOL_LABELS = {
 
 const PORTAL_BASE = import.meta.env.VITE_PORTAL_URL || 'http://localhost:5173';
 
-function renderContent(text) {
+interface AdminUser {
+  name?: string;
+  token?: string;
+  role?: string;
+  permissions?: string[];
+  [key: string]: unknown;
+}
+
+interface ToolCall {
+  name: string;
+  input?: unknown;
+  output?: unknown;
+}
+
+interface AiMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  toolCalls?: ToolCall[];
+  feedback?: 'helpful' | 'unhelpful' | null;
+  feedbackNote?: string;
+  _error?: boolean;
+}
+
+interface AiConversationSummary {
+  id: string;
+  title?: string;
+  lastMessageAt: string;
+}
+
+interface OrgSummary {
+  id: string | number;
+  name: string;
+  [key: string]: unknown;
+}
+
+function renderContent(text: string): string {
   if (!text) return '';
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -57,7 +94,7 @@ function renderContent(text) {
   return escaped
     // Admin-app lives on its own origin — portal links open in a new tab.
     .replace(/\[([^\]]+?)\]\((\/portal\/[^)\s]+|https?:\/\/[^)\s]+)\)/g,
-      (_m, label, href) => {
+      (_m, label: string, href: string) => {
         const isPortal = href.startsWith('/portal/');
         const finalHref = isPortal ? `${PORTAL_BASE}${href}` : href;
         const safe = finalHref.replace(/"/g, '&quot;');
@@ -69,29 +106,29 @@ function renderContent(text) {
 }
 
 export default function AIAssistantWidget() {
-  const user = (() => {
+  const user: AdminUser | null = (() => {
     try { return JSON.parse(localStorage.getItem('admin_user') || 'null'); } catch { return null; }
   })();
 
   const [open, setOpen]                 = useState(false);
-  const [conversationId, setConvId]     = useState(() => sessionStorage.getItem(SESSION_KEY) || null);
-  const [messages, setMessages]         = useState([]);
+  const [conversationId, setConvId]     = useState<string | null>(() => sessionStorage.getItem(SESSION_KEY) || null);
+  const [messages, setMessages]         = useState<AiMessage[]>([]);
   const [input, setInput]               = useState('');
   const [sending, setSending]           = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [feedbackFor, setFeedbackFor]   = useState(null);
+  const [feedbackFor, setFeedbackFor]   = useState<string | null>(null);
   const [feedbackNote, setFeedbackNote] = useState('');
   const [showHistory, setShowHistory]   = useState(false);
-  const [historyList, setHistoryList]   = useState([]);
+  const [historyList, setHistoryList]   = useState<AiConversationSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [orgs, setOrgs]                 = useState([]);
-  const [targetOrgId, setTargetOrgId]   = useState(() => sessionStorage.getItem(ORG_KEY) || '');
+  const [orgs, setOrgs]                 = useState<OrgSummary[]>([]);
+  const [targetOrgId, setTargetOrgId]   = useState<string>(() => sessionStorage.getItem(ORG_KEY) || '');
 
   // Header object to pass into API helpers — X-Tenant-Id if a target org is set.
-  const apiHeaders = targetOrgId ? { 'X-Tenant-Id': targetOrgId } : {};
+  const apiHeaders: Record<string, string> = targetOrgId ? { 'X-Tenant-Id': targetOrgId } : {};
 
-  const scrollRef = useRef(null);
-  const inputRef  = useRef(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef  = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -108,7 +145,7 @@ export default function AIAssistantWidget() {
         const res = await getAiConversation(conversationId, apiHeaders);
         if (cancelled) return;
         setMessages(res.conversation?.messages || []);
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setConvId(null);
           sessionStorage.removeItem(SESSION_KEY);
@@ -127,7 +164,7 @@ export default function AIAssistantWidget() {
     (async () => {
       try {
         const res = await getAdminOrganizations({ status: 'active', limit: 200 });
-        const list = res.organizations || res.data || [];
+        const list: OrgSummary[] = res.organizations || res.data || [];
         setOrgs(list);
       } catch { setOrgs([]); }
     })();
@@ -161,13 +198,13 @@ export default function AIAssistantWidget() {
     }
   }, [showHistory, apiHeaders]); // eslint-disable-line
 
-  const loadConversation = useCallback((id) => {
+  const loadConversation = useCallback((id: string) => {
     sessionStorage.setItem(SESSION_KEY, id);
     setConvId(id);
     setShowHistory(false);
   }, []);
 
-  const changeOrg = useCallback((orgId) => {
+  const changeOrg = useCallback((orgId: string) => {
     setTargetOrgId(orgId);
     if (orgId) sessionStorage.setItem(ORG_KEY, orgId);
     else       sessionStorage.removeItem(ORG_KEY);
@@ -178,14 +215,19 @@ export default function AIAssistantWidget() {
     setShowHistory(false);
   }, []);
 
-  const send = useCallback(async (textOverride) => {
+  const send = useCallback(async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text || sending) return;
 
     setSending(true);
     setInput('');
 
-    const tempUserMsg = { id: `tmp-${Date.now()}`, role: 'user', content: text, createdAt: new Date().toISOString() };
+    const tempUserMsg: AiMessage = {
+      id: `tmp-${Date.now()}`,
+      role: 'user',
+      content: text,
+      createdAt: new Date().toISOString(),
+    };
     setMessages(prev => [...prev, tempUserMsg]);
 
     try {
@@ -202,13 +244,14 @@ export default function AIAssistantWidget() {
 
       setMessages(prev => {
         const base = prev.filter(m => m.id !== tempUserMsg.id);
-        const merged = [...base];
+        const merged: AiMessage[] = [...base];
         if (res.userMessage)      merged.push(res.userMessage);
         if (res.assistantMessage) merged.push(res.assistantMessage);
         return merged;
       });
     } catch (err) {
-      const errText = err.response?.data?.error || err.message || 'Something went wrong.';
+      const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
+      const errText = axiosErr.response?.data?.error || axiosErr.message || 'Something went wrong.';
       setMessages(prev => [
         ...prev.filter(m => m.id !== tempUserMsg.id),
         tempUserMsg,
@@ -225,22 +268,26 @@ export default function AIAssistantWidget() {
     }
   }, [input, sending, conversationId, targetOrgId]); // eslint-disable-line
 
-  const onKeyDown = (e) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
     }
   };
 
-  const rate = async (msgId, kind) => {
+  const rate = async (msgId: string, kind: 'helpful' | 'unhelpful' | null) => {
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, feedback: kind } : m));
     try {
-      await submitAiFeedback(msgId, kind, null, apiHeaders);
-      if (kind === 'unhelpful') {
-        setFeedbackFor(msgId);
-        setFeedbackNote('');
+      // Widget treats `null` as a clear; API semantics: null means no change so
+      // we only call when there's a value.
+      if (kind) {
+        await submitAiFeedback(msgId, kind, null, apiHeaders);
+        if (kind === 'unhelpful') {
+          setFeedbackFor(msgId);
+          setFeedbackNote('');
+        }
       }
-    } catch (err) {
+    } catch {
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, feedback: null } : m));
     }
   };
@@ -308,7 +355,7 @@ export default function AIAssistantWidget() {
             >
               <option value="">— Platform (no org context) —</option>
               {orgs.map(o => (
-                <option key={o.id} value={o.id}>{o.name}</option>
+                <option key={String(o.id)} value={String(o.id)}>{o.name}</option>
               ))}
             </select>
           </div>

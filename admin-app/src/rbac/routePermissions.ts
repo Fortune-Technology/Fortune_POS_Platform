@@ -2,7 +2,7 @@
  * Admin-app route → permission mapping.
  * Superadmins always pass via the usePermissions() hook.
  */
-export const ADMIN_ROUTE_PERMISSIONS = {
+export const ADMIN_ROUTE_PERMISSIONS: Record<string, string> = {
   '/dashboard':                    'admin_dashboard.view',
   '/analytics':                    'admin_analytics.view',
   '/analytics/organizations':      'admin_analytics.view',
@@ -29,7 +29,7 @@ export const ADMIN_ROUTE_PERMISSIONS = {
   '/lottery':                      'lottery.manage',
 };
 
-export function getRoutePermission(pathname) {
+export function getRoutePermission(pathname: string): string | null {
   if (ADMIN_ROUTE_PERMISSIONS[pathname]) return ADMIN_ROUTE_PERMISSIONS[pathname];
   for (const pattern of Object.keys(ADMIN_ROUTE_PERMISSIONS)) {
     if (!pattern.includes(':')) continue;

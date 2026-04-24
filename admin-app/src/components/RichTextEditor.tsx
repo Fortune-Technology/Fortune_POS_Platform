@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import './RichTextEditor.css';
@@ -19,7 +18,13 @@ const formats = [
   'list', 'blockquote', 'link', 'align',
 ];
 
-const RichTextEditor = ({ value, onChange, placeholder = 'Write content here...' }) => {
+interface RichTextEditorProps {
+  value?: string;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+}
+
+const RichTextEditor = ({ value, onChange, placeholder = 'Write content here...' }: RichTextEditorProps) => {
   return (
     <div className="rich-text-editor-wrapper">
       <ReactQuill

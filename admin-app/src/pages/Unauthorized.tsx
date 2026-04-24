@@ -1,9 +1,12 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldOff, ArrowLeft } from 'lucide-react';
 import '../styles/admin.css';
 
-export default function Unauthorized({ required }) {
+interface UnauthorizedProps {
+  required?: string | null;
+}
+
+export default function Unauthorized({ required }: UnauthorizedProps) {
   return (
     <div className="admin-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{

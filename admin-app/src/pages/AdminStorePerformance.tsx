@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -6,13 +6,23 @@ import { getAdminStorePerformance } from '../services/api';
 import { toast } from 'react-toastify';
 import '../styles/admin.css';
 
+interface StoreRow {
+  id: string | number;
+  name?: string;
+  transactionCount?: number;
+  stationCount?: number;
+  createdAt?: string;
+  organization?: { name?: string };
+  [key: string]: unknown;
+}
+
 const AdminStorePerformance = () => {
-  const [stores, setStores] = useState([]);
+  const [stores, setStores] = useState<StoreRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getAdminStorePerformance()
-      .then(r => setStores(r.data || []))
+      .then((r: any) => setStores((r.data as StoreRow[]) || []))
       .catch(() => toast.error('Failed to load store performance'))
       .finally(() => setLoading(false));
   }, []);
@@ -20,7 +30,7 @@ const AdminStorePerformance = () => {
   const top10 = [...stores]
     .sort((a, b) => (b.transactionCount || 0) - (a.transactionCount || 0))
     .slice(0, 10)
-    .map(s => ({ name: s.name?.length > 18 ? s.name.slice(0, 18) + '...' : s.name, transactions: s.transactionCount || 0 }));
+    .map(s => ({ name: (s.name && s.name.length > 18) ? s.name.slice(0, 18) + '...' : s.name, transactions: s.transactionCount || 0 }));
 
   return (
     <>
@@ -78,7 +88,7 @@ const AdminStorePerformance = () => {
                         </td>
                       </tr>
                     ) : stores.map(store => (
-                      <tr key={store.id}>
+                      <tr key={String(store.id)}>
                         <td className="primary">{store.name}</td>
                         <td>{store.organization?.name || '-'}</td>
                         <td>{(store.transactionCount ?? 0).toLocaleString()}</td>

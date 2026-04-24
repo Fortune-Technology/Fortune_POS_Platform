@@ -7,15 +7,21 @@
  *   showTagline {boolean} show "POINT OF SALE" tagline below wordmark. Default false.
  *   iconOnly    {boolean} render only the blue sprout icon square (200×200). Default false.
  */
-import React from 'react';
 import './StoreveuLogo.css';
+
+interface StoreveuLogoProps {
+  height?: number;
+  darkMode?: boolean;
+  showTagline?: boolean;
+  iconOnly?: boolean;
+}
 
 export default function StoreveuLogo({
   height      = 40,
   darkMode    = false,
   showTagline = false,
   iconOnly    = false,
-}) {
+}: StoreveuLogoProps) {
 
   /* ── Icon-only: 200×200 blue square (from storeveu_icon.svg) ─────────── */
   if (iconOnly) {
