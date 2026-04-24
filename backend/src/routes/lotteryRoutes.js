@@ -27,6 +27,7 @@ import {
   cancelPendingMove, runPendingMovesNow,
   getLotteryOnlineTotal, upsertLotteryOnlineTotal,
   getDailyLotteryInventory, closeLotteryDay, getYesterdayCloses, getCounterSnapshot,
+  upsertHistoricalClose,
   listLotterySettlements, getLotterySettlement,
   upsertLotterySettlement, finalizeLotterySettlement, markLotterySettlementPaid,
   syncLotteryCatalog,
@@ -115,6 +116,8 @@ router.get( '/yesterday-closes', requirePermission('lottery.view'), getYesterday
 // Date-scoped Counter view — which books were on the counter on a given
 // date plus their opening/closing ticket snapshots for historical browsing.
 router.get( '/counter-snapshot', requirePermission('lottery.view'), getCounterSnapshot);
+// Edit a historical day's close ticket (manual mode on past dates).
+router.put( '/historical-close', requirePermission('lottery.manage'), upsertHistoricalClose);
 
 // ── Phase 2: Weekly Settlement ───────────────────────────────────────────
 router.get( '/settlements',                     requirePermission('lottery.view'),   listLotterySettlements);

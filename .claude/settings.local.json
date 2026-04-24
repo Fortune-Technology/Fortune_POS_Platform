@@ -98,7 +98,13 @@
       "Bash(grep -nA 2 \"^model Invoice \" backend/prisma/schema.prisma)",
       "Bash(grep -n \"^export default InvoiceImport\\\\|^};\\\\s*$\\\\|^}\\\\s*$\" frontend/src/pages/InvoiceImport.jsx)",
       "Bash(npx tsc *)",
-      "Bash(awk -F. '{print $NF}')"
+      "Bash(awk -F. '{print $NF}')",
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, StartTime, ProcessName | Format-Table -AutoSize\")",
+      "Bash(env)",
+      "Read(//c/Users/nishn/**)",
+      "Bash(git config *)",
+      "Bash(tasklist)"
     ]
   }
 }

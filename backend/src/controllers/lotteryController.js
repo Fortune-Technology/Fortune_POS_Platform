@@ -139,7 +139,7 @@ export const getLotteryBoxes = async (req, res) => {
         ...(status && { status }),
         ...(gameId && { gameId }),
       },
-      include: { game: { select: { id: true, name: true, ticketPrice: true } } },
+      include: { game: { select: { id: true, name: true, gameNumber: true, ticketPrice: true } } },
       orderBy: [{ status: 'asc' }, { slotNumber: 'asc' }, { createdAt: 'desc' }],
     });
     res.json({ success: true, data: boxes });
@@ -438,7 +438,7 @@ export const adjustBoxTickets = async (req, res) => {
 
     const box = await prisma.lotteryBox.findFirst({
       where: { id, orgId, storeId },
-      include: { game: { select: { id: true, name: true, ticketPrice: true } } },
+      include: { game: { select: { id: true, name: true, gameNumber: true, ticketPrice: true } } },
     });
     if (!box) return res.status(404).json({ success: false, error: 'Box not found' });
 
@@ -639,8 +639,56 @@ export const saveLotteryShiftReport = async (req, res) => {
       update: { machineAmount: machNum, digitalAmount: digNum, scannedTickets: scannedTickets || undefined, scannedAmount: scannedAmount ? Number(scannedAmount) : null, boxScans: boxScans || undefined, totalSales, totalPayouts, netAmount, variance, notes: notes || null, closedById: closedById || null, closedAt: new Date() },
       create: { orgId, storeId, shiftId, machineAmount: machNum, digitalAmount: digNum, scannedTickets: scannedTickets || undefined, scannedAmount: scannedAmount ? Number(scannedAmount) : null, boxScans: boxScans || undefined, totalSales, totalPayouts, netAmount, variance, notes: notes || null, closedById: closedById || null, closedAt: new Date() },
     });
+
+    // Propagate scanned end-tickets to each LotteryBox + emit close_day_snapshot
+    // events. Without this, the cashier's EoD scan never reached the box's
+    // currentTicket field (so scan engine kept the old position) AND no
+    // snapshot existed for the next-day rollover.
+    if (Array.isArray(boxScans)) {
+      for (const bs of boxScans) {
+        if (!bs?.boxId) continue;
+        const isSoldout = !!bs.soldout || bs.endTicket === 'SO';
+        const endTicket = (!isSoldout && bs.endTicket != null && bs.endTicket !== '') ? String(bs.endTicket) : null;
+
+        // Update the box if we have a real end ticket
+        if (endTicket != null) {
+          await prisma.lotteryBox.update({
+            where: { id: bs.boxId },
+            data: {
+              currentTicket:      endTicket,
+              lastShiftEndTicket: endTicket,
+              updatedAt:          new Date(),
+            },
+          }).catch((e) => console.warn('[saveShiftReport] box update failed', bs.boxId, e.message));
+        }
+
+        // Create close_day_snapshot event so the next-day rollover works.
+        // (Soldout boxes also get an event so the daily-close report
+        // includes them — currentTicket: null indicates no specific ticket.)
+        await prisma.lotteryScanEvent.create({
+          data: {
+            orgId, storeId,
+            boxId:     bs.boxId,
+            scannedBy: closedById || null,
+            raw:       `shift_close:${shiftId}`,
+            parsed: {
+              gameNumber:    bs.gameNumber || null,
+              gameName:      bs.gameName || null,
+              slotNumber:    bs.slotNumber ?? null,
+              currentTicket: endTicket,
+              ticketsSold:   bs.ticketsSold ?? null,
+              soldout:       isSoldout,
+            },
+            action:  'close_day_snapshot',
+            context: 'eod',
+          },
+        }).catch((e) => console.warn('[saveShiftReport] snapshot insert failed', bs.boxId, e.message));
+      }
+    }
+
     res.json({ success: true, data: report });
   } catch (err) {
+    console.error('[saveLotteryShiftReport]', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -653,22 +701,44 @@ export const getLotteryDashboard = async (req, res) => {
   try {
     const orgId   = getOrgId(req);
     const storeId = getStore(req);
-    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    // Month-to-date window (UTC), inclusive
+    const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+    const monthEnd   = new Date(); monthEnd.setUTCHours(23, 59, 59, 999);
 
-    const [monthTxns, activeBoxes, inventoryBoxes] = await Promise.all([
-      prisma.lotteryTransaction.findMany({ where: { orgId, storeId, createdAt: { gte: monthStart } } }),
+    const [monthTxns, activeBoxes, inventoryBoxes, real] = await Promise.all([
+      // Payouts + posSales come from LotteryTransaction (audit signal only)
+      prisma.lotteryTransaction.findMany({
+        where: { orgId, storeId, createdAt: { gte: monthStart, lte: monthEnd } },
+        select: { type: true, amount: true },
+      }),
       prisma.lotteryBox.count({ where: { orgId, storeId, status: 'active' } }),
       prisma.lotteryBox.count({ where: { orgId, storeId, status: 'inventory' } }),
+      // Authoritative sales come from ticket-math snapshots (the cashier
+      // doesn't have to ring up every ticket — close_day_snapshot deltas are truth)
+      _realSalesRange({ orgId, storeId, from: monthStart, to: monthEnd }),
     ]);
 
-    const totalSales   = monthTxns.filter(t => t.type === 'sale').reduce((s, t)   => s + Number(t.amount), 0);
-    const totalPayouts = monthTxns.filter(t => t.type === 'payout').reduce((s, t) => s + Number(t.amount), 0);
-    const netRevenue   = totalSales - totalPayouts;
+    const totalSales   = real.totalSales;                                                                // ticket-math truth
+    const posSales     = monthTxns.filter(t => t.type === 'sale').reduce((s, t) => s + Number(t.amount || 0), 0);
+    const totalPayouts = monthTxns.filter(t => t.type === 'payout').reduce((s, t) => s + Number(t.amount || 0), 0);
+    // Round all currency math to 2dp so floating-point noise (eg .9500000005)
+    // doesn't leak into the response. Compare-then-round: keeps unreported
+    // semantics intact while presenting clean values to the UI.
+    const unreported   = Math.max(0, Math.round((totalSales - posSales) * 100) / 100);
+    const netRevenue   = Math.round((totalSales - totalPayouts) * 100) / 100;
+
     const settings = await prisma.lotterySettings.findUnique({ where: { storeId } }).catch(() => null);
     const commissionRate = settings?.commissionRate ? Number(settings.commissionRate) : 0.05;
-    const commission   = totalSales * commissionRate;
+    const commission   = Math.round(totalSales * commissionRate * 100) / 100;
 
-    res.json({ totalSales, totalPayouts, netRevenue, commission, activeBoxes, inventoryBoxes });
+    res.json({
+      totalSales,
+      posSales: Math.round(posSales * 100) / 100,
+      unreported,
+      totalPayouts: Math.round(totalPayouts * 100) / 100,
+      netRevenue, commission,
+      activeBoxes, inventoryBoxes,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -683,53 +753,73 @@ export const getLotteryReport = async (req, res) => {
     const now  = new Date();
     let startDate;
     if (from) {
-      startDate = new Date(from);
+      startDate = new Date(from + 'T00:00:00.000Z');
     } else if (period === 'week') {
-      startDate = new Date(now); startDate.setDate(now.getDate() - 7);
+      startDate = new Date(now); startDate.setUTCDate(now.getUTCDate() - 7); startDate.setUTCHours(0,0,0,0);
     } else if (period === 'month') {
-      startDate = new Date(now); startDate.setMonth(now.getMonth() - 1);
+      startDate = new Date(now); startDate.setUTCMonth(now.getUTCMonth() - 1); startDate.setUTCHours(0,0,0,0);
     } else {
-      startDate = new Date(now); startDate.setHours(0, 0, 0, 0);
+      startDate = new Date(now); startDate.setUTCHours(0, 0, 0, 0);
     }
-    const endDate = to ? new Date(to) : new Date();
+    const endDate = to ? new Date(to + 'T23:59:59.999Z') : new Date();
 
+    // Ticket-math (authoritative) sales — walks close_day_snapshot deltas day by day
+    const real = await _realSalesRange({ orgId, storeId, from: startDate, to: endDate });
+    const totalSales = real.totalSales;
+
+    // POS-side data (audit signal): payouts + ringed-up sales
     const txns = await prisma.lotteryTransaction.findMany({
       where: { orgId, storeId, createdAt: { gte: startDate, lte: endDate } },
       orderBy: { createdAt: 'asc' },
+      select: { type: true, amount: true, gameId: true, createdAt: true },
     });
 
-    const totalSales   = txns.filter(t => t.type === 'sale').reduce((s, t)   => s + Number(t.amount), 0);
-    const totalPayouts = txns.filter(t => t.type === 'payout').reduce((s, t) => s + Number(t.amount), 0);
-    const netAmount    = totalSales - totalPayouts;
+    const posSales     = Math.round(txns.filter(t => t.type === 'sale').reduce((s, t) => s + Number(t.amount || 0), 0) * 100) / 100;
+    const totalPayouts = Math.round(txns.filter(t => t.type === 'payout').reduce((s, t) => s + Number(t.amount || 0), 0) * 100) / 100;
+    const unreported   = Math.max(0, Math.round((totalSales - posSales) * 100) / 100);
+    const netAmount    = Math.round((totalSales - totalPayouts) * 100) / 100;
 
-    // Group by day for chart data
-    const byDay = {};
-    txns.forEach(t => {
+    // Chart: per-day buckets — sales from ticket math, payouts from txns
+    const dayMap = {};
+    real.byDay.forEach(d => {
+      dayMap[d.date] = { date: d.date, sales: d.sales, payouts: 0, net: d.sales };
+    });
+    txns.filter(t => t.type === 'payout').forEach(t => {
       const key = t.createdAt.toISOString().slice(0, 10);
-      if (!byDay[key]) byDay[key] = { date: key, sales: 0, payouts: 0, net: 0 };
-      if (t.type === 'sale')   byDay[key].sales   += Number(t.amount);
-      if (t.type === 'payout') byDay[key].payouts += Number(t.amount);
-      byDay[key].net = byDay[key].sales - byDay[key].payouts;
+      if (!dayMap[key]) dayMap[key] = { date: key, sales: 0, payouts: 0, net: 0 };
+      dayMap[key].payouts += Number(t.amount || 0);
+      dayMap[key].net = dayMap[key].sales - dayMap[key].payouts;
     });
+    const chart = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
 
-    // Group by game
+    // Per-game breakdown — sales from ticket math (real.byGame), payouts from txns
     const gameMap = {};
+    for (const [gameId, info] of real.byGame.entries()) {
+      gameMap[gameId] = { gameId, gameName: null, sales: info.sales, payouts: 0, net: info.sales, count: info.count };
+    }
     txns.forEach(t => {
       const key = t.gameId || '_unknown';
       if (!gameMap[key]) gameMap[key] = { gameId: key, gameName: null, sales: 0, payouts: 0, net: 0, count: 0 };
-      if (t.type === 'sale')   { gameMap[key].sales += Number(t.amount); gameMap[key].count++; }
-      if (t.type === 'payout') { gameMap[key].payouts += Number(t.amount); }
-      gameMap[key].net = gameMap[key].sales - gameMap[key].payouts;
+      if (t.type === 'payout') {
+        gameMap[key].payouts += Number(t.amount || 0);
+        gameMap[key].net = gameMap[key].sales - gameMap[key].payouts;
+      }
     });
-    // Lookup game names
     const gameIds = Object.keys(gameMap).filter(k => k !== '_unknown');
     if (gameIds.length) {
-      const games = await prisma.lotteryGame.findMany({ where: { id: { in: gameIds } }, select: { id: true, name: true } });
+      const games = await prisma.lotteryGame.findMany({
+        where: { id: { in: gameIds } },
+        select: { id: true, name: true },
+      });
       games.forEach(g => { if (gameMap[g.id]) gameMap[g.id].gameName = g.name; });
     }
     const byGame = Object.values(gameMap).map(g => ({ ...g, gameName: g.gameName || 'Other' }));
 
-    res.json({ totalSales, totalPayouts, netRevenue: netAmount, transactionCount: txns.length, byGame, chart: Object.values(byDay) });
+    res.json({
+      totalSales, posSales, unreported, totalPayouts,
+      netRevenue: netAmount, transactionCount: txns.length,
+      byGame, chart,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -743,47 +833,49 @@ export const getLotteryCommissionReport = async (req, res) => {
 
     let startDate;
     if (from) {
-      startDate = new Date(from);
+      startDate = new Date(from + 'T00:00:00.000Z');
     } else if (period === 'week') {
-      startDate = new Date(); startDate.setDate(startDate.getDate() - 7);
+      startDate = new Date(); startDate.setUTCDate(startDate.getUTCDate() - 7); startDate.setUTCHours(0,0,0,0);
     } else if (period === 'day') {
-      startDate = new Date(); startDate.setHours(0, 0, 0, 0);
+      startDate = new Date(); startDate.setUTCHours(0, 0, 0, 0);
     } else {
-      startDate = new Date(); startDate.setDate(1); startDate.setHours(0,0,0,0);
+      startDate = new Date(); startDate.setUTCDate(1); startDate.setUTCHours(0,0,0,0);
     }
-    const endDate = to ? new Date(to) : new Date();
+    const endDate = to ? new Date(to + 'T23:59:59.999Z') : new Date();
 
+    // Authoritative sales from ticket math — already grouped by gameId
+    const real = await _realSalesRange({ orgId, storeId, from: startDate, to: endDate });
+
+    // Game catalog for naming + ensure inactive games still show with $0 sales
     const games = await prisma.lotteryGame.findMany({
       where: { orgId, storeId, deleted: false },
-      include: { boxes: { select: { salesAmount: true, ticketsSold: true } } },
-    });
-
-    const txns = await prisma.lotteryTransaction.findMany({
-      where: { orgId, storeId, type: 'sale', createdAt: { gte: startDate, lte: endDate } },
-    });
-
-    const salesByGameId = {};
-    txns.forEach(t => {
-      const gId = t.gameId || '_unknown';
-      if (!salesByGameId[gId]) salesByGameId[gId] = 0;
-      salesByGameId[gId] += Number(t.amount);
+      select: { id: true, name: true },
     });
 
     // Get store commission rate from settings
     const settings = await prisma.lotterySettings.findUnique({ where: { storeId } }).catch(() => null);
     const storeCommissionRate = settings?.commissionRate ? Number(settings.commissionRate) : 0.05;
 
-    const commissionRows = games.map(g => {
-      const sales  = salesByGameId[g.id] || 0;
-      const rate   = storeCommissionRate; // store-level rate, not per-game
-      const earned = sales * rate;
-      return { gameName: g.name, commissionRate: rate, totalSales: sales, commission: earned };
+    // Merge real sales with the game catalog. A game with no sales in the
+    // window still appears with $0 so the UI doesn't have a sparse row count.
+    const gameById = new Map(games.map(g => [g.id, { gameName: g.name, gameId: g.id, sales: 0 }]));
+    for (const [gameId, info] of real.byGame.entries()) {
+      const existing = gameById.get(gameId) || { gameName: 'Other', gameId, sales: 0 };
+      existing.sales += info.sales;
+      gameById.set(gameId, existing);
+    }
+
+    const commissionRows = [...gameById.values()].map(g => {
+      const earned = g.sales * storeCommissionRate;
+      return { gameName: g.gameName, commissionRate: storeCommissionRate, totalSales: g.sales, commission: earned };
     });
 
     const totalCommission = commissionRows.reduce((s, c) => s + c.commission, 0);
     const totalSalesAll   = commissionRows.reduce((s, c) => s + c.totalSales, 0);
     const avgRate         = totalSalesAll > 0 ? totalCommission / totalSalesAll : 0;
-    const byGame          = commissionRows.map(c => ({ gameName: c.gameName, rate: c.commissionRate, sales: c.totalSales, commission: c.commission }));
+    const byGame          = commissionRows.map(c => ({
+      gameName: c.gameName, rate: c.commissionRate, sales: c.totalSales, commission: c.commission,
+    }));
     res.json({ totalCommission, totalSales: totalSalesAll, avgRate, byGame });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -1521,6 +1613,160 @@ export const upsertLotteryOnlineTotal = async (req, res) => {
 };
 
 /**
+ * Compute "real" instant sales by reading close_day_snapshot deltas.
+ *
+ * The cashier-app's LotteryTransaction rows are unreliable because cashiers
+ * sometimes skip ringing up tickets (or partially ring them). The TRUE
+ * source of sales is the change in each active book's currentTicket
+ * between yesterday's close and today's close — the physical scratch
+ * tickets sold. The state's lottery commission uses the same logic.
+ *
+ * @param {string} orgId, storeId
+ * @param {Date} dayStart, dayEnd  — UTC bounds for the target day
+ * @returns {Promise<{ totalSales, byBox: Map<boxId, {sold,price,amount}> }>}
+ */
+async function _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd }) {
+  // Closes for THIS day (latest per box)
+  const todayEvents = await prisma.lotteryScanEvent.findMany({
+    where: { orgId, storeId, action: 'close_day_snapshot', createdAt: { gte: dayStart, lte: dayEnd } },
+    orderBy: { createdAt: 'desc' },
+    select: { boxId: true, parsed: true },
+  });
+  const todayMap = new Map();
+  for (const ev of todayEvents) {
+    if (ev.boxId && !todayMap.has(ev.boxId)) {
+      todayMap.set(ev.boxId, ev.parsed?.currentTicket ?? null);
+    }
+  }
+  if (todayMap.size === 0) return { totalSales: 0, byBox: new Map() };
+
+  // Closes BEFORE this day (latest per box) — yesterday's close
+  const prevEvents = await prisma.lotteryScanEvent.findMany({
+    where: {
+      orgId, storeId,
+      action: 'close_day_snapshot',
+      createdAt: { lt: dayStart },
+      boxId: { in: [...todayMap.keys()] },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { boxId: true, parsed: true },
+  });
+  const prevMap = new Map();
+  for (const ev of prevEvents) {
+    if (ev.boxId && !prevMap.has(ev.boxId)) {
+      prevMap.set(ev.boxId, ev.parsed?.currentTicket ?? null);
+    }
+  }
+
+  // Need ticketPrice + startTicket per box (for first-day sales where prev
+  // close doesn't exist). startTicket carries the book's opening position.
+  const boxes = await prisma.lotteryBox.findMany({
+    where: { id: { in: [...todayMap.keys()] } },
+    select: { id: true, ticketPrice: true, startTicket: true, totalTickets: true },
+  });
+  const boxMap = new Map(boxes.map((b) => [b.id, b]));
+
+  // Need sellDirection to compute the "fresh book opening" position when
+  // there's no prior close (first day a book is on the counter). Default
+  // 'desc' = tickets count down (fresh 150-pack starts at 149).
+  const settings = await prisma.lotterySettings.findUnique({
+    where: { storeId },
+    select: { sellDirection: true },
+  }).catch(() => null);
+  const sellDirection = settings?.sellDirection || 'desc';
+
+  function freshOpeningPosition(box) {
+    if (box.startTicket != null) return box.startTicket;
+    const total = Number(box.totalTickets || 0);
+    if (!total) return null;
+    return sellDirection === 'asc' ? '0' : String(total - 1);
+  }
+
+  let totalSales = 0;
+  const byBox = new Map();
+  for (const [boxId, todayTicketStr] of todayMap.entries()) {
+    if (todayTicketStr == null || todayTicketStr === '') continue;
+    const todayTicket = parseInt(todayTicketStr, 10);
+    if (!Number.isFinite(todayTicket)) continue;
+    const box = boxMap.get(boxId);
+    if (!box) continue;
+
+    // Prev close → fall back to box.startTicket → fall back to "fresh book
+    // opening" (149 for descending, 0 for ascending). This handles the
+    // first-day-on-counter case where no prior close_day_snapshot exists.
+    const prevTicketStr = prevMap.get(boxId) ?? freshOpeningPosition(box);
+    const prevTicket = parseInt(prevTicketStr, 10);
+    if (!Number.isFinite(prevTicket)) continue;
+
+    // |prev − today| handles both ascending and descending sell directions
+    const sold = Math.abs(prevTicket - todayTicket);
+    const price = Number(box.ticketPrice || 0);
+    const amount = sold * price;
+    totalSales += amount;
+    byBox.set(boxId, { sold, price, amount });
+  }
+  return { totalSales: Math.round(totalSales * 100) / 100, byBox };
+}
+
+/**
+ * Aggregate ticket-math sales across a date range. Walks day-by-day and
+ * sums close_day_snapshot deltas. Returns totalSales + per-day buckets
+ * + per-game breakdown. Used by dashboard, reports, commission report
+ * so they all share one source of truth instead of summing
+ * LotteryTransaction rows (which the cashier may have skipped).
+ *
+ * @param {string} orgId, storeId
+ * @param {Date} from   — UTC start (inclusive)
+ * @param {Date} to     — UTC end   (inclusive)
+ * @returns {Promise<{ totalSales: number, byDay: Array<{date,sales}>, byGame: Map<gameId,{sales,count}> }>}
+ */
+async function _realSalesRange({ orgId, storeId, from, to }) {
+  // Walk day by day. Cap iterations defensively at 366 to avoid pathological
+  // date ranges hanging the request loop. The per-day _realSalesFromSnapshots
+  // call is cheap (2 small indexed queries + 1 box lookup).
+  const start = new Date(from); start.setUTCHours(0, 0, 0, 0);
+  const end   = new Date(to);   end.setUTCHours(23, 59, 59, 999);
+
+  // Pre-fetch box → game mapping once so we can attribute sales per game
+  // without a query inside the loop.
+  const allBoxes = await prisma.lotteryBox.findMany({
+    where: { orgId, storeId },
+    select: { id: true, gameId: true },
+  });
+  const boxToGame = new Map(allBoxes.map(b => [b.id, b.gameId]));
+
+  const byDay = [];
+  const byGame = new Map();   // gameId → { sales, count }
+  let totalSales = 0;
+
+  let safety = 0;
+  const cursor = new Date(start);
+  while (cursor <= end && safety++ < 366) {
+    const dayStart = new Date(cursor); dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd   = new Date(cursor); dayEnd.setUTCHours(23, 59, 59, 999);
+    const day      = await _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd });
+
+    byDay.push({ date: dayStart.toISOString().slice(0, 10), sales: day.totalSales });
+    totalSales += day.totalSales;
+
+    for (const [boxId, info] of day.byBox.entries()) {
+      const gameId = boxToGame.get(boxId) || '_unknown';
+      const cur = byGame.get(gameId) || { sales: 0, count: 0 };
+      cur.sales += info.amount;
+      cur.count += info.sold;
+      byGame.set(gameId, cur);
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return {
+    totalSales: Math.round(totalSales * 100) / 100,
+    byDay,
+    byGame,
+  };
+}
+
+/**
  * GET /api/lottery/daily-inventory?date=YYYY-MM-DD
  *
  * Computes the live Scratchoff Inventory panel:
@@ -1593,7 +1839,17 @@ export const getDailyLotteryInventory = async (req, res) => {
 
     const received   = receivedToday.reduce((s, b) => s + Number(b.totalValue || 0), 0);
     const activated  = activatedToday.length;
-    const sold       = saleTxs.reduce((s, t) => s + Number(t.amount || 0), 0);
+    // POS-recorded sales — what the cashier actually rang up (audit signal).
+    // The cashier-app's LotteryTransaction rows are unreliable: cashiers
+    // sometimes skip ringing up tickets. We expose this as a SEPARATE
+    // metric so managers can see the variance vs ticket-math truth.
+    const posSold    = saleTxs.reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    // Truth: ticket-math sales from close_day_snapshot deltas.
+    const real = await _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd });
+    const sold = real.totalSales;
+    const unreported = Math.max(0, sold - posSold);  // diff = "didn't ring up"
+
     const returnPart = returnsToday
       .filter((b) => Number(b.ticketsSold || 0) > 0)
       .reduce((s, b) => s + Math.max(0, (Number(b.totalTickets || 0) - Number(b.ticketsSold || 0)) * Number(b.ticketPrice || 0)), 0);
@@ -1607,13 +1863,15 @@ export const getDailyLotteryInventory = async (req, res) => {
     res.json({
       success: true,
       data: {
-        begin:      Math.round(begin * 100) / 100,
-        received:   Math.round(received * 100) / 100,
+        begin:        Math.round(begin * 100) / 100,
+        received:     Math.round(received * 100) / 100,
         activated,
-        sold:       Math.round(sold * 100) / 100,
-        returnPart: Math.round(returnPart * 100) / 100,
-        returnFull: Math.round(returnFull * 100) / 100,
-        end:        Math.round(end * 100) / 100,
+        sold:         Math.round(sold * 100) / 100,         // ticket-math truth
+        posSold:      Math.round(posSold * 100) / 100,      // what cashier rang up
+        unreported:   Math.round(unreported * 100) / 100,   // diff (audit signal)
+        returnPart:   Math.round(returnPart * 100) / 100,
+        returnFull:   Math.round(returnFull * 100) / 100,
+        end:          Math.round(end * 100) / 100,
         counts: {
           active:  activeCnt,
           safe:    safeCnt,
@@ -1854,6 +2112,101 @@ export const getCounterSnapshot = async (req, res) => {
     res.json({ success: true, date: req.query.date, isToday, boxes: enriched });
   } catch (err) {
     console.error('[lottery.counterSnapshot]', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+/**
+ * PUT /api/lottery/historical-close
+ * Body: { boxId, date: 'YYYY-MM-DD', ticket }
+ *
+ * Lets a manager correct a HISTORICAL day's close ticket for a single
+ * book — used by the Daily page in manual mode when navigating to a past
+ * date and editing the "today" cell. Creates or updates the
+ * close_day_snapshot LotteryScanEvent for that box on that date.
+ *
+ * If `ticket` is null/empty/undefined, deletes any existing snapshot
+ * for that day instead (effectively un-recording the close).
+ */
+export const upsertHistoricalClose = async (req, res) => {
+  try {
+    const orgId   = getOrgId(req);
+    const storeId = getStore(req);
+    const userId  = req.user?.id || null;
+    const { boxId, date: dateStr, ticket } = req.body || {};
+    if (!boxId || !dateStr) {
+      return res.status(400).json({ success: false, error: 'boxId and date are required' });
+    }
+    const date = parseDate(dateStr);
+    if (!date) return res.status(400).json({ success: false, error: 'Invalid date' });
+
+    // Verify the box belongs to this org/store
+    const box = await prisma.lotteryBox.findFirst({
+      where: { id: boxId, orgId, storeId },
+      include: { game: true },
+    });
+    if (!box) return res.status(404).json({ success: false, error: 'Box not found' });
+
+    const dayStart = new Date(date); dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd   = new Date(date); dayEnd.setUTCHours(23, 59, 59, 999);
+
+    // Find any existing close_day_snapshot for this box on this date
+    const existing = await prisma.lotteryScanEvent.findFirst({
+      where: {
+        orgId, storeId,
+        boxId,
+        action:    'close_day_snapshot',
+        createdAt: { gte: dayStart, lte: dayEnd },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const t = (ticket == null || ticket === '') ? null : String(ticket);
+
+    // Empty ticket → delete the snapshot
+    if (t == null) {
+      if (existing) {
+        await prisma.lotteryScanEvent.delete({ where: { id: existing.id } });
+      }
+      return res.json({ success: true, deleted: !!existing });
+    }
+
+    // Otherwise upsert. Prisma doesn't have a natural composite key here,
+    // so do it as findFirst + update/create.
+    const parsed = {
+      gameNumber:    box.game?.gameNumber ?? null,
+      gameName:      box.game?.name ?? null,
+      slotNumber:    box.slotNumber ?? null,
+      currentTicket: t,
+      ticketsSold:   null,
+      manualEdit:    true,
+    };
+
+    if (existing) {
+      await prisma.lotteryScanEvent.update({
+        where: { id: existing.id },
+        data:  { parsed, scannedBy: userId, raw: `historical_close:${dateStr}` },
+      });
+    } else {
+      // Pin createdAt to the END of the day so it's recognised as the day's
+      // close (queries use createdAt-window matching).
+      await prisma.lotteryScanEvent.create({
+        data: {
+          orgId, storeId,
+          boxId,
+          scannedBy: userId,
+          raw:       `historical_close:${dateStr}`,
+          parsed,
+          action:    'close_day_snapshot',
+          context:   'eod',
+          createdAt: dayEnd,
+        },
+      });
+    }
+
+    res.json({ success: true, ticket: t });
+  } catch (err) {
+    console.error('[lottery.historicalClose]', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };

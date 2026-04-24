@@ -1796,9 +1796,13 @@ function LotteryBody({ urlTab } = {}) {
   const handleSaveSettings = async () => {
     setSettingsSaving(true); setSettingsMsg('');
     try {
-      const payload = { ...settingsForm, commissionRate: settingsForm.commissionRate !== '' ? Number(settingsForm.commissionRate) / 100 : null };
-      const updated = await updateLotterySettings(localStorage.getItem('activeStoreId'), payload);
-      setLotterySettings(updated || payload);
+      // Don't write through state + commissionRate — those are read-only
+      // mirrors of values managed elsewhere (Store Settings + State catalog).
+      // Sending them would clobber the inherited values and accidentally
+      // override the per-stream rates picked up by the settlement engine.
+      const { state: _ignoredState, commissionRate: _ignoredCommission, ...editable } = settingsForm;
+      const updated = await updateLotterySettings(localStorage.getItem('activeStoreId'), editable);
+      setLotterySettings(updated || editable);
       setSettingsMsg('Settings saved successfully.');
     } catch (e) {
       setSettingsMsg('Error: ' + (e.response?.data?.error || e.message));
@@ -2306,20 +2310,36 @@ function LotteryBody({ urlTab } = {}) {
             {settingsMsg && (
               <div className={settingsMsg.startsWith('Error') ? 'lt-error' : 'lt-success-msg'}>{settingsMsg}</div>
             )}
-            <div className="lt-field">
-              <label className="lt-field-label">Store State / Province</label>
-              <select className="lt-select" value={settingsForm.state} onChange={e => setSettingsForm(f => ({ ...f, state: e.target.value }))}>
-                <option value="">— Select —</option>
-                {ALL_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <span className="lt-field-hint">Used to filter the ticket catalog to your state's available tickets</span>
+            {/* State + commission rate are inherited from elsewhere — DO NOT
+                duplicate the inputs here:
+                  • State comes from Account → Store Settings (per-store)
+                  • Per-stream commission rates come from the State catalog
+                    (set by superadmin in Admin → States)
+                  • Per-store commission override (legacy) is preserved in
+                    the DB for back-compat but no longer editable here.
+                Showing the resolved values read-only so the manager can
+                verify what's in effect, with a hint pointing at where to
+                change them. */}
+            <div className="lt-field lt-field--readonly">
+              <label className="lt-field-label">State (from Store Settings)</label>
+              <div className="lt-field-readonly">{settingsForm.state || '— not set —'}</div>
+              <span className="lt-field-hint">
+                Pick this in Account → Store Settings. Determines which games
+                appear in your catalog and which state-level commission rates apply.
+              </span>
             </div>
-            <div className="lt-field">
-              <label className="lt-field-label">Commission Rate (%)</label>
-              <PriceInput maxValue={100} className="lt-input" value={settingsForm.commissionRate}
-                onChange={(v) => setSettingsForm(f => ({ ...f, commissionRate: v }))}
-                placeholder="e.g. 5.4" style={{ maxWidth: 200 }} />
-              <span className="lt-field-hint">Enter as percentage e.g. 5.4 for 5.4%</span>
+            <div className="lt-field lt-field--readonly">
+              <label className="lt-field-label">Commission Rate (from State catalog)</label>
+              <div className="lt-field-readonly">
+                {settingsForm.commissionRate
+                  ? `${settingsForm.commissionRate}%`
+                  : '— set by superadmin per state —'}
+              </div>
+              <span className="lt-field-hint">
+                Per-stream rates (instant sales / instant cashing / machine sales /
+                machine cashing) are managed by superadmin in Admin → States. The
+                settlement engine picks the correct rate per revenue stream automatically.
+              </span>
             </div>
 
             {/* Sell direction — how this store opens books. Drives the default

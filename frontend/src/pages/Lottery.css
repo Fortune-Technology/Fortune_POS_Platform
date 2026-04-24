@@ -1553,6 +1553,18 @@
   vertical-align: middle;
 }
 
+/* Read-only "this is set elsewhere" field for the Settings tab (state
+ * + commission rate are inherited from Store Settings + State catalog).
+ * Looks like a normal field but is non-interactive. */
+.lt-field--readonly .lt-field-readonly {
+  padding: 8px 12px;
+  background: var(--bg-tertiary, #f9fafb);
+  border: 1px dashed var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
 /* Sell-direction radio-card selector in Lottery Settings.
  * Two side-by-side cards — Descending / Ascending — with examples and
  * hints so the store admin understands the consequence of the choice. */

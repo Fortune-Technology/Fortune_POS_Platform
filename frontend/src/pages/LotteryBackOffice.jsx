@@ -43,7 +43,7 @@ import {
   scanLotteryBarcode, parseLotteryBarcode, closeLotteryDay,
   listPosShifts, getLotterySettings,
   soldoutLotteryBox, moveLotteryBoxToSafe, activateLotteryBox, deleteLotteryBox,
-  getLotteryCounterSnapshot,
+  getLotteryCounterSnapshot, upsertLotteryHistoricalClose,
 } from '../services/api';
 import './LotteryBackOffice.css';
 
@@ -210,8 +210,19 @@ export default function LotteryBackOffice() {
     const draft = counterDrafts[boxId];
     if (draft == null || draft === '') return;
     try {
-      await updateLotteryBox(boxId, { currentTicket: String(draft) });
+      // Today edits → live update of box.currentTicket. Historical edits
+      // → write a close_day_snapshot for that date so the past-day view
+      // and rollover math reflect the correction (without disturbing the
+      // box's live current state).
+      if (snapIsToday) {
+        await updateLotteryBox(boxId, { currentTicket: String(draft) });
+      } else {
+        await upsertLotteryHistoricalClose({ boxId, date, ticket: String(draft) });
+      }
+      // Clear the draft so the row leaves "dirty" state cleanly
+      setCounterDrafts(d => { const n = { ...d }; delete n[boxId]; return n; });
       await load();
+      showToast(snapIsToday ? 'Ticket saved' : 'Historical close updated');
     } catch (e) {
       showToast(e?.response?.data?.error || e.message, 'error');
     }
@@ -631,7 +642,15 @@ function CounterRow({
   const tNum = todayVal === '' ? null : Number(todayVal);
   const sold = tNum != null && Number.isFinite(yNum) && Number.isFinite(tNum) ? Math.abs(yNum - tNum) : 0;
   const amt = sold * price;
-  const dirty = !historicalView && draft !== undefined && String(draft) !== String(box.currentTicket ?? '');
+  // Dirty when the user has typed something different from the current
+  // baseline. For historical views the baseline is the day's close; for
+  // today, it's box.currentTicket.
+  const baseline = historicalView ? (currentTicket ?? '') : (box.currentTicket ?? '');
+  const dirty = draft !== undefined && String(draft) !== String(baseline);
+  // Inputs editable in manual mode (any date) OR in scan mode for today.
+  // Past-date scan-mode is read-only because scanning into history is
+  // confusing; manual mode lets manager correct historical close numbers.
+  const inputDisabled = scanMode && historicalView;
 
   // Activation date — "Activated Apr 18" text below the book number.
   const activatedLabel = box.activatedAt
@@ -719,17 +738,21 @@ function CounterRow({
           placeholder={String(yesterday)}
           onChange={e => onDraftChange(e.target.value.replace(/[^0-9]/g, ''))}
           onKeyDown={e => e.key === 'Enter' && onSave()}
-          disabled={historicalView || (scanMode && !dirty && !isToday)}
-          title={historicalView ? `Closed at ${todayVal || '—'} on this date (read-only)` : undefined}
+          disabled={inputDisabled}
+          title={
+            inputDisabled
+              ? 'Switch to Manual mode to correct historical close ticket'
+              : (historicalView ? `Closed at ${todayVal || '—'} on this date — edit to correct` : undefined)
+          }
         />
       </span>
       <span className="lbo-cnt-sold">{sold || ''}</span>
       <span className="lbo-cnt-amt">{amt > 0 ? fmtMoney(amt) : ''}</span>
       <span className="lbo-cnt-act">
-        {historicalView ? (
+        {dirty ? (
+          <button onClick={onSave} className="lbo-cnt-save" title={historicalView ? 'Save corrected close' : 'Save'}>✓</button>
+        ) : historicalView ? (
           <span className="lbo-cnt-histpill" title="Viewing a past date">HIST</span>
-        ) : dirty ? (
-          <button onClick={onSave} className="lbo-cnt-save" title="Save">✓</button>
         ) : (
           <ActionMenu
             items={[

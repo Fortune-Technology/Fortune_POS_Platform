@@ -23,6 +23,7 @@ import { X, CheckCircle2, Printer, DollarSign, RotateCcw, Lock, Info } from 'luc
 import {
   listLotterySettlements, getLotterySettlement,
   upsertLotterySettlement, finalizeLotterySettlement, markLotterySettlementPaid,
+  getLotteryBoxes,
 } from '../services/api';
 
 const fmt = (n) => n == null ? '$0.00' : `$${Number(n).toFixed(2)}`;
@@ -37,6 +38,7 @@ export default function LotteryWeeklySettlement() {
   const [year, setYear]   = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth()); // 0-11
   const [rows, setRows]   = useState([]);
+  const [boxLookup, setBoxLookup] = useState({});  // boxId → { gameNumber, boxNumber, totalValue, gameName }
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showOnlyEligible, setShowOnlyEligible] = useState(false);
@@ -48,11 +50,24 @@ export default function LotteryWeeklySettlement() {
       // weeks at the month boundary aren't cut off.
       const from = new Date(Date.UTC(year, month - 1, 25));
       const to   = new Date(Date.UTC(year, month + 1, 7));
-      const res = await listLotterySettlements({
-        from: toIsoDate(from),
-        to:   toIsoDate(to),
-      });
+      const [res, boxes] = await Promise.all([
+        listLotterySettlements({ from: toIsoDate(from), to: toIsoDate(to) }),
+        // Pull all boxes once so settlement BookList can render
+        // human-readable game-book labels instead of raw nanoid strings.
+        getLotteryBoxes({}),
+      ]);
       setRows(Array.isArray(res) ? res : []);
+      const list = Array.isArray(boxes) ? boxes : (boxes?.boxes || boxes?.data || []);
+      const lookup = {};
+      for (const b of list) {
+        lookup[b.id] = {
+          gameNumber: b.game?.gameNumber || null,
+          gameName:   b.game?.name || null,
+          boxNumber:  b.boxNumber || null,
+          totalValue: Number(b.totalValue || 0),
+        };
+      }
+      setBoxLookup(lookup);
     } catch (e) {
       console.warn('[settlement] load failed', e.message);
       setRows([]);
@@ -117,6 +132,7 @@ export default function LotteryWeeklySettlement() {
       {editing && (
         <SettlementEditModal
           initial={editing}
+          lookup={boxLookup}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); load(); }}
         />
@@ -211,7 +227,7 @@ function Line({ label, value, muted }) {
 /* ────────────────────────────────────────────────────────────────────
  * Edit Modal — adjust bonus / svc charge / adjustments + finalize + pay
  * ──────────────────────────────────────────────────────────────────── */
-function SettlementEditModal({ initial, onClose, onSaved }) {
+function SettlementEditModal({ initial, lookup = {}, onClose, onSaved }) {
   const weekKey = toIsoDate(initial.weekStart);
   const [row, setRow] = useState(initial);
   const [form, setForm] = useState({
@@ -425,13 +441,13 @@ function SettlementEditModal({ initial, onClose, onSaved }) {
 
         <div className="lws-book-lists">
           {row.settledBookIds?.length > 0 && (
-            <BookList title="Settled this week" ids={row.settledBookIds} tone="success" />
+            <BookList title="Settled this week" ids={row.settledBookIds} tone="success" lookup={lookup} />
           )}
           {row.returnedBookIds?.length > 0 && (
-            <BookList title="Returned to Lotto" ids={row.returnedBookIds} tone="warning" />
+            <BookList title="Returned to Lotto" ids={row.returnedBookIds} tone="warning" lookup={lookup} />
           )}
           {row.unsettledBookIds?.length > 0 && (
-            <BookList title="Not yet eligible" ids={row.unsettledBookIds} tone="muted" />
+            <BookList title="Not yet eligible" ids={row.unsettledBookIds} tone="muted" lookup={lookup} />
           )}
         </div>
 
@@ -480,7 +496,7 @@ function DollarField({ label, value, onChange, disabled, allowNegative }) {
   );
 }
 
-function BookList({ title, ids, tone }) {
+function BookList({ title, ids, tone, lookup = {} }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`lws-booklist lws-booklist--${tone}`}>
@@ -490,9 +506,24 @@ function BookList({ title, ids, tone }) {
       </button>
       {open && (
         <div className="lws-booklist-body">
-          {ids.map((id) => (
-            <code key={id}>{id.slice(-10)}</code>
-          ))}
+          {ids.map((id) => {
+            // Render human-readable game-book label when we have it; fall
+            // back to a short truncated ID for unrecognised entries (the
+            // lookup may be incomplete if a book was deleted).
+            const meta = lookup[id];
+            if (meta?.gameNumber && meta?.boxNumber) {
+              return (
+                <code
+                  key={id}
+                  className="lws-bookchip"
+                  title={`${meta.gameName || 'Unknown game'} · $${(meta.totalValue || 0).toFixed(2)}`}
+                >
+                  {meta.gameNumber}-{meta.boxNumber}
+                </code>
+              );
+            }
+            return <code key={id} className="lws-bookchip lws-bookchip--unknown" title="Book details unavailable">{id.slice(-10)}</code>;
+          })}
         </div>
       )}
     </div>
