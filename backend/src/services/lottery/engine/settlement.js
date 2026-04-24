@@ -179,17 +179,113 @@ export async function computeSettlement({ orgId, storeId, weekStart, weekEnd, st
     else if (b.status === 'active') unsettled.push(b);
   }
 
-  // ── Instant Sales (value of tickets sold from settled + returned books) ─
+  // ── Instant Sales (per-WEEK ticket math, not cumulative) ──────────
+  //
+  // The old impl summed `box.ticketsSold * box.ticketPrice` for every
+  // settled/returned book. That double-counts every active book in every
+  // week (because ticketsSold is cumulative since activation, not weekly)
+  // and back-attributes a depleted book's lifetime sales to whichever
+  // week it happened to deplete. Industry-correct settlement is:
+  //
+  //   instantSales = Σ (yesterdayCloseTicket − todayCloseTicket) × price
+  //   summed across every close_day_snapshot day in the week, for every
+  //   active OR settled-this-week OR returned-this-week book.
+  //
+  // This matches what the dashboard/report/commission endpoints now do
+  // (see _realSalesRange in lotteryController.js) so all four surfaces
+  // use the same source of truth: the close_day_snapshot trail.
+  const eligibleBoxIds = [...settled, ...returned, ...unsettled].map((b) => b.id);
   let instantSales = 0;
-  for (const b of [...settled, ...returned]) {
-    instantSales += Number(b.ticketsSold || 0) * Number(b.ticketPrice || 0);
+  if (eligibleBoxIds.length) {
+    const weekClosingEvents = await prisma.lotteryScanEvent.findMany({
+      where: {
+        orgId, storeId,
+        action: 'close_day_snapshot',
+        boxId: { in: eligibleBoxIds },
+        createdAt: { gte: dayStart, lte: dayEnd },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { boxId: true, parsed: true, createdAt: true },
+    });
+    const priorEvents = await prisma.lotteryScanEvent.findMany({
+      where: {
+        orgId, storeId,
+        action: 'close_day_snapshot',
+        boxId: { in: eligibleBoxIds },
+        createdAt: { lt: dayStart },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { boxId: true, parsed: true, createdAt: true },
+    });
+    // For each eligible box: walk this week's snapshot trail, computing
+    // |prev − today| × price. The "prev" pointer starts at the latest
+    // close BEFORE the week (or, for first-week-of-life books, the box's
+    // startTicket, or, if even that is null, the fresh-from-pack opening).
+    const settings = await prisma.lotterySettings.findUnique({
+      where: { storeId },
+      select: { sellDirection: true },
+    }).catch(() => null);
+    const sellDir = settings?.sellDirection || 'desc';
+    function freshOpening(box) {
+      if (box.startTicket != null) return Number(box.startTicket);
+      const total = Number(box.totalTickets || 0);
+      if (!total) return null;
+      return sellDir === 'asc' ? 0 : total - 1;
+    }
+    const priorByBox = new Map();
+    for (const ev of priorEvents) {
+      if (!priorByBox.has(ev.boxId)) {
+        const t = ev.parsed?.currentTicket;
+        priorByBox.set(ev.boxId, t != null ? Number(t) : null);
+      }
+    }
+    const weekBoxMap = new Map([...settled, ...returned, ...unsettled].map((b) => [b.id, b]));
+    const weekByBox = new Map();
+    for (const ev of weekClosingEvents) {
+      if (!weekByBox.has(ev.boxId)) weekByBox.set(ev.boxId, []);
+      weekByBox.get(ev.boxId).push(ev);
+    }
+    for (const [boxId, events] of weekByBox.entries()) {
+      const box = weekBoxMap.get(boxId);
+      if (!box) continue;
+      const price = Number(box.ticketPrice || 0);
+      let cursor = priorByBox.get(boxId);
+      if (cursor == null) cursor = freshOpening(box);
+      if (cursor == null) continue;
+      for (const ev of events) {
+        const cur = ev.parsed?.currentTicket;
+        if (cur == null) continue;
+        const today = Number(cur);
+        if (!Number.isFinite(today)) continue;
+        instantSales += Math.abs(cursor - today) * price;
+        cursor = today;
+      }
+    }
   }
 
   // ── Returns deduction (unsold tickets on returned books) ──────────
+  // returnedAt-this-week books are measured at their final scan position.
+  // Use the box's currentTicket (the cashier-app's saveLotteryShiftReport
+  // updates this) to derive how many tickets are still on the book.
   let returnsDeduction = 0;
   for (const b of returned) {
-    const unsold = Math.max(0, Number(b.totalTickets || 0) - Number(b.ticketsSold || 0));
-    returnsDeduction += unsold * Number(b.ticketPrice || 0);
+    const total = Number(b.totalTickets || 0);
+    // Prefer currentTicket-derived "tickets remaining" — for a descending
+    // book, remaining = currentTicket + 1 (e.g. currentTicket=10 means
+    // tickets 0..10 are still on the book = 11 tickets). For ascending,
+    // remaining = total - currentTicket. Fall back to the legacy aggregate
+    // when no currentTicket is set.
+    let remaining;
+    const ct = b.currentTicket != null ? Number(b.currentTicket) : null;
+    if (Number.isFinite(ct)) {
+      remaining = (b.startTicket != null && Number(b.startTicket) === 0)
+        ? Math.max(0, total - ct)              // ascending
+        : Math.max(0, ct + 1);                 // descending (default)
+      remaining = Math.min(remaining, total);
+    } else {
+      remaining = Math.max(0, total - Number(b.ticketsSold || 0));
+    }
+    returnsDeduction += remaining * Number(b.ticketPrice || 0);
   }
 
   // ── Per-source commission ────────────────────────────────────────

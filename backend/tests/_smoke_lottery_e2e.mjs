@@ -198,6 +198,20 @@ async function run() {
   const stationList = stations.data?.stations || [];
   info(`${stationList.length} station(s) at store ${STORE_ID}`);
 
+  // 12b. Historical-close endpoint shape (dry run)
+  console.log('');
+  console.log('-- 12b. Historical-close endpoint shape (dry run) --');
+  const histRun = await call('PUT', '/lottery/historical-close', {
+    boxId: 'NOPE-fake-id', date: '2026-04-20', ticket: '99',
+  });
+  if (histRun.status === 404) {
+    console.log('[PASS] Endpoint accepted body shape (404 as expected - fake id)');
+  } else if (histRun.status === 400) {
+    console.log(`[FAIL] Endpoint rejected body: ${JSON.stringify(histRun.data).slice(0, 200)}`);
+  } else {
+    console.log(`[?] unexpected ${histRun.status}: ${JSON.stringify(histRun.data).slice(0, 200)}`);
+  }
+
   // 13. Return endpoint accepts partial-return shape (dry run)
   console.log('');
   console.log('-- 13. Return endpoint accepts partial-return body (dry run) --');

@@ -537,6 +537,11 @@ export const getLotteryYesterdayCloses = (params) =>
 // so navigating the calendar strip shows historically correct numbers.
 export const getLotteryCounterSnapshot = (params) =>
   api.get('/lottery/counter-snapshot', { params }).then(lotteryUnwrap);
+// Edit a historical day's close ticket (manual mode on past Counter rows).
+// Body: { boxId, date: 'YYYY-MM-DD', ticket }. Pass `ticket: null` to
+// delete the snapshot.
+export const upsertLotteryHistoricalClose = (data) =>
+  api.put('/lottery/historical-close', data).then(lotteryUnwrap);
 export const closeLotteryDay          = (data)   => api.post('/lottery/close-day', data).then(lotteryUnwrap);
 
 // Phase 2: Weekly Settlement

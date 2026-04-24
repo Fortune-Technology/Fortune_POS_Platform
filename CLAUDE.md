@@ -7613,3 +7613,120 @@ Plus `createDelivery` now returns `varianceWarnings: [{ tankId, tankName, newPri
 
 *Last updated: April 2026 — Session 43: Fuel V1.5 — Pump → Tank mapping with cashier icon picker, sequential drain mode, original-tx-aware partial refunds with FIFO layer scaling, delivery cost variance alert (5% industry default), shift-boundary stick-reading prompt gating close-shift button, tank shimmer animation fix. End-to-end verified in preview with pump-attributed sale (FIFO -5 gal), partial refund (FIFO +2 gal back to same layer), partial-refund remaining-amount tracking.*
 
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 44)
+
+### Lottery — Ticket-Math as Source of Truth (across every reporting surface)
+
+User raised the most important real-world failure mode of the existing lottery module:
+
+> *"Lottery sales sometimes, lottery ringed at register is different than the actual sales… some cashier scan and give more tickets based on the cashing done by the lottery machine, so transactions like those never went into register, and some time it when through register the whole entire transaction including sales and payouts and some time partially went into register. But end of the day reports cash collected is always depends on the tickets sold (difference between yesterday's numbers and today's numbers). How can we manage these situations to reflect accurate reports, accurate on-hand cash for lottery at end of shift and commission reports?"*
+
+The problem: `LotteryTransaction` rows (what the cashier rang up at the register) are **unreliable**. Cashiers skip tickets, batch-ring partial counts, or run cashings without recording. The only authoritative source is the **physical ticket count** at end of shift — captured as `LotteryScanEvent` rows with `action='close_day_snapshot'`.
+
+#### The architectural model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  TRUTH (authoritative)         AUDIT SIGNAL (cashier said)   │
+│  ──────────────────────        ────────────────────────────   │
+│  close_day_snapshot deltas     LotteryTransaction rows        │
+│    sold = |yClose − tClose|     posSold = Σ rang-up amounts   │
+│    × ticketPrice                                              │
+│                                                                │
+│  unreported = max(0, sold − posSold)                          │
+│    └─ flag for managers: cashier skipped ringing this up      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Every reporting surface now reads `sold` from the snapshot trail. `posSold` is reported **alongside** as an audit signal — managers can see when the cashier-app data drifts from physical reality.
+
+#### Changes shipped this session
+
+**1. New range aggregator** — [`_realSalesRange({ orgId, storeId, from, to })`](backend/src/controllers/lotteryController.js) walks day-by-day across a date range, calls `_realSalesFromSnapshots` per day, and returns `{ totalSales, byDay: [{date, sales}], byGame: Map<gameId, {sales, count}> }`. Pre-fetches the box→game mapping once so per-day work is just two indexed queries + one box lookup.
+
+**2. First-day fallback fix** — `_realSalesFromSnapshots` previously returned `sold=0` for the first day a book ever appeared on the counter (no prior close → no delta). Now it falls back to the box's `startTicket`, then to the "fresh from pack" opening based on the store's `LotterySettings.sellDirection`:
+- `desc` (default): `startTicket = totalTickets - 1` (e.g. 150-pack opens at ticket 149)
+- `asc`: `startTicket = 0` (counts up as sold)
+
+**3. Dashboard / Report / Commission** — all three switched from `LotteryTransaction.amount` to `_realSalesRange` for the authoritative `totalSales` figure. Each response now also returns:
+- `posSales` — cashier-rang-up total (for transparency)
+- `unreported` — `max(0, totalSales − posSales)` — the "didn't ring up" variance
+- All currency math rounded to 2dp at the response edge so floating-point noise (`311.95000000000005`) doesn't leak
+
+**4. Settlement engine refactor** — `instantSales` was the worst offender. The old impl summed `box.ticketsSold × box.ticketPrice` for every settled-or-returned book, which:
+- Double-counted every active book in every weekly settlement
+- Back-attributed a depleted book's lifetime sales to whichever week it happened to deplete (a 600-ticket book that took 3 months to sell would attribute all 600 × $5 = $3,000 to the single week it ran out)
+
+New implementation reads close_day_snapshot trail per box per week:
+```
+instantSales = Σ |prevDayClose − thisDayClose| × ticketPrice
+   summed across each close in [weekStart, weekEnd]
+```
+
+**Returns deduction** also rewritten to use `box.currentTicket` (which the cashier-app's EoD wizard updates on every shift close) to derive "tickets remaining" instead of the cumulative `box.ticketsSold` aggregate.
+
+**5. Seed updated** — [`seedLotteryActivity.js`](backend/prisma/seedLotteryActivity.js) now updates `box.currentTicket`, `box.ticketsSold`, `box.salesAmount`, and `box.startTicket` on each iterated book so the LotteryBox aggregates match the simulated activity. In production this happens automatically inside `saveLotteryShiftReport` when the cashier closes the EoD wizard.
+
+#### Verification — seeded data flowing end-to-end
+
+Seed creates 7 days of activity: 3 books × 7 days = 21 close_day_snapshot events, ~85 LotteryTransactions, plus deliberately skips ALL transactions on one day to simulate the "cashier didn't ring up" scenario.
+
+| Surface | Pre-fix | Post-fix |
+|---|---|---|
+| Daily inventory T-3 (skip day) | sold=$0 (used ringed-up txns) | **sold=$195, posSold=$0, unreported=$195 ⚠** |
+| Daily inventory T-7 (first day) | sold=$0 (no prior close) | **sold=$385** (uses fresh-pack opening fallback) |
+| Report (7-day window) | totalSales from txns only | **totalSales=$1225, posSales=$1030, unreported=$195** |
+| Dashboard (MTD) | sales from txns | **totalSales from snapshots** |
+| Commission (MTD) | from txns | **$1225 × 5% = $61.25 split across 3 active games** |
+| Settlement Apr 19-25 | $0 (no books depleted that week) | **$880 instantSales** (5 of 7 seed days fall here) |
+| Settlement Apr 12-18 | $0 | **$345** (2 of 7 seed days) |
+| Settlement Apr 5-11 (pre-seed week) | $9300 (lifetime of one depleted book) | **$0** (no snapshots → no proof of sales-this-week) |
+| `880 + 345` settlement total | mismatched | **= $1225** (matches report) ✓ |
+
+#### Cash Reconciliation Model — End of Shift
+
+The user's deeper question: **how does this affect on-hand cash at end of shift?**
+
+Drawer expectation now reads ticket-math truth, not POS-recorded sales:
+
+```
+expectedDrawer = openingFloat
+              + cashSales          (POS-recorded transactions)
+              + lotteryCashIn      (= ticket-math instantSales − instantPayouts)
+              + machineDrawIn      (LotteryOnlineTotal.machineSales)
+              − lotteryCashOut     (LotteryOnlineTotal.instantCashing
+                                    + LotteryOnlineTotal.machineCashing)
+              − cashDrops − payouts
+```
+
+Key insight: `lotteryCashIn` uses **ticket-math instantSales** (snapshot deltas), not the cashier-rang-up amount. So even when the cashier short-circuits and gives 5 tickets without ringing them, the close_day_snapshot at shift end captures the new ticket position → instantSales reflects all 5 tickets sold → drawer expectation includes $25 (5 × $5) → drawer counts that money correctly → variance = $0.
+
+If the cashier instead **didn't physically take cash** for those 5 tickets (gave them away based on machine cashings), the drawer is short by $25 — and the EoD report shows the variance with `unreported=$25` so the manager knows which side of the books was wrong.
+
+#### Known follow-ups
+
+- **Cashier-app drawer math** — `cashier-app/src/components/modals/CloseShiftModal.jsx` uses `LotteryTransaction` totals for `lotteryCashIn`. Needs to pull from a new endpoint that returns ticket-math instantSales for the shift's date window (or have the EoD wizard's reconciliation step pre-write a `LotteryShiftReport` row that the close-shift modal reads). Not blocking — `LotteryShiftModal`'s 3-step EoD wizard from Session 40 already writes the snapshots that the back-office surfaces consume.
+- **Multi-cashier same-day handover** — when two cashiers run shifts in the same day, snapshot trail captures end-of-day delta but not per-shift split. The wizard's "Counter Scan" step in Phase 3g writes intermediate snapshots, so settlement is still per-day-correct, but per-cashier accountability needs a separate audit trail.
+- **Settlement engine snapshot-trail visibility** — when settlement returns `instantSales=$0` for a week with active books, it's not obvious whether (a) the books legitimately sold nothing or (b) no snapshots were captured. A future enhancement could add a `snapshotCoverage: { daysWithSnapshots, totalDaysInWeek }` field to flag the gap.
+
+#### Files changed (Session 44)
+
+| File | Change |
+|---|---|
+| `backend/src/controllers/lotteryController.js` | `_realSalesFromSnapshots` first-day fallback via `LotterySettings.sellDirection`; new `_realSalesRange` helper; `getLotteryDashboard` / `getLotteryReport` / `getLotteryCommissionReport` switched to ticket-math truth + `posSales` / `unreported` audit fields + clean 2dp rounding |
+| `backend/src/services/lottery/engine/settlement.js` | `instantSales` now from per-week snapshot deltas (was cumulative `box.ticketsSold`); `returnsDeduction` from `currentTicket`-derived remaining (was legacy aggregate) |
+| `backend/prisma/seedLotteryActivity.js` | Bumps `box.currentTicket` / `box.ticketsSold` / `box.salesAmount` / `box.startTicket` after generating snapshot trail |
+| `backend/tests/_smoke_lottery_seeded.mjs` | NEW — probe script that hits inventory / yesterday-closes / counter-snapshot / online-totals / report / dashboard / commission / weekly settlement against the seeded org and prints the ticket-math fields + variance |
+
+#### Tests
+
+- **205/205 lottery unit tests** still green after settlement refactor (no change to weekly formula tests; the math input source changed but the formula didn't)
+- **16/16 e2e smoke checks** still green
+- New seeded-data probe shows correct values across all 7 surfaces with $1225 instantSales matching from report → dashboard → commission → (settlement Apr 19-25 + settlement Apr 12-18)
+
+---
+
+*Last updated: April 2026 — Session 44: Lottery Ticket-Math as Source of Truth — every reporting surface (daily inventory, dashboard, report, commission, weekly settlement) now reads from close_day_snapshot deltas instead of LotteryTransaction.amount. `posSales` + `unreported` exposed as audit signals. Settlement engine refactored to per-week snapshot deltas (was cumulative `box.ticketsSold`). 205/205 unit tests + 16/16 e2e tests green; seeded probe verifies $1225 sales reconciles across all 4 surfaces ($880 + $345 across 2 weeks = $1225 total).*
+
