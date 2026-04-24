@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 import { Search, ArrowUpDown, Loader, PieChart as PieIcon } from 'lucide-react';
 
 import { getAdminOrgAnalytics } from '../services/api';
@@ -6,25 +6,36 @@ import { toast } from 'react-toastify';
 import '../styles/admin.css';
 import './AdminOrgAnalytics.css';
 
-const PLAN_COLORS = {
-  free: '#6b7280', starter: '#3b82f6', pro: '#8b5cf6', enterprise: '#f59e0b',
-};
+interface OrgRow {
+  id: string | number;
+  name?: string;
+  slug?: string;
+  plan?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  transactionCount?: number;
+  _count?: { users?: number; stores?: number };
+  [key: string]: unknown;
+}
+
+type SortField = 'name' | 'plan' | 'users' | 'stores' | 'transactions' | 'isActive' | 'createdAt';
+type SortDir = 'asc' | 'desc';
 
 const AdminOrgAnalytics = () => {
-  const [orgs, setOrgs] = useState([]);
+  const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState('name');
-  const [sortDir, setSortDir] = useState('asc');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   useEffect(() => {
     getAdminOrgAnalytics()
-      .then(r => setOrgs(r.data || []))
+      .then((r: any) => setOrgs((r.data as OrgRow[]) || []))
       .catch(() => toast.error('Failed to load organization analytics'))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSort = (field) => {
+  const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
@@ -34,18 +45,20 @@ const AdminOrgAnalytics = () => {
   };
 
   const filtered = useMemo(() => {
-    let list = orgs.filter(o =>
+    const list = orgs.filter(o =>
       o.name?.toLowerCase().includes(search.toLowerCase()) ||
       o.slug?.toLowerCase().includes(search.toLowerCase())
     );
     list.sort((a, b) => {
-      let aVal, bVal;
+      let aVal: string | number | Date, bVal: string | number | Date;
       switch (sortField) {
-        case 'users': aVal = a._count?.users || 0; bVal = b._count?.users || 0; break;
-        case 'stores': aVal = a._count?.stores || 0; bVal = b._count?.stores || 0; break;
+        case 'users':        aVal = a._count?.users || 0; bVal = b._count?.users || 0; break;
+        case 'stores':       aVal = a._count?.stores || 0; bVal = b._count?.stores || 0; break;
         case 'transactions': aVal = a.transactionCount || 0; bVal = b.transactionCount || 0; break;
-        case 'createdAt': aVal = new Date(a.createdAt); bVal = new Date(b.createdAt); break;
-        default: aVal = (a[sortField] || '').toString().toLowerCase(); bVal = (b[sortField] || '').toString().toLowerCase();
+        case 'createdAt':    aVal = new Date(a.createdAt || 0); bVal = new Date(b.createdAt || 0); break;
+        default:
+          aVal = ((a[sortField] as string | undefined) || '').toString().toLowerCase();
+          bVal = ((b[sortField] as string | undefined) || '').toString().toLowerCase();
       }
       if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
@@ -54,7 +67,12 @@ const AdminOrgAnalytics = () => {
     return list;
   }, [orgs, search, sortField, sortDir]);
 
-  const SortHeader = ({ field, children }) => (
+  interface SortHeaderProps {
+    field: SortField;
+    children: ReactNode;
+  }
+
+  const SortHeader = ({ field, children }: SortHeaderProps) => (
     <th className="sortable" onClick={() => handleSort(field)}>
       <span className="aoa-sort-label">
         {children}
@@ -113,7 +131,7 @@ const AdminOrgAnalytics = () => {
                       </td>
                     </tr>
                   ) : filtered.map(org => (
-                    <tr key={org.id}>
+                    <tr key={String(org.id)}>
                       <td className="primary">{org.name}</td>
                       <td>
                         <span className={`admin-badge ${org.plan || 'trial'}`}>{org.plan || 'free'}</span>

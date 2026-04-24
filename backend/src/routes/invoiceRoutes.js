@@ -46,11 +46,17 @@ const storage = multer.diskStorage({
 // Session 39 Round 5 — accepted file types. HEIC/HEIF is common on iPhones
 // (iOS default camera format) and was previously silently rejected; it's
 // now converted to JPEG server-side in gptService before OCR.
+// Invoice Scanning follow-up — added the non-standard JPEG variants
+// ('image/jpg', 'image/pjpeg') some Android/Windows browsers send, plus
+// the generic 'application/octet-stream' and '' (empty) cases that
+// occasionally slip through from mobile drag-drop / share-sheet uploads.
+// These only pass when the file extension is also valid — see fileFilter.
 const ALLOWED_MIMES = new Set([
   'application/pdf',
   'image/png',
   'image/jpeg',
   'image/jpg',
+  'image/pjpeg',
   'image/heic',
   'image/heif',
   'image/heic-sequence',

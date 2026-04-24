@@ -1,4 +1,4 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,7 +35,11 @@ import AdminLottery         from './pages/AdminLottery';
 
 import PermissionRoute from './components/PermissionRoute';
 
-const ProtectedRoute = ({ children }) => {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   // Route-level permission checks happen in <PermissionRoute>. This wrapper
   // just ensures an admin session exists; non-superadmins are redirected.
   return <PermissionRoute>{children}</PermissionRoute>;

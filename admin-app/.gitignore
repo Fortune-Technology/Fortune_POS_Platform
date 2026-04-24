@@ -8,3 +8,6 @@ coverage/
 # Do NOT add package-lock.json here
 
 package-lock.json
+
+# TypeScript incremental build cache — regenerated on every `tsc --noEmit`
+tsconfig.tsbuildinfo

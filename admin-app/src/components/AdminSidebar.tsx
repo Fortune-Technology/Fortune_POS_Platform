@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import StoreveuLogo from './StoreveuLogo';
 import './AdminSidebar.css';
@@ -30,7 +30,25 @@ import {
 import api from '../services/api';
 import { getRoutePermission } from '../rbac/routePermissions';
 
-const adminMenuGroups = [
+interface MenuItem {
+  name: string;
+  icon: ReactNode;
+  path: string;
+}
+
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
+
+interface AdminUser {
+  token?: string;
+  role?: string;
+  permissions?: string[];
+  [key: string]: unknown;
+}
+
+const adminMenuGroups: MenuGroup[] = [
   {
     label: 'Overview',
     items: [
@@ -109,17 +127,17 @@ const AdminSidebar = () => {
 
   // Read effective permissions once on mount (written to localStorage by
   // /login and refreshed by <PermissionRoute>). Superadmins see everything.
-  const user = React.useMemo(() => {
+  const user = useMemo<AdminUser | null>(() => {
     try { return JSON.parse(localStorage.getItem('admin_user') || 'null'); } catch { return null; }
   }, []);
   const perms = user?.permissions || [];
-  const canView = React.useCallback((path) => {
+  const canView = useCallback((path: string) => {
     if (user?.role === 'superadmin') return true;
     const required = getRoutePermission(path);
     return !required || perms.includes(required);
   }, [user, perms]);
 
-  const visibleMenuGroups = React.useMemo(() => (
+  const visibleMenuGroups = useMemo(() => (
     adminMenuGroups
       .map(g => ({ ...g, items: g.items.filter(i => canView(i.path)) }))
       .filter(g => g.items.length > 0)

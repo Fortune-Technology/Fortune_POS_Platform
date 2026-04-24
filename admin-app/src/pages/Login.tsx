@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, ChevronRight, Loader, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ChevronRight, Loader, Eye, EyeOff } from 'lucide-react';
 import { login } from '../services/api';
 import { toast } from 'react-toastify';
 import StoreveuLogo from '../components/StoreveuLogo';
 import './Login.css';
+
+interface StoredAdminUser {
+  token?: string;
+  role?: string;
+  [key: string]: unknown;
+}
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -13,13 +19,14 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('admin_user'));
+    const raw = localStorage.getItem('admin_user');
+    const user: StoredAdminUser | null = raw ? JSON.parse(raw) : null;
     if (user && user.token && user.role === 'superadmin') {
       navigate('/dashboard', { replace: true });
     }
   }, [navigate]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -32,7 +39,8 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Login failed');
+      const axiosErr = error as { response?: { data?: { error?: string } } };
+      toast.error(axiosErr.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
     }
