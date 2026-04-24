@@ -97,7 +97,8 @@
       "Bash(gh auth *)",
       "Bash(grep -nA 2 \"^model Invoice \" backend/prisma/schema.prisma)",
       "Bash(grep -n \"^export default InvoiceImport\\\\|^};\\\\s*$\\\\|^}\\\\s*$\" frontend/src/pages/InvoiceImport.jsx)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(awk -F. '{print $NF}')"
     ]
   }
 }
