@@ -1028,24 +1028,40 @@ function ReviewPanel({
                       <div style={{ borderTop: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
                         <div className="review-item-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid var(--border-color)' }}>
 
-                          {/* Left: invoice reference */}
+                          {/* Left: invoice reference. Simplified per Invoice Scanning spec —
+                              we compute the single "Invoice Case Cost" as the lowest value
+                              after all discounts (min of caseCost vs netCost), and drop the
+                              separate Unit Cost / Net Cost / discount breakdown rows. The
+                              per-unit math still renders on the right panel's "Unit Cost (auto)"
+                              field. This keeps the invoice reference tight and unambiguous. */}
                           <div style={{ padding: '0.9rem 1rem', borderRight: '1px solid var(--border-color)' }}>
                             <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.65rem' }}>📄 From Invoice</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                              {[
-                                ['Description',  item.originalVendorDescription || item.description || '—'],
-                                ['Item Code',    item.originalItemCode || item.itemCode || '—'],
-                                ['UPC',          item.upc || '—'],
-                                ['Quantity',     item.quantity ?? '—'],
-                                ['Case Cost',    item.caseCost   != null ? fmt(item.caseCost)  : '—'],
-                                ['Net Cost',     item.netCost    != null ? fmt(item.netCost)   : '—'],
-                                ['Unit Cost',    item.unitCost   != null ? `$${Number(item.unitCost).toFixed(4)}` : '—'],
-                                ['Pack',         item.packUnits  ?? '—'],
-                                ['Retail (orig)',item.suggestedRetailPrice != null ? fmt(item.suggestedRetailPrice) : '—'],
-                                ['Total',        item.totalAmount != null ? fmt(item.totalAmount) : '—'],
-                                ['Category',     item.category   || '—'],
-                                ['Deposit',      item.depositAmount != null ? fmt(item.depositAmount) : '—'],
-                              ].map(([l, v]) => (
+                              {(() => {
+                                // Invoice Case Cost = lowest of gross case cost vs net cost
+                                // (net is always <= gross when there's a discount; if only
+                                // one is present, use that one). Numeric; displayed below.
+                                const cc = item.caseCost != null ? Number(item.caseCost) : null;
+                                const nc = item.netCost  != null ? Number(item.netCost)  : null;
+                                const invoiceCaseCost =
+                                  (cc != null && nc != null) ? Math.min(cc, nc) :
+                                  (nc != null) ? nc :
+                                  (cc != null) ? cc :
+                                  null;
+                                return [
+                                  ['Description',       item.originalVendorDescription || item.description || '—'],
+                                  ['Item Code',         item.originalItemCode || item.itemCode || '—'],
+                                  ['UPC',               item.upc || '—'],
+                                  ['Quantity',          item.quantity ?? '—'],
+                                  ['Pack',              item.packUnits  ?? '—'],
+                                  // One cost number — the effective case cost after discounts
+                                  ['Invoice Case Cost', invoiceCaseCost != null ? fmt(invoiceCaseCost) : '—'],
+                                  ['Retail (orig)',     item.suggestedRetailPrice != null ? fmt(item.suggestedRetailPrice) : '—'],
+                                  ['Total',             item.totalAmount != null ? fmt(item.totalAmount) : '—'],
+                                  ['Category',          item.category   || '—'],
+                                  ['Deposit',           item.depositAmount != null ? fmt(item.depositAmount) : '—'],
+                                ];
+                              })().map(([l, v]) => (
                                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
                                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{l}</span>
                                   <span style={{ fontSize: '0.78rem', fontWeight: 500, textAlign: 'right', color: 'var(--text-primary)' }}>{String(v)}</span>
@@ -1152,9 +1168,24 @@ function ReviewPanel({
                               );
                             })()}
 
-                            {/* Case Cost + Unit Cost (auto) + Retail */}
+                            {/* Invoice Case Cost + Unit Cost (auto) + Retail
+                                Relabeled from "Case Cost" per Invoice Scanning spec — this is
+                                the effective case cost FROM THE INVOICE (post-discount). On
+                                confirm, this value may (per store + vendor + product lock
+                                settings) auto-update MasterProduct.defaultCasePrice. If the
+                                matched product has lockManualCaseCost=true, an amber "🔒 locked"
+                                hint appears so the user knows the invoice cost won't overwrite
+                                the store's manually-set product cost. */}
                             <div className="review-price-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.45rem' }}>
-                              <div><label style={lbl}>Case Cost ($)</label>
+                              <div>
+                                <label style={lbl}>
+                                  Invoice Case Cost ($)
+                                  {item.linkedProduct?.lockManualCaseCost && (
+                                    <span style={{ color: '#f59e0b', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                                      — 🔒 product cost is locked, won&apos;t sync
+                                    </span>
+                                  )}
+                                </label>
                                 <PriceInput
                                   style={inpStyle(readOnly)}
                                   value={item.caseCost ?? ''}
@@ -1162,7 +1193,7 @@ function ReviewPanel({
                                   onChange={v => onItemChange(i, 'caseCost', v)}
                                 /></div>
                               <div><label style={lbl}>Unit Cost (auto)</label>
-                                <input style={inpStyle(true)} value={unitCostCalc} readOnly title="Case Cost ÷ Pack" /></div>
+                                <input style={inpStyle(true)} value={unitCostCalc} readOnly title="Invoice Case Cost ÷ Pack" /></div>
                               <div><label style={lbl}>Retail Price ($)</label>
                                 <PriceInput
                                   style={inpStyle(readOnly)}
@@ -1805,12 +1836,26 @@ const InvoiceImport = () => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     // Session 39 Round 5 — HEIC/HEIF added. Backend transcodes to JPEG
     // before OCR via heic-convert, so iPhone-native photos upload directly.
+    // Invoice Scanning follow-up — each image MIME gets its OWN explicit
+    // key (not just 'image/*') so react-dropzone's attr-accept matches
+    // reliably even when browsers report slightly different mime strings
+    // (e.g. 'image/jpg' on some Android Chrome builds, empty mimetype on
+    // drag-from-Finder, 'application/octet-stream' on Windows right-click
+    // → Send To). The extension arrays still scope each mime to the
+    // correct OS file-picker filter.
     onDrop,
     accept: {
-      'image/*':        ['.png', '.jpg', '.jpeg', '.heic', '.heif'],
-      'image/heic':     ['.heic'],
-      'image/heif':     ['.heif'],
-      'application/pdf':['.pdf'],
+      'application/pdf':    ['.pdf'],
+      'image/png':          ['.png'],
+      'image/jpeg':         ['.jpg', '.jpeg'],
+      'image/jpg':          ['.jpg', '.jpeg'],  // non-standard but some browsers send this
+      'image/pjpeg':        ['.jpg', '.jpeg'],  // legacy progressive-JPEG mime
+      'image/heic':         ['.heic'],
+      'image/heif':         ['.heif'],
+      // Wildcard as last-resort catch-all so files with missing/unknown
+      // mimetypes (but a valid extension) still pass the dropzone filter.
+      // Backend will still run its own strict mime + extension check.
+      'image/*':            ['.png', '.jpg', '.jpeg', '.heic', '.heif'],
     },
     multiple: true,
   });
