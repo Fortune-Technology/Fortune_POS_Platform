@@ -132,11 +132,11 @@ describe('Loyalty CRUD', () => {
   test('update program', async () => {
     const r = await hit('PUT', '/api/loyalty/program', {
       storeId: STORE,
-      programName: 'Storv Rewards — Updated',
+      programName: 'Storeveu Rewards — Updated',
       pointsPerDollar: 2,
     });
     assert.equal(r.status, 200, JSON.stringify(r.body));
-    assert.equal(r.body.programName, 'Storv Rewards — Updated');
+    assert.equal(r.body.programName, 'Storeveu Rewards — Updated');
   });
 
   test('list rewards', async () => {

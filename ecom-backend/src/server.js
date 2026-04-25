@@ -14,7 +14,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
-import { getRedisClient, disconnectRedis, isRedisAvailable } from '@storv/redis';
+import { getRedisClient, disconnectRedis, isRedisAvailable } from '@storeveu/redis';
 
 import path from 'path';
 import { fileURLToPath } from 'url';

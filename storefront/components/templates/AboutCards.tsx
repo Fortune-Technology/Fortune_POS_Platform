@@ -3,7 +3,7 @@
  * Clean heading + description, then values/features as cards.
  */
 
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 export default function AboutCards({ content }: TemplateProps) {
   const s = content?.sections || {};

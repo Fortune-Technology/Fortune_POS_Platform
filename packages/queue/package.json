@@ -1,5 +1,5 @@
 {
-  "name": "@storv/queue",
+  "name": "@storeveu/queue",
   "version": "1.0.0",
   "description": "Shared BullMQ queue definitions and producers for Storeveu POS platform",
   "type": "module",
@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "bullmq": "^5.34.8",
-    "@storv/redis": "file:../redis"
+    "@storeveu/redis": "file:../redis"
   }
 }

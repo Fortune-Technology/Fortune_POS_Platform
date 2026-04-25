@@ -42,6 +42,7 @@ import CashDrawerModal         from '../components/modals/CashDrawerModal.jsx';
 import LotteryModal            from '../components/modals/LotteryModal.jsx';
 import LotteryShiftModal       from '../components/modals/LotteryShiftModal.jsx';
 import FuelModal                from '../components/modals/FuelModal.jsx';
+import CouponModal              from '../components/modals/CouponModal.jsx';
 import BottleRedemptionModal   from '../components/modals/BottleRedemptionModal.jsx';
 import VendorPayoutModal from '../components/modals/VendorPayoutModal.jsx';
 import PackSizePickerModal from '../components/modals/PackSizePickerModal.jsx';
@@ -102,6 +103,11 @@ export default function POSScreen() {
   const setPromotions     = useCartStore(s => s.setPromotions);
   const applyPromoResults = useCartStore(s => s.applyPromoResults);
   const promoResults      = useCartStore(s => s.promoResults);
+
+  // Manufacturer-coupon redemptions for the current cart (Session 46)
+  const couponRedemptions = useCartStore(s => s.couponRedemptions);
+  const applyCouponAction = useCartStore(s => s.applyCoupon);
+  const removeCouponAction = useCartStore(s => s.removeCoupon);
 
   // Watch catalog sync timestamp so promos reload after every sync
   const catalogSyncedAt   = useSyncStore(s => s.catalogSyncedAt);
@@ -417,6 +423,8 @@ export default function POSScreen() {
   const [showLotteryShift,   setShowLotteryShift]   = useState(false);
   // Fuel modal
   const [fuelModalMode,      setFuelModalMode]      = useState(null);  // null | 'sale' | 'refund'
+  // Manufacturer coupon modal (Session 46)
+  const [showCoupon,         setShowCoupon]         = useState(false);
   const [showBottleReturn,   setShowBottleReturn]   = useState(false);
   const [showVendorPayout,   setShowVendorPayout]   = useState(false);
   const [showHardwareSettings, setShowHardwareSettings] = useState(false);
@@ -809,6 +817,38 @@ export default function POSScreen() {
     }
   }, [posConfig.lottery, lotteryActiveBoxes, lotteryShiftDone, storeId]);
 
+  // ── Manufacturer coupon apply (Session 46) ───────────────────────────────
+  // Wraps the cart-store applyCoupon action with the threshold-aware manager
+  // gate. CouponModal hands us a validation payload that already includes the
+  // `requiresApproval` flag computed against store thresholds.
+  const handleCouponApply = useCallback((payload) => {
+    const { coupon, qualifyingLineId, computedDiscount, requiresApproval, approvalReason } = payload || {};
+    if (!coupon || !qualifyingLineId) return;
+
+    // Cumulative-tx coupon $ ceiling — backend validates per-coupon, but the
+    // cumulative cart total is only knowable client-side, so we check it here.
+    const existingTotal = couponRedemptions.reduce((s, r) => s + Number(r.discountApplied || 0), 0);
+    const wouldBeTotal  = existingTotal + Number(computedDiscount || 0);
+    const cumOver       = wouldBeTotal > Number(posConfig.couponMaxTotalWithoutMgr ?? 10);
+
+    const doApply = (managerApprovedById = null) => {
+      applyCouponAction({ coupon, qualifyingLineId, computedDiscount, managerApprovedById });
+    };
+
+    if (requiresApproval || cumOver) {
+      const reason = requiresApproval
+        ? approvalReason
+        : `Cumulative coupon discount $${wouldBeTotal.toFixed(2)} exceeds the $${Number(posConfig.couponMaxTotalWithoutMgr ?? 10).toFixed(2)} per-tx limit.`;
+      requireManager(`Coupon: ${reason}`, () => {
+        // After PIN gate, the manager's id is on useManagerStore.getState()
+        const mgrId = useManagerStore.getState?.()?.managerId || null;
+        doApply(mgrId);
+      });
+    } else {
+      doApply();
+    }
+  }, [couponRedemptions, posConfig.couponMaxTotalWithoutMgr, applyCouponAction, requireManager]);
+
   // ── Quick-button action dispatch ─────────────────────────────────────────
   // The WYSIWYG builder lets admins drop "Action" tiles onto the home grid.
   // Each tile carries an `actionKey` (validated server-side against
@@ -836,6 +876,7 @@ export default function POSScreen() {
       case 'end_of_day':         setShowEndOfDay(true); break;
       case 'lottery_sale':       setShowLottery(true); break;
       case 'fuel_sale':          setFuelModalMode('sale'); break;
+      case 'coupon':             setShowCoupon(true); break;
       case 'bottle_return':      setShowBottleReturn(true); break;
       case 'manual_entry':       setShowOpenItem(true); break;
       case 'clock_event':        console.warn('clock_event from quick-button not supported — use PIN login screen'); break;
@@ -985,6 +1026,18 @@ export default function POSScreen() {
         pumpId:         i.pumpId    || undefined,      // V1.5
         refundsOf:      i.refundsOf || undefined,      // V1.5
       })),
+      // Manufacturer coupon redemptions (Session 46) — backend creates one
+      // CouponRedemption row per entry linked to the saved transaction.
+      couponRedemptions: (couponRedemptions || []).map(r => ({
+        couponId:            r.couponId,
+        serial:              r.serial,
+        brandFamily:         r.brandFamily,
+        manufacturerId:      r.manufacturerId,
+        discountApplied:     r.discountApplied,
+        qualifyingUpc:       r.qualifyingUpc,
+        qualifyingQty:       r.qualifyingQty,
+        managerApprovedById: r.managerApprovedById || undefined,
+      })),
       tenderLines: finalLines,
       changeGiven: change,
       offlineCreatedAt: new Date().toISOString(),
@@ -1009,7 +1062,7 @@ export default function POSScreen() {
 
     clearCart();
     handleSaleCompleted(savedTx, change);
-  }, [items, totals, storeId, bagCount, bagPrice, posConfig.bagFee, customer, loyaltyRedemption, isOnline, enqueueTx, clearCart, handleSaleCompleted]);
+  }, [items, totals, storeId, bagCount, bagPrice, posConfig.bagFee, customer, loyaltyRedemption, couponRedemptions, isOnline, enqueueTx, clearCart, handleSaleCompleted]);
 
   // Flash animation — driven by the className on `.pos-left-pane`
   // (see POSScreen.css keyframes). The previous inline-style copy was
@@ -1974,6 +2027,7 @@ export default function POSScreen() {
         onFuelRefund={() => setFuelModalMode('refund')}
         fuelEnabled={fuel.settings?.enabled === true}
         fuelRefundsEnabled={fuel.settings?.allowRefunds !== false}
+        onCoupon={() => setShowCoupon(true)}
         onBottleReturn={() => setShowBottleReturn(true)}
         onHardwareSettings={() => setShowHardwareSettings(true)}
         onAdminPortal={() => {
@@ -2276,6 +2330,20 @@ export default function POSScreen() {
         pumps={fuel.pumps || []}
         storeId={storeId}
         onClose={() => setFuelModalMode(null)}
+      />
+
+      {/* ── Coupon Modal (Session 46) ── */}
+      <CouponModal
+        open={showCoupon}
+        cartItems={items}
+        existingSerials={couponRedemptions.map(r => r.serial)}
+        thresholds={{
+          maxVal:   Number(posConfig.couponMaxValueWithoutMgr ?? 5),
+          maxTotal: Number(posConfig.couponMaxTotalWithoutMgr ?? 10),
+          maxCount: Number(posConfig.couponMaxCountWithoutMgr ?? 5),
+        }}
+        onApply={handleCouponApply}
+        onClose={() => setShowCoupon(false)}
       />
       {showLotteryShift && (
         <LotteryShiftModal

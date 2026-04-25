@@ -6,7 +6,7 @@
  */
 
 import { Worker } from 'bullmq';
-import { getRedisClient } from '@storv/redis';
+import { getRedisClient } from '@storeveu/redis';
 import prisma from '../config/postgres.js';
 import { setCachedInventory } from '../config/redis.js';
 import { revalidateProduct, revalidateProductListing, revalidateDepartment } from '../services/revalidationService.js';

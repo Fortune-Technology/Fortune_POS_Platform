@@ -31,7 +31,7 @@
     "react-router-dom": "^6.28.0",
     "react-toastify": "^11.0.5",
     "serialport": "^13.0.0",
-    "storv-pos-platform": "file:..",
+    "storeveu-pos-platform": "file:..",
     "zustand": "^5.0.1"
   },
   "devDependencies": {

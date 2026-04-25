@@ -13,7 +13,7 @@ import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
 import ProductCard from '../../components/products/ProductCard';
 import { getStoreInfo, getProducts, getDepartments } from '../../lib/api';
-import type { Store, Product, Department } from '../../lib/types';
+import type { Store, Product, Department } from '@storeveu/types';
 
 interface ProductFilters {
   department: string | null;

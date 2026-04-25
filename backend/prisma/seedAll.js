@@ -48,7 +48,7 @@ const PER_STORE_SEEDS = [
 
 // Global (cross-store) seeders that run after per-store seeds
 const GLOBAL_POST_SEEDS = [
-  { file: 'seedExchange.js', label: 'Storv Exchange: partnerships + wholesale orders' },
+  { file: 'seedExchange.js', label: 'Storeveu Exchange: partnerships + wholesale orders' },
 ];
 
 const CORE_STEPS = [
@@ -73,7 +73,7 @@ function runScript(file, args) {
 }
 
 async function main() {
-  console.log(`\n🌱🌱🌱  Storv POS — seed:all  🌱🌱🌱\n`);
+  console.log(`\n🌱🌱🌱  Storeveu POS — seed:all  🌱🌱🌱\n`);
   const t0 = Date.now();
 
   // 1-4. Core platform seeds (org, RBAC, lottery catalog, historical txns)

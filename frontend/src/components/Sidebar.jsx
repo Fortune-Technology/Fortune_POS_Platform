@@ -45,6 +45,7 @@ import {
   Repeat,
   Layout,
   HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import StoreSwitcher from './StoreSwitcher';
 import { usePermissions } from '../hooks/usePermissions';
@@ -77,6 +78,12 @@ const menuGroups = [
     label: 'Fuel',
     items: [
       { name: 'Fuel', icon: <Fuel size={13} />, path: '/portal/fuel' },
+    ],
+  },
+  {
+    label: 'Compliance',
+    items: [
+      { name: 'Scan Data (Tobacco)', icon: <ShieldCheck size={13} />, path: '/portal/scan-data' },
     ],
   },
   {

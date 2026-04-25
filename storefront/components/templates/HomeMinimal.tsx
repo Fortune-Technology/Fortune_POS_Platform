@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import ProductCard from '../products/ProductCard';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 export default function HomeMinimal({ content, store, products = [], departments = [], storeSlug }: TemplateProps) {
   const s = content?.sections || {};

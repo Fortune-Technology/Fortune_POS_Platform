@@ -4,7 +4,7 @@
  */
 
 import { createContext, useContext, ReactNode } from 'react';
-import type { Store } from './types';
+import type { Store } from '@storeveu/types';
 
 const StoreContext = createContext<Store | null>(null);
 

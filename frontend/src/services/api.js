@@ -670,6 +670,31 @@ export const createClockSession   = (data)       => api.post('/reports/clock-eve
 export const updateClockEventEntry = (id, data)  => api.put(`/reports/clock-events/${id}`, data).then(r => r.data);
 export const deleteClockEventEntry = (id)        => api.delete(`/reports/clock-events/${id}`).then(r => r.data);
 
+// ── Scan Data / Tobacco compliance (Session 45) ─────────────────────────────
+export const listTobaccoManufacturers   = ()               => api.get('/scan-data/manufacturers').then(r => r.data);
+export const listScanDataEnrollments    = (params)         => api.get('/scan-data/enrollments', { params }).then(r => r.data);
+export const getScanDataEnrollment      = (id)             => api.get(`/scan-data/enrollments/${id}`).then(r => r.data);
+export const upsertScanDataEnrollment   = (data)           => api.post('/scan-data/enrollments', data).then(r => r.data);
+export const updateEnrollmentStatus     = (id, status)     => api.put(`/scan-data/enrollments/${id}/status`, { status }).then(r => r.data);
+export const deleteScanDataEnrollment   = (id)             => api.delete(`/scan-data/enrollments/${id}`).then(r => r.data);
+export const listProductMappings        = (params)         => api.get('/scan-data/product-mappings', { params }).then(r => r.data);
+export const upsertProductMapping       = (data)           => api.post('/scan-data/product-mappings', data).then(r => r.data);
+export const bulkUpsertProductMappings  = (mappings)       => api.post('/scan-data/product-mappings/bulk', { mappings }).then(r => r.data);
+export const deleteProductMapping       = (id)             => api.delete(`/scan-data/product-mappings/${id}`).then(r => r.data);
+export const listTobaccoProducts        = (params)         => api.get('/scan-data/tobacco-products', { params }).then(r => r.data);
+export const listScanDataSubmissions    = (params)         => api.get('/scan-data/submissions', { params }).then(r => r.data);
+export const getScanDataSubmissionStats = (params)         => api.get('/scan-data/submissions/stats', { params }).then(r => r.data);
+
+// ── Manufacturer Coupons (Session 45) ───────────────────────────────────────
+export const listManufacturerCoupons    = (params)         => api.get('/coupons', { params }).then(r => r.data);
+export const getManufacturerCoupon      = (id)             => api.get(`/coupons/${id}`).then(r => r.data);
+export const createManufacturerCoupon   = (data)           => api.post('/coupons', data).then(r => r.data);
+export const updateManufacturerCoupon   = (id, data)       => api.put(`/coupons/${id}`, data).then(r => r.data);
+export const deleteManufacturerCoupon   = (id)             => api.delete(`/coupons/${id}`).then(r => r.data);
+export const importCouponsCsvData       = (rows)           => api.post('/coupons/import', { rows }).then(r => r.data);
+export const listCouponRedemptions      = (params)         => api.get('/coupons/redemptions/list', { params }).then(r => r.data);
+export const getCouponRedemptionStats   = (params)         => api.get('/coupons/redemptions/stats', { params }).then(r => r.data);
+
 // ── Public API (no auth) ─────────────────────────────────────────────────────
 export const getPublishedCareers        = ()               => api.get('/public/careers').then(r => r.data);
 export const getPublishedCmsPage        = (slug)           => api.get(`/public/cms/${slug}`).then(r => r.data);

@@ -1,10 +1,10 @@
 # Multi-Pack Import Cookbook
 
-How to get products that sell in multiple configurations (single / 6-pack / case) correctly imported into Storv POS.
+How to get products that sell in multiple configurations (single / 6-pack / case) correctly imported into Storeveu POS.
 
 ---
 
-## What "multi-pack" means in Storv
+## What "multi-pack" means in Storeveu
 
 One physical product, multiple ways to sell it. Three different fields, each with a specific role:
 
@@ -100,7 +100,7 @@ This means: **migrating a multi-pack catalog from another POS requires pre-shapi
 | **Separate SKU row per pack** (e.g. Coke-Single, Coke-6pk, Coke-Case each have their own row with the same product name) | In a spreadsheet: group rows by product name → collapse to one row per product → build `pack_options` from the grouped rows' unitCount + price → keep each row's UPC as an entry in `additional_upcs` (primary = the single-unit row's UPC). |
 | **Parent/child SKU hierarchy** (e.g. IT Retail — parent "Coke" with children for each pack size) | Export children with parent linkage → use parent as the product row → build `pack_options` from children → use children UPCs as `additional_upcs`. |
 | **Multi-column layout** (e.g. same row has `Single_UPC`, `SixPack_UPC`, `Case_UPC`, `Single_Price`, `SixPack_Price`, `Case_Price`) | Map `Single_UPC` → `upc`; map the other two UPC columns to `additional_upcs` (multi-source); build `pack_options` by concatenating the three size rows (e.g. `=CONCAT("Single@1@",A2,";6-Pack@6@",B2,";Case@24@",C2)` in Excel). |
-| **No multi-pack data** (e.g. AGNE pricing CSVs) | Import without pack_options. If the product doesn't already have pack sizes in Storv, it'll just sell at the single unit price. You can add pack sizes later from the Product edit page. |
+| **No multi-pack data** (e.g. AGNE pricing CSVs) | Import without pack_options. If the product doesn't already have pack sizes in Storeveu, it'll just sell at the single unit price. You can add pack sizes later from the Product edit page. |
 
 ---
 
@@ -129,7 +129,7 @@ This means: **migrating a multi-pack catalog from another POS requires pre-shapi
 ┌──────────────────────────────────────────────────────────────┐
 │  Existing catalog in old POS                                 │
 │                                                              │
-│  Option 1: export in canonical Storv format → upload         │
+│  Option 1: export in canonical Storeveu format → upload         │
 │  Option 2: export in old format → reshape in Excel → upload  │
 │  Option 3: no multi-pack data → import basic, add later in UI│
 └──────────────────────────────────────────────────────────────┘

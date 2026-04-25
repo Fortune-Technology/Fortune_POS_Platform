@@ -1,4 +1,4 @@
-name: Deploy Storv POS
+name: Deploy Storeveu POS
 
 on:
   push:
@@ -250,7 +250,7 @@ jobs:
         shell: bash
         run: |
           echo "╔══════════════════════════════════════════════╗"
-          echo "║  ✅ Storv POS deployed successfully!          ║"
+          echo "║  ✅ Storeveu POS deployed successfully!       ║"
           echo "╠══════════════════════════════════════════════╣"
           echo "║  Backend:      https://api.storeveu.com      ║"
           echo "║  Dashboard:    https://storeveu.com           ║"

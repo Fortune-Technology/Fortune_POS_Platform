@@ -377,7 +377,7 @@ REVALIDATE_SECRET="any_random_secret_string"    # must match ecom-backend
 ## 5. Frontend Pages & Routes
 
 | `/` | Home.jsx | Marketing Home |
-| `/about` | About.jsx | About Storv |
+| `/about` | About.jsx | About Storeveu |
 | `/features` | Features.jsx | Product features |
 | `/pricing` | Pricing.jsx | Subscription plans |
 | `/contact` | Contact.jsx | Get in touch |

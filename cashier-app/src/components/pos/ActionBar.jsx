@@ -8,7 +8,7 @@ import {
   RotateCcw, Ban, BarChart2, Lock, Unlock, X,
   ArrowDownCircle, ArrowUpCircle, LockKeyhole, UnlockKeyhole, Ticket, Fuel, History, Recycle,
   ClipboardList, Settings, Monitor, MessageSquare, Edit3, Leaf, ExternalLink,
-  Camera,
+  Camera, ScanLine,
 } from 'lucide-react';
 import { useManagerStore } from '../../stores/useManagerStore.js';
 import { useCartStore }    from '../../stores/useCartStore.js';
@@ -41,6 +41,7 @@ export default function ActionBar({
   onLotteryShift,
   onFuelSale,
   onFuelRefund,
+  onCoupon,
   onScanCamera,
   onHardwareSettings,
   onAdminPortal,
@@ -189,6 +190,12 @@ export default function ActionBar({
               {fuelRefundsEnabled && (
                 <ACT icon={Fuel} label="Fuel Refund" onClick={onFuelRefund} color="#f59e0b" />
               )}
+              <Divider />
+            </>
+          )}
+          {onCoupon && (
+            <>
+              <ACT icon={ScanLine} label="Coupon" onClick={onCoupon} color="#7c3aed" />
               <Divider />
             </>
           )}

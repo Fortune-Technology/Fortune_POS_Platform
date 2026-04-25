@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import ProductCard from '../products/ProductCard';
 import { TrustIcon } from '../icons';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 export default function HomeTypography({ content, store, products = [], departments = [], storeSlug }: TemplateProps) {
   const s = content?.sections || {};

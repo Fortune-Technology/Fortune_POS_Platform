@@ -6,7 +6,10 @@
 
 import prisma from '../config/postgres.js';
 
-const STORV_ORG_ID = process.env.STORV_ORG_ID;
+// Renamed to STOREVEU_ORG_ID for brand consistency. Falls back to the legacy
+// STORV_ORG_ID env var so existing production deploys keep working until the
+// server's .env file is updated.
+const STOREVEU_ORG_ID = process.env.STOREVEU_ORG_ID || process.env.STORV_ORG_ID;
 export const FREE_SHIPPING_THRESHOLD = 500;
 export const FLAT_SHIPPING = 25;
 

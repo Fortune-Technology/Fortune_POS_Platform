@@ -106,7 +106,13 @@
       "Bash(git config *)",
       "Bash(tasklist)",
       "WebSearch",
-      "WebFetch(domain:docs.ipospays.com)"
+      "WebFetch(domain:docs.ipospays.com)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('workspaces:', d.get\\('workspaces'\\)\\); print\\('name:', d.get\\('name'\\)\\)\")",
+      "Bash(python -c 'import json; d=json.load\\(open\\('\\\\''__TRACKED_VAR__'\\\\''\\)\\); print\\('\\\\''name:'\\\\'', d.get\\('\\\\''name'\\\\''\\), '\\\\''| version:'\\\\'', d.get\\('\\\\''version'\\\\''\\), '\\\\''| main:'\\\\'', d.get\\('\\\\''main'\\\\''\\)\\)')",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(xargs sed *)",
+      "Bash(grep -rn \"from ['\\\\\"]\\\\\\\\..*services/types['\\\\\"]\" --include=\"*.ts\" --include=\"*.tsx\" admin-app/)",
+      "Bash(grep -rn \"from ['\\\\\"]\\\\\\\\..*lib/types['\\\\\"]\" --include=\"*.ts\" --include=\"*.tsx\" storefront/)"
     ]
   }
 }

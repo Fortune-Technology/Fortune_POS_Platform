@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import ProductCard from '../products/ProductCard';
 import { DeptIcon } from '../icons';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 const ECOM_URL = process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005';
 

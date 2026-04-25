@@ -15,7 +15,7 @@ import {
   ReactNode,
 } from 'react';
 import { updateCart as syncCartToServer } from './api';
-import type { CartItem, Product } from './types';
+import type { CartItem, Product } from '@storeveu/types';
 
 interface CartContextValue {
   items: CartItem[];

@@ -59,10 +59,17 @@ const calcLine = (item) => {
     : manualPrice;
 
   const effectivePrice = afterPromo;
+  const baseLineTotal = round2(effectivePrice * item.qty);
+
+  // Manufacturer coupon discount (Session 46) — applied LAST, after promo + manual.
+  // Stored as a fixed $ amount on the line; persists through qty/price changes.
+  const couponAmt = Number(item.manufacturerCouponAmount) || 0;
+  const lineTotal = round2(Math.max(0, baseLineTotal - couponAmt));
+
   return {
     ...item,
     effectivePrice,
-    lineTotal:    round2(effectivePrice * item.qty),
+    lineTotal,
     depositTotal: item.depositAmount ? round2(item.depositAmount * item.qty) : 0,
   };
 };
@@ -94,6 +101,14 @@ export const useCartStore = create((set, get) => ({
   // Active promotions + results
   promotions:    [],   // raw promo records from IndexedDB
   promoResults:  { lineAdjustments: {}, totalSaving: 0, appliedPromos: [] },
+
+  // Manufacturer coupon redemptions for THIS transaction (Session 46).
+  // Each entry: { couponId, serial, brandFamily, manufacturerId, discountApplied,
+  //               qualifyingLineId, qualifyingUpc, qualifyingQty,
+  //               managerApprovedById?, displayName? }
+  // Persisted on the line via `manufacturerCouponAmount` + `manufacturerCouponSerial`
+  // so totals stay correct through qty/price changes.
+  couponRedemptions: [],
 
   // ── Item management ─────────────────────────────────────────────────────
   addProduct: (product) => {
@@ -334,6 +349,90 @@ export const useCartStore = create((set, get) => ({
   applyOrderDiscount: (type, value) => set({ orderDiscount: { type, value: Number(value) } }),
   removeOrderDiscount: ()          => set({ orderDiscount: null }),
 
+  // ── Manufacturer Coupons (Session 46) ────────────────────────────────────
+  // Apply a validated coupon to a specific qualifying line.
+  // Caller is responsible for passing the validation result from the backend
+  // (which already includes the computed discount + qualifying line list).
+  //
+  // Args:
+  //   coupon:           { id, serial, brandFamily, manufacturerId, displayName, discountType, discountAmount, fundedBy }
+  //   qualifyingLineId: line in cart to attach to (one of validation.qualifyingLines)
+  //   computedDiscount: $ amount (already clamped to line total by backend)
+  //   managerApprovedById: optional — set when threshold required manager PIN
+  applyCoupon: ({ coupon, qualifyingLineId, computedDiscount, managerApprovedById = null }) => {
+    set(s => {
+      const line = s.items.find(i => i.lineId === qualifyingLineId);
+      if (!line) return s;
+
+      const discountToApply = Number(computedDiscount) || 0;
+      if (discountToApply <= 0) return s;
+
+      const rawItems = s.items.map(i => {
+        if (i.lineId !== qualifyingLineId) return i;
+        const existing = Number(i.manufacturerCouponAmount) || 0;
+        const totalCoupon = round2(existing + discountToApply);
+        return calcLine({
+          ...i,
+          manufacturerCouponAmount: totalCoupon,
+          manufacturerCouponSerial: coupon.serial,
+        });
+      });
+      const { items, promoResults } = withPromos(rawItems, s.promotions);
+
+      const redemption = {
+        couponId:        coupon.id,
+        serial:          coupon.serial,
+        brandFamily:     coupon.brandFamily,
+        manufacturerId:  coupon.manufacturerId,
+        displayName:     coupon.displayName || null,
+        discountApplied: discountToApply,
+        qualifyingLineId,
+        qualifyingUpc:   line.upc,
+        qualifyingQty:   line.qty,
+        managerApprovedById,
+        appliedAt:       Date.now(),
+      };
+
+      return {
+        items,
+        promoResults,
+        couponRedemptions: [...s.couponRedemptions, redemption],
+      };
+    });
+  },
+
+  // Remove a coupon by serial. Reduces the line's manufacturerCouponAmount
+  // by exactly the redemption's discountApplied. If multiple coupons stacked
+  // on one line, only the matching redemption is removed.
+  removeCoupon: (serial) => {
+    set(s => {
+      const target = s.couponRedemptions.find(r => r.serial === serial);
+      if (!target) return s;
+
+      const rawItems = s.items.map(i => {
+        if (i.lineId !== target.qualifyingLineId) return i;
+        const existing = Number(i.manufacturerCouponAmount) || 0;
+        const reduced  = round2(Math.max(0, existing - target.discountApplied));
+        // Find any other redemption still on this line — keep its serial as the display
+        const otherSerials = s.couponRedemptions
+          .filter(r => r.serial !== serial && r.qualifyingLineId === i.lineId)
+          .map(r => r.serial);
+        return calcLine({
+          ...i,
+          manufacturerCouponAmount: reduced,
+          manufacturerCouponSerial: otherSerials[otherSerials.length - 1] || null,
+        });
+      });
+      const { items, promoResults } = withPromos(rawItems, s.promotions);
+
+      return {
+        items,
+        promoResults,
+        couponRedemptions: s.couponRedemptions.filter(r => r.serial !== serial),
+      };
+    });
+  },
+
   selectItem:    (lineId) => set({ selectedLineId: lineId }),
   clearSelection: ()      => set({ selectedLineId: null }),
 
@@ -358,14 +457,15 @@ export const useCartStore = create((set, get) => ({
     orderDiscount: null, customer: null, loyaltyRedemption: null, verifiedAges: [],
     bagCount: 0,
     promoResults: { lineAdjustments: {}, totalSaving: 0, appliedPromos: [] },
+    couponRedemptions: [],
   }),
 
   // ── Hold & Recall ──────────────────────────────────────────────────────
   holdCart: async (label = '') => {
-    const { items, customer, orderDiscount, loyaltyRedemption, bagCount } = get();
+    const { items, customer, orderDiscount, loyaltyRedemption, bagCount, couponRedemptions } = get();
     if (!items.length) return;
     await db.heldTransactions.add({
-      items, customer, orderDiscount, loyaltyRedemption, bagCount,
+      items, customer, orderDiscount, loyaltyRedemption, bagCount, couponRedemptions,
       label: label || `Hold ${new Date().toLocaleTimeString()}`,
       heldAt: Date.now(),
       storeId: null,
@@ -378,12 +478,13 @@ export const useCartStore = create((set, get) => ({
     const held = await db.heldTransactions.get(id);
     if (!held) return false;
     set({
-      items:             held.items || [],
-      customer:          held.customer || null,
-      orderDiscount:     held.orderDiscount || null,
-      loyaltyRedemption: held.loyaltyRedemption || null,
-      bagCount:          held.bagCount || 0,
-      selectedLineId:    null,
+      items:              held.items || [],
+      customer:           held.customer || null,
+      orderDiscount:      held.orderDiscount || null,
+      loyaltyRedemption:  held.loyaltyRedemption || null,
+      bagCount:           held.bagCount || 0,
+      couponRedemptions:  held.couponRedemptions || [],
+      selectedLineId:     null,
     });
     await db.heldTransactions.delete(id);
     return true;

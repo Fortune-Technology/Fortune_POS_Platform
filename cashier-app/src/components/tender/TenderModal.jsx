@@ -85,7 +85,7 @@ export default function TenderModal({
   bagPrice       = 0,
   shiftId        = null,   // active Shift.id — attached to the saved transaction
 }) {
-  const { items, clearCart, customer, loyaltyRedemption, orderDiscount } = useCartStore();
+  const { items, clearCart, customer, loyaltyRedemption, orderDiscount, couponRedemptions } = useCartStore();
 
   // Single source of truth for cart-level discount math (customer standing %
   // + manual order discount + loyalty redemption). Same helper POSScreen uses
@@ -496,6 +496,17 @@ export default function TenderModal({
         taxAmount:      Math.abs(Number(i.taxAmount)  || 0),
         pumpId:         i.pumpId    || undefined,      // V1.5
         refundsOf:      i.refundsOf || undefined,      // V1.5
+      })),
+      // Manufacturer coupon redemptions (Session 46)
+      couponRedemptions: (couponRedemptions || []).map(r => ({
+        couponId:            r.couponId,
+        serial:              r.serial,
+        brandFamily:         r.brandFamily,
+        manufacturerId:      r.manufacturerId,
+        discountApplied:     r.discountApplied,
+        qualifyingUpc:       r.qualifyingUpc,
+        qualifyingQty:       r.qualifyingQty,
+        managerApprovedById: r.managerApprovedById || undefined,
       })),
       tenderLines: finalLines,
       changeGiven: change,

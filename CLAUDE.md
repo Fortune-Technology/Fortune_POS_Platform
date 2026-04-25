@@ -1,5 +1,5 @@
 # CLAUDE.md — AI Session Context File
-# Storv POS / Future Foods Portal
+# Storeveu POS / Future Foods Portal
 
 > **This file is read automatically by Claude Code at the start of every session.**
 > It keeps Claude aligned with the project's vision, conventions, and current state
@@ -9,7 +9,7 @@
 
 ## 🎯 Vision & Mission
 
-**Product:** Storv — A full-featured, multi-tenant retail POS and business intelligence platform built for independent convenience, grocery, and liquor stores.
+**Product:** Storeveu — A full-featured, multi-tenant retail POS and business intelligence platform built for independent convenience, grocery, and liquor stores.
 
 **Mission:** Replace expensive legacy POS back-office software with a modern, affordable, cloud-first platform that gives small store owners the same analytics, compliance tools, and operational efficiency as big-box retailers.
 
@@ -1754,8 +1754,8 @@ POS Backend (:5000)  ──► BullMQ (Redis) ──► ecom-backend (:5005) ─
 
 | Package | Directory | Purpose |
 |---------|-----------|---------|
-| `@storv/redis` | `packages/redis/` | Shared ioredis singleton client |
-| `@storv/queue` | `packages/queue/` | BullMQ queue definitions + producer helpers |
+| `@storeveu/redis` | `packages/redis/` | Shared ioredis singleton client |
+| `@storeveu/queue` | `packages/queue/` | BullMQ queue definitions + producer helpers |
 
 #### E-Commerce Prisma Schema (`ecom-backend/prisma/schema.prisma`)
 
@@ -1807,7 +1807,7 @@ POS Backend (:5000)  ──► BullMQ (Redis) ──► ecom-backend (:5005) ─
 |------|--------|
 | `package.json` (root) | Added `"workspaces": ["packages/*"]`, 6-app `dev` script, `dev:ecom`, `dev:storefront` |
 | `backend/docker-compose.yml` | Added Redis 7-alpine service on :6379 |
-| `backend/package.json` | Added `@storv/redis`, `@storv/queue` dependencies |
+| `backend/package.json` | Added `@storeveu/redis`, `@storeveu/queue` dependencies |
 | `backend/src/controllers/catalogController.js` | Import + emit sync events on all product/dept/inventory mutations |
 | `backend/src/routes/catalogRoutes.js` | Added `POST /ecom-stock-check` route |
 | `backend/.env.example` | Added `http://localhost:5005` to CORS_ORIGIN |
@@ -5528,7 +5528,7 @@ User confirmed: Sessions 36, 37, 37b done. Next session tackles a grab-bag of sm
 
 **Needs before Wave 2**: sample Sante export CSV/XLSX to confirm their exact column names.
 
-### Wave 3 — Storv Exchange settlement (own session, ~3h)
+### Wave 3 — Storeveu Exchange settlement (own session, ~3h)
 
 - [ ] Partial-acceptance email + in-app notification to sender when receiver marks items short
 - [ ] Settlement log page — chronological credit/debit list between two stores, filter by date/partner/status, viewable by both parties
@@ -5646,7 +5646,7 @@ POST   /api/ai-assistant/conversations/:id/messages   — send message, get resp
 POST   /api/ai-assistant/messages/:id/feedback        — 👍 or 👎 with optional note
 ```
 
-**System prompt** — identifies as Storv AI Assistant; tells it to call tools rather than guess; bans code/SQL/internal discussion; tells it to propose a support ticket when it can't answer.
+**System prompt** — identifies as Storeveu AI Assistant; tells it to call tools rather than guess; bans code/SQL/internal discussion; tells it to propose a support ticket when it can't answer.
 
 **Cost guards** (MVP):
 - Max 2048 output tokens per response
@@ -6727,7 +6727,7 @@ Deliberately deferred: Audit Log (no clean "unread" semantics), Delivery Platfor
 
 ### Exchange flow overhaul
 
-Addressed all Q6 + Q7 requirements for the Storv Exchange wholesale flow.
+Addressed all Q6 + Q7 requirements for the Storeveu Exchange wholesale flow.
 
 **Schema additions** on [`WholesaleOrder`](backend/prisma/schema.prisma) — per-party archive flags + dispute tracking:
 ```prisma
@@ -7729,4 +7729,477 @@ If the cashier instead **didn't physically take cash** for those 5 tickets (gave
 ---
 
 *Last updated: April 2026 — Session 44: Lottery Ticket-Math as Source of Truth — every reporting surface (daily inventory, dashboard, report, commission, weekly settlement) now reads from close_day_snapshot deltas instead of LotteryTransaction.amount. `posSales` + `unreported` exposed as audit signals. Settlement engine refactored to per-week snapshot deltas (was cumulative `box.ticketsSold`). 205/205 unit tests + 16/16 e2e tests green; seeded probe verifies $1225 sales reconciles across all 4 surfaces ($880 + $345 across 2 weeks = $1225 total).*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 45)
+
+### Scan Data + Tobacco Compliance — Foundation (Phase 1 of 5)
+
+Daily-batch reporting of tobacco transactions to manufacturer "scan data" programs (Altria, RJR/RAI, ITG Brands) in exchange for funded promos + buydowns + coupon reimbursement. **Replaces the monthly mail-in coupon process** with digital coupon redemption flowing through the same daily feed.
+
+This session ships the **foundation** only — schema, manufacturer catalog, enrollment management, tobacco product mapping, coupon catalog, submission log read-API. The actual file generation + SFTP upload + POS coupon engine ship in Sessions 46-48.
+
+#### Architecture
+
+```
+TobaccoManufacturer  ─────► ScanDataEnrollment  ─────► ScanDataSubmission
+  (platform catalog)        (per-store-per-feed)        (daily file log)
+  • code, name              • SFTP creds (encrypted)    • status: queued →
+  • fileFormat              • UAT vs Production          uploading → uploaded
+  • brandFamilies[]         • status: draft →            → acknowledged
+  • cadence                   certifying → active        | rejected | failed
+                              | suspended | rejected     • ack details
+
+TobaccoProductMap    ─────► (links MasterProduct → mfr feed + brand family)
+  (per-product per-feed)      Drives which products appear on each feed
+
+ManufacturerCoupon  ─────► CouponRedemption
+  (catalog: serial,           (POS redemption record →
+   discount, qualifying        flows into daily feed
+   UPCs, expiration)           for reimbursement)
+```
+
+7 manufacturer sub-feeds seeded (one row per SFTP target, since each has its own credentials + file format):
+- **Altria** — `altria_pmusa` (cigarettes), `altria_usstc` (smokeless), `altria_middleton` (cigars)
+- **RJR / RAI** — `rjr_edlp` (funded promos), `rjr_scandata` (POS reporting), `rjr_vap` (smokeless/pouch)
+- **ITG** — `itg` (single feed across all ITG brands)
+
+#### Schema (6 new models, additive — `npx prisma db push`)
+
+| Model | Purpose |
+|---|---|
+| `TobaccoManufacturer` | Platform catalog. Per-feed file format spec, supported brand families, cert host details |
+| `ScanDataEnrollment` | Per-store per-feed enrollment with encrypted SFTP creds + lifecycle status |
+| `TobaccoProductMap` | Links `MasterProduct` → manufacturer + brand family + funding type |
+| `ManufacturerCoupon` | Coupon catalog (manual entry primary, CSV import secondary) |
+| `CouponRedemption` | POS redemption records + submission/reimbursement lifecycle |
+| `ScanDataSubmission` | Daily file submission log (status, ack, retry tracking) |
+
+Plus reciprocal `tobaccoProductMaps TobaccoProductMap[]` back-relation on `MasterProduct`.
+
+#### Encryption
+
+SFTP credentials reuse the existing [`cryptoVault.js`](backend/src/utils/cryptoVault.js) (AES-256-GCM, env-key, KMS-ready upgrade path). Plaintext **never** persists or returns from any endpoint — list/get APIs surface `sftpPasswordSet: boolean` + `sftpUsernameMasked: "•••••••est"` only.
+
+#### RBAC — 8 new permissions (auto-granted via reseedRbac.js)
+
+| Permission | Owner | Manager | Cashier |
+|---|---|---|---|
+| `scan_data.view`       | ✓ | ✓ | — |
+| `scan_data.enroll`     | ✓ | — | — |
+| `scan_data.submit`     | ✓ | ✓ | — |
+| `scan_data.configure`  | ✓ | ✓ | — |
+| `coupons.view`         | ✓ | ✓ | — |
+| `coupons.manage`       | ✓ | ✓ | — |
+| `coupons.redeem`       | ✓ | ✓ | ✓ |
+| `coupons.approve`      | ✓ | ✓ | — |
+
+(Owner gets all via `*` wildcard; manager + cashier listed explicitly above.)
+
+**Drive-by fix**: [`seedRbac.js`](backend/prisma/seedRbac.js) was passing display-only fields (`moduleLabel`, `surface`) to `prisma.permission.create()` and silently failing on every NEW permission key. Update path was always fine — the bug was latent until my new keys hit the create branch. Fixed to strip to model-only fields.
+
+#### Backend API
+
+`/api/scan-data/*` — manufacturer catalog (read), enrollments CRUD, product mappings CRUD + bulk, tobacco-products list, submissions read + stats
+`/api/coupons/*` — coupon catalog CRUD, CSV import (column-tolerant), redemptions read + stats
+
+Routes split-mounted in [`scanDataRoutes.js`](backend/src/routes/scanDataRoutes.js):
+- `scanDataRouter` → mounted at `/api/scan-data`
+- `couponsRouter` → mounted at `/api/coupons`
+
+Both gated on the new `scan_data.*` / `coupons.*` permissions via `requirePermission()`.
+
+#### Portal — `/portal/scan-data` page (4 tabs)
+
+[`ScanData.jsx`](frontend/src/pages/ScanData.jsx) + [`.css`](frontend/src/pages/ScanData.css) (prefix `sd-`):
+
+1. **Enrollments** — per-store grouped by parent mfr (Altria/RJR/ITG). Each manufacturer feed renders as a card with status badge (Not enrolled / Draft / Certifying / Active / Suspended / Rejected), env chip (UAT / PRODUCTION), SFTP host, last-submission timestamp. Inline status transitions (Start Cert → Mark Active → Suspend → Resume). Click "Enroll" opens the Enrollment modal with all SFTP credential fields, Eye/EyeOff toggle on password, AES-256-GCM at-rest hint, mfr context info strip.
+2. **Tobacco Catalog** — lists products with `taxClass='tobacco'` OR an existing mapping. Search + "unmapped only" filter. Per-product modal shows existing mappings + add-mapping form (mfr feed dropdown filters brand family options).
+3. **Coupons** — KPI strip (active catalog count, 30d redemptions, pending reimbursement, $ reimbursed). Searchable table with status chips. New Coupon modal with brand family dropdown filtered by selected manufacturer feed, fixed/percent toggle, multipack requirement, qualifying UPCs (space/comma-separated).
+4. **Submissions** — read-only daily submission log with status chips per status code (queued/uploading/uploaded/acknowledged/rejected/failed). Info banner notes that file generation ships in Session 47.
+
+#### Verified end-to-end (live preview)
+
+- ✅ Manager login → 76 perms including 7 scan_data/coupons keys
+- ✅ `GET /scan-data/manufacturers` → returns all 7 seeded feeds
+- ✅ Page renders: 4 tabs, store block "Main Street Marketplace", 3 mfr groups (ALTRIA/ITG/RJR), 7 mfr cards with "Not enrolled" badges
+- ✅ Tobacco Catalog tab shows 5 existing tobacco products
+- ✅ Coupons tab shows empty state + 4 stat cards
+- ✅ Submissions tab shows empty state + Session 47 info banner
+- ✅ Manager creating enrollment → 403 (correctly forbidden)
+- ✅ Owner creating ITG enrollment → 200, status 'draft'
+- ✅ Password encrypted at rest — `sftpPasswordSet: true` returned, `sftpPasswordEnc` ciphertext NEVER leaked in any response
+- ✅ Username masked → `•••••••est`
+- ✅ ITG card now renders with "Draft" badge, "UAT" env chip, "sftp.itgbrands.com" host, Edit + Start Cert buttons
+- ✅ Toolbar updates: "0 active · 0 certifying · 1 draft"
+
+#### Files Added (Session 45)
+
+| File | Purpose |
+|---|---|
+| `backend/prisma/seedTobaccoManufacturers.js` | Idempotent seed for 7 manufacturer feeds |
+| `backend/src/controllers/scanDataController.js` | Enrollments + product mappings + submissions read |
+| `backend/src/controllers/couponController.js` | Coupon catalog CRUD + CSV import + redemption stats |
+| `backend/src/routes/scanDataRoutes.js` | Two routers (`/scan-data`, `/coupons`) gated by RBAC |
+| `frontend/src/pages/ScanData.jsx` + `.css` | 4-tab portal page (prefix `sd-`) |
+
+#### Files Modified (Session 45)
+
+| File | Change |
+|---|---|
+| `backend/prisma/schema.prisma` | +6 models, +`tobaccoProductMaps` back-relation on MasterProduct |
+| `backend/prisma/seedRbac.js` | Fix latent bug — strip display-only fields before `permission.create()` |
+| `backend/src/rbac/permissionCatalog.js` | +`scan_data` + `coupons` modules with 8 actions; manager + cashier role grants |
+| `backend/src/server.js` | Mount `/api/scan-data` + `/api/coupons` |
+| `frontend/src/App.jsx` | `/portal/scan-data` route + import |
+| `frontend/src/components/Sidebar.jsx` | "Compliance" nav group with "Scan Data (Tobacco)" + ShieldCheck icon |
+| `frontend/src/rbac/routePermissions.js` | `/portal/scan-data` → `scan_data.view` |
+| `frontend/src/services/api.js` | +21 API helpers (14 scan-data + 7 coupons + 1 redemption-stats) |
+
+#### Deferred to Sessions 46-48
+
+| # | Scope |
+|---|---|
+| **46** | **Coupon engine + POS modal + line-item discount split.** Cashier-app `CouponModal` (scan/enter coupon → validate → apply discount), threshold-based manager-PIN gate, line-item JSON shape extended with `buydownAmount` / `multipackAmount` / `manufacturerCouponAmount` / `manufacturerCouponSerial` / `retailerCouponAmount` / `loyaltyTobaccoAmount` so formatters can split discounts correctly. CouponRedemption rows created on every POS use. |
+| **47** | **File formatters + SFTP service + nightly scheduler.** Per-mfr formatter modules (Altria pipe-delimited × 3 sub-feeds, RJR fixed-width × 3 programs, ITG pipe-delimited). Shared SFTP transport with retry + dead-letter. Nightly cron at 2am store-local builds + uploads + parses ack files. |
+| **48** | **Submission log + ack processing + reimbursement reconciliation.** Match ack entries back to submissions, mark CouponRedemption as reimbursed/rejected, reconciliation report. Admin-app platform-config page for managing `TobaccoManufacturer` rows when mfr specs change. |
+| **49** | **Certification harness + UAT submission flow.** Sample data generator. Per-mfr cert tracking. Real-world certification with each manufacturer (2-8 weeks per mfr). |
+
+#### Manual deployment steps (production)
+
+```bash
+cd backend
+git pull
+npx prisma db push                          # Adds 6 new tables
+node prisma/seedTobaccoManufacturers.js     # Seeds 7 manufacturer feeds
+node prisma/seedRbac.js                     # Adds 8 new permissions + grants
+pm2 restart api-pos                         # Picks up new routes
+```
+
+```bash
+cd frontend
+npm run build
+```
+
+Existing stores see zero functional change. The `/portal/scan-data` page only appears in the sidebar for users with `scan_data.view` (manager+ in seeded roles).
+
+---
+
+*Last updated: April 2026 — Session 45: Scan Data + Tobacco Compliance Foundation — 6 new schema models, 7 manufacturer feeds seeded (Altria PMUSA/USSTC/Middleton + RJR EDLP/ScanData/VAP + ITG), 8 new RBAC permissions, encrypted SFTP credential storage via cryptoVault (AES-256-GCM), `/portal/scan-data` 4-tab page (Enrollments + Tobacco Catalog functional, Coupons + Submissions read-only stubs). Coupon engine + POS modal + file formatters + SFTP scheduler queued for Sessions 46-48. End-to-end verified: enrollment create/list works, password encrypted at rest, never leaks in responses, RBAC correctly forbids manager from `scan_data.enroll` (owner+ only).*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 46)
+
+### Coupon Engine + POS Modal + Line-Item Discount Split (Phase 2 of 5)
+
+Replaces the monthly mail-in coupon process with **digital redemption at the register**. Cashier scans/keys a coupon serial, backend validates against the catalog, and the discount is applied to a qualifying line in the cart. On transaction completion, a `CouponRedemption` row is written linked to the transaction — these flow into the daily scan-data submission (Session 47) for manufacturer reimbursement (~30 days vs 60-90 days for paper coupons).
+
+#### Backend
+
+**New endpoint** — `POST /api/coupons/validate` (gated on `coupons.redeem`, cashier+):
+- Body: `{ serial, cartItems: [{lineId, upc, qty, lineTotal}], existingSerials }`
+- Validates 7 rules in order: already-used → catalog match → active flag → date window → qualifying UPC (or brand-family fallback via `TobaccoProductMap`) → multipack/minQty → `maxPerCoupon` cap
+- Computes discount value clamped to qualifying line total
+- Reads store-level thresholds from `store.pos` JSON, returns `requiresApproval: bool` + `approvalReason`
+- Returns full coupon detail + qualifying-line list so the modal can pre-select
+
+**Transaction creation** ([`posTerminalController.js`](backend/src/controllers/posTerminalController.js)):
+- `createTransaction` + `batchCreateTransactions` accept `couponRedemptions[]` in payload
+- One `CouponRedemption` row per entry, linked to the saved tx by `transactionId`
+- Captures: serial, brandFamily, manufacturerId, discountApplied, qualifyingUpc, qualifyingQty, cashierId, optional `managerApprovedById`
+
+#### Cashier-app
+
+**Cart store** ([`useCartStore.js`](cashier-app/src/stores/useCartStore.js)):
+- New `couponRedemptions: []` cart state
+- `applyCoupon({ coupon, qualifyingLineId, computedDiscount, managerApprovedById? })` — tags the line with `manufacturerCouponAmount` + `manufacturerCouponSerial`, pushes redemption to cart-level array
+- `removeCoupon(serial)` — reverses one redemption, preserves any other coupons on the same line (multi-coupon stacking supported)
+- `calcLine` extended — coupon discount baked into `lineTotal` as `Math.max(0, baseLineTotal − manufacturerCouponAmount)`. Persists through qty/price/promo changes.
+- `holdCart` / `recallHeld` / `clearCart` all updated to round-trip `couponRedemptions`
+
+**`CouponModal`** ([`CouponModal.jsx`](cashier-app/src/components/modals/CouponModal.jsx) + [`.css`](cashier-app/src/components/modals/CouponModal.css), prefix `cpm-`):
+- Purple brand accent (`#7c3aed`) — matches admin-app's "Manufacturer Coupons" palette
+- Scan input + 12-key numpad + Check button
+- Live validation on submit — shows the coupon detail (brand, displayName, discount value, computed amount)
+- Qualifying-line picker (radio-style buttons, first line pre-selected)
+- Threshold breach banner with explicit reason
+- Already-applied chips list
+- Apply button label adapts: "Apply (manager PIN)" when threshold breached, "Apply Coupon" otherwise
+- Responsive @560px
+
+**POSScreen wiring** ([`POSScreen.jsx`](cashier-app/src/screens/POSScreen.jsx)):
+- New `showCoupon` state + `handleCouponApply(payload)` callback
+- Cumulative-cart $ ceiling check (single-coupon $ + count are checked backend-side, but cumulative tx total only knowable client-side) — combines with `requiresApproval` flag and gates via `requireManager()` when either breaches
+- After PIN gate, the cashier-app passes `useManagerStore.getState().managerId` to the cart store as `managerApprovedById` for audit trail
+- New `coupon` action key dispatched from Quick Buttons home grid
+- `couponRedemptions[]` extracted in both `quickCashSubmit` AND `TenderModal.complete()` payload paths (online + offline-queue both supported)
+
+**ActionBar** ([`ActionBar.jsx`](cashier-app/src/components/pos/ActionBar.jsx)):
+- New `onCoupon` prop + "Coupon" button (purple `#7c3aed`, `ScanLine` icon)
+- Renders only when `shiftOpen && onCoupon` — sits next to Fuel Sale/Refund
+
+**POS config** ([`usePOSConfig.js`](cashier-app/src/hooks/usePOSConfig.js)):
+- New defaults: `couponMaxValueWithoutMgr: 5`, `couponMaxTotalWithoutMgr: 10`, `couponMaxCountWithoutMgr: 5`
+- Stored in `store.pos` JSON via existing `getPOSConfig` / `updatePOSConfig` round-trip — no schema change needed
+
+#### Verified end-to-end (live preview, port 5000 backend)
+
+5 validation scenarios:
+| Scenario | Result |
+|---|---|
+| Empty cart | `valid: false`, "No qualifying Winston product in cart" ✓ |
+| Qualifying UPC in cart, $1 coupon | `valid: true, computedDiscount: 1, requiresApproval: false` ✓ |
+| $10 coupon (above $5 per-coupon threshold) | `valid: true, requiresApproval: true`, reason "Coupon value $10.00 exceeds the $5.00 per-coupon limit" ✓ |
+| Already-applied serial | `valid: false`, "This coupon has already been applied to the current transaction" ✓ |
+| `maxPerCoupon: 1` after one redemption | `valid: false`, "This coupon has already been redeemed the maximum number of times" ✓ |
+
+Full transaction-with-redemption flow:
+- ✅ `POST /api/pos-terminal/transactions` with `couponRedemptions[]` → 201, txNumber generated
+- ✅ `CouponRedemption` row created, linked to tx by `transactionId`, all fields preserved (serial, brand, amount, qualifyingUpc, qualifyingQty)
+- ✅ Soft-delete behaviour: deleting a coupon WITH redemptions sets `active: false` (preserves audit trail), without redemptions hard-deletes
+
+Cashier-app build verified clean (4.82s, PWA generated, no errors).
+
+#### Files Added (Session 46)
+
+| File | Purpose |
+|---|---|
+| `cashier-app/src/components/modals/CouponModal.jsx` + `.css` | Scan/keypad serial entry → live validation → qualifying-line picker → apply with threshold gate (prefix `cpm-`) |
+
+#### Files Modified (Session 46)
+
+| File | Change |
+|---|---|
+| `backend/src/controllers/couponController.js` | +`validateCoupon` handler with 7-rule validation pipeline + threshold check |
+| `backend/src/routes/scanDataRoutes.js` | `POST /coupons/validate` route gated on `coupons.redeem` |
+| `backend/src/controllers/posTerminalController.js` | `createTransaction` + `batchCreateTransactions` accept `couponRedemptions[]`, write `CouponRedemption` rows |
+| `cashier-app/src/api/pos.js` | +`validateCouponAtPOS(body)` API helper |
+| `cashier-app/src/stores/useCartStore.js` | +`couponRedemptions[]` state, `applyCoupon` / `removeCoupon` actions, `calcLine` extended for coupon discount, hold/recall/clear updated |
+| `cashier-app/src/hooks/usePOSConfig.js` | +3 threshold defaults |
+| `cashier-app/src/components/pos/ActionBar.jsx` | +`onCoupon` prop + Coupon button (purple, `ScanLine` icon) |
+| `cashier-app/src/screens/POSScreen.jsx` | Mount `CouponModal`, `handleCouponApply` with cumulative-tx threshold check + manager-PIN gate, `coupon` action key dispatch, `couponRedemptions[]` extracted in tx payload |
+| `cashier-app/src/components/tender/TenderModal.jsx` | `couponRedemptions[]` extracted from cart store + sent in tx payload |
+
+#### Manual deployment steps (production)
+
+```bash
+cd backend
+git pull
+pm2 restart api-pos     # Picks up new validate endpoint + tx changes
+
+cd ../cashier-app
+git pull
+npm run build           # PWA rebuild — cashiers see new Coupon button on next refresh
+```
+
+No schema migration. No new permissions (Session 45's `coupons.redeem` already granted to cashier role). Existing transactions unaffected.
+
+#### Deferred to Sessions 47–49
+
+| # | Scope |
+|---|---|
+| **47** | **File formatters + SFTP scheduler.** Per-mfr formatter modules (Altria pipe-delimited × 3 sub-feeds, RJR fixed-width × 3 programs, ITG pipe-delimited). Coupon redemption rows feed directly into the daily file. Nightly cron at 2am store-local builds + uploads + parses ack files. |
+| **48** | **Submission log + ack processing.** Match ack entries back to submissions, mark redemptions as `submittedAt`/`reimbursedAt`/`rejectedAt`, reconciliation report. Admin-app platform-config page for managing `TobaccoManufacturer` rows when mfr specs change. |
+| **49** | **Certification harness + UAT submission.** Sample data generator. Per-mfr cert tracking. Real-world certification with each manufacturer (2-8 weeks per mfr, ITG first). |
+
+---
+
+*Last updated: April 2026 — Session 46: Coupon Engine + POS Modal + Line-Item Discount Split — `POST /coupons/validate` runtime check (7 rules: catalog → active → dates → qualifying UPC → multipack → maxPerCoupon → threshold), `CouponModal` with scan + numpad + qualifying-line picker + threshold-aware manager-PIN gate, `useCartStore.applyCoupon` / `removeCoupon` actions with line-item tagging (`manufacturerCouponAmount` + `manufacturerCouponSerial`), `couponRedemptions[]` flow through both online + offline-queue tx paths. Three configurable thresholds in `store.pos`: per-coupon $ ceiling, cumulative-tx $ ceiling, coupon-count-per-tx ceiling. End-to-end verified: 5 validation scenarios pass, transaction with redemption creates the CouponRedemption row, soft-delete preserves audit trail when redemptions exist. Cashier-app build clean. Coupon catalog → POS apply → daily mfr submission (next session) replaces monthly paper mail-in.*
+
+---
+
+## 📦 Recent Feature Additions (April 2026 — Session 47)
+
+### File Formatters + SFTP Service + Nightly Scheduler (Phase 3 of 5)
+
+The pipe that ships tobacco transactions + coupon redemptions to manufacturers every night. Generator queries the day's transactions, formats them per-mfr-spec, writes the file to local storage, uploads via SFTP, and updates the submission row with status. The nightly scheduler runs every 15 min and submits any (store × mfr × day) that hasn't been delivered yet.
+
+#### Architecture
+
+```
+Scheduler (15-min sweep)
+    │
+    ▼
+For each active enrollment:
+  1. Query transactions in [yesterday-local-midnight, yesterday-local-23:59:59.999]
+  2. Build productMapByUpc (UPC → mfrCode/brand/fundingType)
+  3. Call per-mfr formatter → file body + counts
+  4. Write file to backend/uploads/scan-data/{date}/{store}/{mfr}/{retailer}_{date}.{ext}
+  5. Upload via SFTP (3 retry attempts with 1s/4s/16s backoff)
+  6. Stamp submittedAt on coupon redemptions in window
+  7. Insert ScanDataSubmission row
+```
+
+#### File formatters — 7 modules, 3 distinct format families
+
+| Code | Format | Accent | File |
+|---|---|---|---|
+| `itg` | Pipe-delimited, simplest spec | single feed | `formatters/itg.js` |
+| `altria_pmusa` | Pipe-delimited, full field set | cigarettes | `formatters/altriaPmusa.js` |
+| `altria_usstc` | Pipe-delimited (PMUSA body, feedCode='USSTC') | smokeless | `formatters/altriaUsstc.js` |
+| `altria_middleton` | Pipe-delimited (PMUSA body, feedCode='MIDDLETON') | cigars | `formatters/altriaMiddleton.js` |
+| `rjr_edlp` | Fixed-width, byte-aligned columns | funded promos | `formatters/rjrEdlp.js` |
+| `rjr_scandata` | Fixed-width (EDLP body, feedCode='SCAN') | POS reporting | `formatters/rjrScanData.js` |
+| `rjr_vap` | Fixed-width (EDLP body, feedCode='VAP') | smokeless/pouch | `formatters/rjrVap.js` |
+
+Each formatter exports `format({ enrollment, transactions, productMapByUpc, periodStart, periodEnd })` → `{ body, txCount, lineCount, couponCount, totalAmount }`. The 4 thin variants delegate to their base — line-item structure is identical, only the header feed-code field differs. Cert-time tweaks per-mfr live in their own file.
+
+#### Discount-split logic ([`formatters/common.js`](backend/src/services/scanData/formatters/common.js))
+
+The most spec-sensitive piece. For each tobacco line:
+
+```
+promoDiscount = (unitPrice − effectivePrice) × qty   // pre-coupon
+mapping       = productMapByUpc[normalizeUpc(line.upc)]
+fundingType   = mapping.fundingType  // 'buydown' | 'multipack' | 'promotion' | 'regular'
+
+if (fundingType === 'buydown')   → all of promoDiscount → buydownAmount
+if (fundingType === 'multipack') → all of promoDiscount → multipackAmount
+if (fundingType === 'promotion') → all of promoDiscount → mfrPromotionAmount
+if (fundingType === 'regular')   → all of promoDiscount → retailerCouponAmount
+
+mfrCouponAmount    = line.manufacturerCouponAmount        // Session 46 — coupon redemption
+mfrCouponSerial    = line.manufacturerCouponSerial
+loyaltyAmount      = 0  // skipped in v1 (order-level allocation needs separate pro-rata pass)
+```
+
+The split drives reimbursement at the mfr — buydown $ comes from a different funding bucket than multipack $ which is different from a coupon redemption. Critical for cert.
+
+`extractTobaccoLines(tx, productMapByUpc, mfrCode)` filters out lottery / fuel / bottle-return lines + lines without an `upc` + lines whose UPC isn't in `productMapByUpc` (i.e. not on this mfr's feed).
+
+#### SFTP service ([`sftpService.js`](backend/src/services/scanData/sftpService.js))
+
+Dynamic-import pattern matching the Twilio stub:
+
+```js
+let _SftpClient = null;
+async function loadSftpClient() {
+  try { _SftpClient = (await import('ssh2-sftp-client')).default; }
+  catch { return null; }  // stub mode
+}
+```
+
+Real upload path: `connect → fastPut → end`, 3 attempts with 1s / 4s / 16s exponential backoff, `readyTimeout: 30s`. Decrypts the SFTP password via `cryptoVault.decrypt()` at the last possible moment — plaintext lives in memory only for the upload duration.
+
+Stub mode (lib not installed): returns `{ uploaded: false, skipped: true, error: 'ssh2-sftp-client not installed (run: npm i ssh2-sftp-client). File written locally only.' }`. Submission stays `status: 'queued'` so the next scheduler tick retries after install.
+
+`testConnection(enrollment)` exposed via `POST /scan-data/enrollments/:id/test-connection` (owner+) — connects, lists the upload dir, reports success or exact error. Used during cert prep to validate SFTP creds before flipping enrollment to active.
+
+#### Generator ([`generator.js`](backend/src/services/scanData/generator.js))
+
+The orchestrator. `generateSubmission({ orgId, storeId, manufacturerId, periodStart, periodEnd, dryRun })`:
+
+1. Resolve enrollment + manufacturer + formatter (lookup by `manufacturer.code` in dispatch table)
+2. Load `productMapByUpc` for this org+mfr (one query, not per-line)
+3. Query transactions in window with `status ∈ {complete, refund, voided}`
+4. Call formatter
+5. Write file to `backend/uploads/scan-data/{YYYY-MM-DD}/{storeId}/{mfrCode}/{retailerId}_{date}.{ext}`
+6. SFTP upload (skipped in dryRun)
+7. Insert `ScanDataSubmission` row
+8. Stamp `submittedAt` + `submissionId` on `CouponRedemption` rows in window (Session 48 will set `reimbursedAt` on ack)
+9. Update enrollment's `lastSubmissionAt` / `lastStatus` / `lastErrorMsg` denormalized fields
+
+`generateForStore({ orgId, storeId, periodStart, periodEnd, dryRun })` iterates active+certifying enrollments and runs `generateSubmission` for each. Used by both the scheduler and the manual regenerate endpoint.
+
+Empty-file behaviour: if the org has zero product mappings for a feed, generator still produces a header+trailer-only file. Some mfrs require daily empty submissions — safer to send than to skip.
+
+#### Nightly scheduler ([`scanDataScheduler.js`](backend/src/services/scanData/scanDataScheduler.js))
+
+Sweeps every 15 minutes (constant `SWEEP_INTERVAL_MS = 15 × 60 × 1000`). On each tick:
+
+1. Query active+certifying enrollments
+2. For each enrollment, check the store's local-time hour against the manufacturer's `submissionHour` (default 02:00, settable per-feed in `TobaccoManufacturer`). Submission window: `[submissionHour, submissionHour+4)` — covers transient SFTP outages and server restarts.
+3. Skip if a successful submission already exists in the past 23 hours
+4. Skip if a `failed` submission has `nextRetryAt` in the future
+5. Otherwise: generate + upload for [yesterday-local-midnight, yesterday-local-23:59:59.999]
+
+Local-hour computation uses `Intl.DateTimeFormat('en-CA', { timeZone: tz, hour: '2-digit', hour12: false })` against `Store.timezone`. Same pattern as `shiftScheduler.js`.
+
+Telemetry: every tick that submits OR fails logs `[ScanDataScheduler] tick — submitted=X skipped=Y failed=Z`. Successful no-op ticks are silent.
+
+#### New endpoints
+
+| Method | Route | Permission |
+|---|---|---|
+| `POST` | `/scan-data/submissions/regenerate` | `scan_data.submit` |
+| `GET`  | `/scan-data/submissions/:id/download` | `scan_data.view` |
+| `POST` | `/scan-data/enrollments/:id/test-connection` | `scan_data.enroll` |
+
+`regenerate` body: `{ storeId, manufacturerId?, periodStart, periodEnd, dryRun? }`. If `manufacturerId` is omitted, regenerates for every active enrollment at the store. `dryRun: true` skips SFTP upload and returns the in-memory file body in the response (key: `dryRunBody`) so the back-office can preview the exact bytes before sending.
+
+`download` streams the stored file with `Content-Disposition: attachment` so admins can fetch the raw file during cert when the mfr asks "your line 47 is malformed" — invaluable for debugging without DB access.
+
+#### Verification (live preview, 7 file generations)
+
+| Test | Result |
+|---|---|
+| Backend hot-reload picked up new routes | ✓ `/scan-data/submissions/regenerate` returned 400 with expected body |
+| ITG dry-run with `fundingType: 'buydown'` mapping | ✓ 3-line file (H/D/T), `buydown=$1.00, multipack=$0` correctly split |
+| Altria PMUSA dry-run with same product mapped `fundingType: 'buydown'` | ✓ S record with `buydown=$1.00, multipack=$0` and PMUSA-specific column order |
+| RJR EDLP dry-run with `fundingType: 'multipack'` mapping (different product) | ✓ Fixed-width 139-char S record, `multipack=$3.00` (2 × $1.50 split correctly), `buydown=$0` |
+| Fixed-width byte alignment | ✓ Header=54, Sale=139, Trailer=73 — every column at the documented position |
+| Files written to disk | ✓ 3 files at `backend/uploads/scan-data/{date}/{store}/{mfrCode}/{retailer}_{date}.{ext}` with correct extensions (`.csv`, `.txt`, `.dat`) |
+| Download endpoint streams file with proper headers | ✓ `Content-Type: text/plain`, `Content-Disposition: attachment; filename="…"` |
+| `testConnection` in stub mode | ✓ Clean error: `"ssh2-sftp-client not installed"` |
+| Real (non-dryRun) regenerate without SFTP installed | ✓ File written locally, submission `status='queued'`, `error='…not installed (run: npm i ssh2-sftp-client). File written locally only.'`, `attempts=0` |
+| All 8 modules load without error | ✓ Backend hot-reloaded, generator.generateSubmission resolves as function |
+
+#### File layouts (cert-tweakable starting points)
+
+**ITG** — `H|<retailerId>|<chainId>|<storeId>|<periodStart>|<periodEnd>|<generatedAt>|ITG-1.0`
+followed by `D|<txNumber>|<date>|<time>|<station>|<cashier>|<saleType>|<upc>|<productCode>|<brand>|<qty>|<retailPrice>|<grossLine>|<netLine>|<buydown>|<multipack>|<mfrCoupon>|<couponSerial>|<retailerCoupon>|<loyalty>|<ageVerified>` per line, ending with `T|<txCount>|<lineCount>|<grossTotal>|<netTotal>|<couponCount>|<couponTotal>`.
+
+**Altria (all 3 sub-feeds)** — pipe-delimited with feedCode in header. S record adds `description` and `mfrPromotion` columns vs ITG, trailer includes `buydownTotal` + `multipackTotal`.
+
+**RJR (all 3 programs)** — fixed-width per `EDLP v4.x` typical layout. Amount fields are cents zero-padded, qty × 1000 for 3-decimal precision, UPC left-padded to 12. See file header for byte-position table.
+
+#### Files Added (Session 47)
+
+| File | Purpose |
+|---|---|
+| `backend/src/services/scanData/formatters/common.js` | Shared helpers: UPC normalisation, field encoders, line extraction, discount split, totals aggregator |
+| `backend/src/services/scanData/formatters/itg.js` | ITG pipe-delimited single feed |
+| `backend/src/services/scanData/formatters/altriaPmusa.js` | Altria PMUSA cigarettes (full field set) + shared `formatAltria` |
+| `backend/src/services/scanData/formatters/altriaUsstc.js` | Altria USSTC smokeless (delegates to PMUSA body) |
+| `backend/src/services/scanData/formatters/altriaMiddleton.js` | Altria Middleton cigars (delegates to PMUSA body) |
+| `backend/src/services/scanData/formatters/rjrEdlp.js` | RJR EDLP funded-promo (fixed-width) + shared `formatRJR` |
+| `backend/src/services/scanData/formatters/rjrScanData.js` | RJR Scan Data reporting (delegates to EDLP body) |
+| `backend/src/services/scanData/formatters/rjrVap.js` | RJR VAP smokeless (delegates to EDLP body) |
+| `backend/src/services/scanData/sftpService.js` | Dynamic-import SFTP client + retry + testConnection + verifyLocalFile |
+| `backend/src/services/scanData/generator.js` | Orchestrator: query → format → write → upload → DB row + redemption stamping |
+| `backend/src/services/scanData/scanDataScheduler.js` | 15-min cron sweep, store-local 02:00-06:00 submission window |
+
+#### Files Modified (Session 47)
+
+| File | Change |
+|---|---|
+| `backend/src/controllers/scanDataController.js` | +`regenerateSubmission`, `downloadSubmission`, `testEnrollmentConnection` handlers |
+| `backend/src/routes/scanDataRoutes.js` | +3 new routes (regenerate manager+, download manager+, test-connection owner+) |
+| `backend/src/server.js` | Mount `startScanDataScheduler()` after other schedulers |
+
+#### Manual deployment steps
+
+```bash
+cd backend
+git pull
+npm i ssh2-sftp-client     # OPTIONAL — without this, file generation works but SFTP upload is no-op
+pm2 restart api-pos        # Picks up new endpoints + scheduler
+```
+
+No schema migration. No new permissions (Session 45's `scan_data.submit` and `scan_data.enroll` cover everything). Existing transactions unaffected.
+
+#### Deferred to Sessions 48-49
+
+| # | Scope |
+|---|---|
+| **48** | **Ack file parsing + reimbursement reconciliation.** Watch the SFTP `/ack/` directory for mfr response files, parse per-mfr ack format (each has its own), match ack lines back to submissions, mark `CouponRedemption.reimbursedAt` or `rejectedAt`. Submission log gets a "rejected lines" tab in the back-office UI. Email/notification on failed submissions. |
+| **49** | **Cert harness + UAT submission.** Sample-data generator that produces a synthetic full day's transactions matching mfr cert criteria. Per-mfr cert checklist UI. Real-world certification with each manufacturer (2-8 weeks per mfr). |
+
+---
+
+*Last updated: April 2026 — Session 47: File Formatters + SFTP + Nightly Scheduler — 7 per-mfr formatters (3 distinct format families: ITG pipe-delimited, Altria pipe-delimited, RJR fixed-width), discount-split logic via `TobaccoProductMap.fundingType` (buydown/multipack/promotion/regular), `sftpService.js` with dynamic ssh2-sftp-client + 3-attempt retry + cryptoVault password decryption, `generator.js` orchestrator with dry-run mode + local file storage at `backend/uploads/scan-data/{date}/{store}/{mfr}/`, `scanDataScheduler.js` 15-min sweep with store-local 02:00-06:00 window, manual `regenerate` + `download` + `test-connection` endpoints. End-to-end verified: ITG dry-run produces 3-line file with correct buydown split, Altria PMUSA dry-run with full-spec field order, RJR EDLP fixed-width 139-char sale records byte-aligned, files written to disk, download endpoint streams with proper headers, stub mode (no SFTP lib) returns clean error and keeps submission queued for retry. Daily nightly submission auto-flows coupon redemptions to mfrs for ~30-day reimbursement.*
+
+
 

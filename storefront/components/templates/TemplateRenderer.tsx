@@ -18,7 +18,7 @@ import ContactCards from './ContactCards';
 import ContactMinimal from './ContactMinimal';
 import ContactMapForm from './ContactMapForm';
 import ContactFloating from './ContactFloating';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 type TemplateComponent = ComponentType<TemplateProps>;
 

@@ -16,7 +16,7 @@ import { getStoreSlug } from '../lib/resolveStore';
 import { getStoreInfo, getProducts, getDepartments, getPages } from '../lib/api';
 import { Store as StoreIcon, Search, Truck, ShoppingBag } from 'lucide-react';
 import axios from 'axios';
-import type { Store, Product, Department, EcomPage, TemplateContent } from '../lib/types';
+import type { Store, Product, Department, EcomPage, TemplateContent } from '@storeveu/types';
 
 const ECOM_API = process.env.ECOM_API_URL || 'http://localhost:5005/api';
 

@@ -27,7 +27,11 @@ async function main() {
       });
       permUpdated++;
     } else {
-      await prisma.permission.create({ data: p });
+      // Permission catalog includes display-only fields (moduleLabel, surface)
+      // that aren't columns on the Permission model — strip to model fields.
+      await prisma.permission.create({
+        data: { key: p.key, module: p.module, action: p.action, label: p.label, description: p.description, scope: p.scope },
+      });
       permCreated++;
     }
   }

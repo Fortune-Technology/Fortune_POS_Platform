@@ -1,47 +1,30 @@
 /**
- * Shared API response types for admin-app.
+ * Admin-panel API shapes — produced by the `backend/` REST API (mounted under
+ * `/api/admin/*`) and consumed by `admin-app/`.
  *
- * Phase 3a of the TS migration: replaces the `Promise<any>` pattern in
- * services/api.ts with narrower envelope + entity types. These are hand-
- * maintained to match actual backend responses — they do NOT auto-generate
- * from Prisma. When the response-shape contract changes on the backend,
- * update here too.
- *
- * Phase 4 (future) will lift these into a `@storv/types` workspace package
- * shared across portal + admin + cashier + ecom once the shapes stabilise.
- *
- * Design rules:
+ * Design rules (inherited from the original admin-app/services/types.ts):
  *   - Fields the backend always returns are required; everything else is optional.
  *   - `id` is `string | number` because some tables use cuid strings and others use ints.
  *   - Numeric Decimal columns come back as `number | string` from Prisma/axios.
  *   - Dates come back as ISO strings over the wire.
  *   - Use `Partial<T>` / `Pick<T, K>` in pages when they only need a subset.
+ *
+ * Source-of-truth header rule: when backend's response shape changes, update
+ * here in the same PR.
  */
 
-// ─── Generic envelope patterns ────────────────────────────────────────────────
+import type {
+  DecimalString,
+  IsoDate,
+  UserRole,
+  UserStatus,
+} from './common.js';
 
-/** `{ data: T[], total: N }` — used by paginated list endpoints with simple totals. */
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-}
-
-/** `{ data: T[], meta: { total } }` — used by billing/invoices where more meta exists. */
-export interface MetaPaginatedResponse<T> {
-  data: T[];
-  meta?: { total?: number; page?: number; limit?: number };
-}
-
-/** `{ success: true, ... }` — generic mutation/action ack. */
-export interface SuccessResponse {
-  success: boolean;
-  message?: string;
-}
+// Re-export so admin consumers can pull both common scalars + admin shapes
+// from the same `@storeveu/types` import.
+export type { UserRole, UserStatus };
 
 // ─── Core entities (shared across multiple admin pages) ──────────────────────
-
-export type UserRole = 'staff' | 'cashier' | 'manager' | 'owner' | 'admin' | 'superadmin';
-export type UserStatus = 'pending' | 'active' | 'suspended';
 
 /** Core user record returned by /admin/users. */
 export interface AdminUser {
@@ -53,8 +36,8 @@ export interface AdminUser {
   status: UserStatus;
   orgId?: string;
   organization?: { id?: string | number; name?: string } | null;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: IsoDate;
+  updatedAt?: IsoDate;
 }
 
 /** Core organization record returned by /admin/organizations. */
@@ -67,7 +50,7 @@ export interface Organization {
   maxStores?: number;
   maxUsers?: number;
   isActive?: boolean;
-  createdAt?: string;
+  createdAt?: IsoDate;
   _count?: { users?: number; stores?: number };
 }
 
@@ -79,12 +62,12 @@ export interface AdminStore {
   address?: string;
   stationCount?: number;
   isActive?: boolean;
-  createdAt?: string;
+  createdAt?: IsoDate;
   organization?: { name?: string };
   _count?: { stations?: number };
 }
 
-// ─── Login response ──────────────────────────────────────────────────────────
+// ─── Auth responses ──────────────────────────────────────────────────────────
 
 export interface LoginResponse {
   id: string | number;
@@ -95,8 +78,6 @@ export interface LoginResponse {
   orgId?: string;
   status?: UserStatus;
 }
-
-// ─── Impersonation response ──────────────────────────────────────────────────
 
 export interface ImpersonateResponse {
   token: string;
@@ -110,7 +91,7 @@ export interface ImpersonateResponse {
   };
 }
 
-// ─── Payment Merchant (Dejavoo) ───────────────────────────────────────────────
+// ─── Payment Merchant (Dejavoo) ──────────────────────────────────────────────
 
 export type MerchantStatus = 'active' | 'pending' | 'disabled';
 export type MerchantEnvironment = 'uat' | 'prod';
@@ -129,7 +110,7 @@ export interface PaymentMerchant {
   hppMerchantId?: string;
   hppBaseUrl?: string;
   hppEnabled?: boolean;
-  hppLastTestedAt?: string;
+  hppLastTestedAt?: IsoDate;
   hppLastTestResult?: 'ok' | 'fail' | null;
   // ── Card-on-file ──
   transactBaseUrl?: string;
@@ -140,7 +121,7 @@ export interface PaymentMerchant {
   // ── Status / audit ──
   status?: MerchantStatus;
   notes?: string;
-  lastTestedAt?: string;
+  lastTestedAt?: IsoDate;
   lastTestResult?: 'ok' | 'fail';
   // ── Encrypted-field markers (server populates; never plaintext) ──
   spinAuthKeySet?: boolean;
@@ -165,7 +146,7 @@ export interface PaymentTerminal {
   effectiveTpn?: string;
   notes?: string;
   status?: string;
-  lastPingedAt?: string;
+  lastPingedAt?: IsoDate;
 }
 
 /** Entry in the payment-merchant audit log (every create/update/test/activate/disable). */
@@ -173,12 +154,12 @@ export interface PaymentMerchantAuditEntry {
   id: string | number;
   action: string;
   changedByName?: string;
-  createdAt?: string;
+  createdAt?: IsoDate;
   note?: string;
   changes?: Record<string, unknown>;
 }
 
-// ─── Tickets & Career ─────────────────────────────────────────────────────────
+// ─── Tickets & Career ────────────────────────────────────────────────────────
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -187,7 +168,7 @@ export interface TicketResponse {
   by: string;
   byType: 'admin' | 'store';
   message: string;
-  date: string;
+  date: IsoDate;
 }
 
 export interface SupportTicket {
@@ -198,12 +179,12 @@ export interface SupportTicket {
   body: string;
   status: TicketStatus;
   priority: TicketPriority;
-  createdAt: string;
+  createdAt: IsoDate;
   adminNotes?: string;
   responses?: TicketResponse[];
 }
 
-// ─── CMS & Careers ────────────────────────────────────────────────────────────
+// ─── CMS & Careers ───────────────────────────────────────────────────────────
 
 export interface CmsPage {
   id: string | number;
@@ -214,7 +195,7 @@ export interface CmsPage {
   metaDesc?: string;
   published?: boolean;
   sortOrder?: number;
-  updatedAt?: string;
+  updatedAt?: IsoDate;
 }
 
 export interface CareerPosting {
@@ -236,10 +217,10 @@ export interface CareerApplication {
   coverLetter?: string;
   resumeUrl?: string;
   adminNotes?: string;
-  createdAt?: string;
+  createdAt?: IsoDate;
 }
 
-// ─── RBAC ─────────────────────────────────────────────────────────────────────
+// ─── RBAC ────────────────────────────────────────────────────────────────────
 
 export type RoleStatus = 'active' | 'inactive';
 export type RoleSurface = 'back-office' | 'cashier-app' | 'both';
@@ -264,7 +245,7 @@ export interface Role {
   userCount: number;
 }
 
-// ─── State catalog ────────────────────────────────────────────────────────────
+// ─── State catalog ───────────────────────────────────────────────────────────
 
 export interface UsStateRecord {
   code: string;
@@ -285,7 +266,7 @@ export interface UsStateRecord {
   active?: boolean;
 }
 
-// ─── Lottery (admin catalog + ticket requests) ────────────────────────────────
+// ─── Lottery (admin catalog + ticket requests) ───────────────────────────────
 
 export type LotteryCategory = 'instant' | 'draw' | 'daily' | 'other';
 
@@ -310,7 +291,7 @@ export interface LotteryRequest {
   ticketsPerBook?: number;
   state?: string;
   status?: 'pending' | 'approved' | 'rejected';
-  createdAt?: string;
+  createdAt?: IsoDate;
   notes?: string;
 }
 
@@ -335,7 +316,7 @@ export interface AiReview {
   aiResponse: string;
   userSuggestion?: string;
   status: 'pending' | 'promoted' | 'dismissed';
-  createdAt: string;
+  createdAt: IsoDate;
   articleTitle?: string;
 }
 
@@ -365,9 +346,9 @@ export interface BillingPlan {
   name: string;
   slug: string;
   description?: string;
-  basePrice: number | string;
-  pricePerStore?: number | string;
-  pricePerRegister?: number | string;
+  basePrice: DecimalString;
+  pricePerStore?: DecimalString;
+  pricePerRegister?: DecimalString;
   includedStores?: number;
   includedRegisters?: number;
   trialDays: number;
@@ -382,29 +363,34 @@ export interface BillingAddon {
   key: string;
   name: string;
   description?: string;
-  monthlyPrice: number | string;
+  monthlyPrice: DecimalString;
   sortOrder: number;
   isActive?: boolean;
 }
 
-export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+export type SubscriptionStatus =
+  | 'trial'
+  | 'active'
+  | 'past_due'
+  | 'suspended'
+  | 'cancelled';
 
 export interface Subscription {
   id: string | number;
   orgId: string;
   planId: string | number;
   org?: { name?: string };
-  plan?: { name?: string; basePrice?: number | string };
+  plan?: { name?: string; basePrice?: DecimalString };
   status: SubscriptionStatus;
   overrideMaxStores?: number | null;
   overrideMaxRegisters?: number | null;
   extraAddons?: string[];
   discountType?: string | null;
-  discountValue?: number | string | null;
+  discountValue?: DecimalString | null;
   discountNote?: string | null;
-  discountExpiry?: string | null;
-  trialEndsAt?: string | null;
-  nextBillingDate?: string;
+  discountExpiry?: IsoDate | null;
+  trialEndsAt?: IsoDate | null;
+  nextBillingDate?: IsoDate;
   paymentMethodType?: string | null;
   paymentLast4?: string | null;
 }
@@ -416,14 +402,14 @@ export interface BillingInvoice {
   invoiceNumber: string;
   orgId: string;
   subscription?: { org?: { name?: string } };
-  periodStart?: string;
-  periodEnd?: string;
-  baseAmount: number | string;
-  discountAmount: number | string;
-  totalAmount: number | string;
+  periodStart?: IsoDate;
+  periodEnd?: IsoDate;
+  baseAmount: DecimalString;
+  discountAmount: DecimalString;
+  totalAmount: DecimalString;
   status: InvoiceStatus;
   attemptCount: number;
-  paidAt?: string;
+  paidAt?: IsoDate;
 }
 
 export interface EquipmentOrderItem {
@@ -431,7 +417,12 @@ export interface EquipmentOrderItem {
   qty: number;
 }
 
-export type EquipmentOrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type EquipmentOrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
 
 export interface EquipmentOrder {
   id: string | number;
@@ -439,7 +430,7 @@ export interface EquipmentOrder {
   name?: string;
   email?: string;
   items?: EquipmentOrderItem[];
-  total: number | string;
+  total: DecimalString;
   paymentStatus: string;
   status: EquipmentOrderStatus;
   trackingNumber?: string;
@@ -452,8 +443,8 @@ export interface EquipmentProduct {
   name: string;
   slug: string;
   description?: string;
-  price: number | string;
-  comparePrice?: number | string | null;
+  price: DecimalString;
+  comparePrice?: DecimalString | null;
   category?: string;
   stock: number;
   trackStock: boolean;
@@ -495,15 +486,15 @@ export interface ChatMessage {
   sender_name?: string;
   senderRole?: string;
   sender_role?: string;
-  createdAt?: string;
-  created_at?: string;
-  timestamp?: string;
+  createdAt?: IsoDate;
+  created_at?: IsoDate;
+  timestamp?: IsoDate;
   message?: string;
   text?: string;
   body?: string;
 }
 
-// ─── Vendor Import Templates ──────────────────────────────────────────────────
+// ─── Vendor Import Templates ─────────────────────────────────────────────────
 
 export interface VendorTemplateMapping {
   vendorColumn: string;
@@ -543,7 +534,7 @@ export interface PriceScenario {
   results?: { eff_rate?: number; saves_mo?: number; [k: string]: unknown };
 }
 
-// ─── System config ────────────────────────────────────────────────────────────
+// ─── System config ───────────────────────────────────────────────────────────
 
 export interface SystemConfig {
   id: string | number;

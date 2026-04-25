@@ -78,6 +78,7 @@ import EcomAnalytics     from './pages/EcomAnalytics';
 import EcomCustomers     from './pages/EcomCustomers';
 import LotteryRouter from './pages/LotteryRouter';
 import Fuel from './pages/Fuel';
+import ScanData from './pages/ScanData';
 import Exchange from './pages/Exchange';
 import ExchangeOrderDetail from './pages/ExchangeOrderDetail';
 import ReportsHub from './pages/ReportsHub';
@@ -295,6 +296,9 @@ function App() {
 
           {/* ── Fuel ──────────────────────────────────────────────────── */}
           <Route path="/portal/fuel"             element={gated(<Fuel />)} />
+
+          {/* ── Scan Data / Tobacco Compliance (Session 45) ──────────── */}
+          <Route path="/portal/scan-data"        element={gated(<ScanData />)} />
 
           {/* ── StoreVeu Exchange (B2B wholesale) ────────────────────────── */}
           <Route path="/portal/exchange"              element={gated(<Exchange />)} />
