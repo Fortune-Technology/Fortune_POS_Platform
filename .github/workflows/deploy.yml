@@ -20,6 +20,29 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
+  # Job 0: Detect which paths changed in this push.
+  # Only used to gate the expensive Windows Electron build — every other
+  # job runs unconditionally because the workflow-level `paths:` filter
+  # already covers the broad case.
+  # ──────────────────────────────────────────────────────────────────────────
+  changes:
+    runs-on: [self-hosted, Linux, X64]
+    outputs:
+      cashier-app: ${{ steps.filter.outputs.cashier-app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need history so paths-filter can diff against the base SHA.
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            cashier-app:
+              - 'cashier-app/**'
+              - '.github/workflows/deploy.yml'
+
+  # ──────────────────────────────────────────────────────────────────────────
   # Job 1: Deploy web apps + backend to server
   # ──────────────────────────────────────────────────────────────────────────
   deploy:
@@ -273,8 +296,15 @@ jobs:
   # Job 2: Build Electron desktop installer (Windows NSIS)
   # Runs in parallel with deploy. Builds on GitHub-hosted Windows runner,
   # deletes the previous "latest-desktop" release, then uploads the new .exe.
+  #
+  # Skipped when cashier-app/** is unchanged — saves ~5-10 min Windows
+  # runner time per non-cashier deploy. The previous "latest-desktop"
+  # release stays in place, so publish-installer below still re-publishes
+  # the existing .exe to frontend/dist/downloads.
   # ──────────────────────────────────────────────────────────────────────────
   build-electron:
+    needs: changes
+    if: needs.changes.outputs.cashier-app == 'true'
     runs-on: windows-latest
     permissions:
       contents: write
@@ -361,10 +391,17 @@ jobs:
 
   # ──────────────────────────────────────────────────────────────────────────
   # Job 3: Copy .exe installer to frontend so it's served from the website
-  # Runs AFTER both deploy and build-electron finish successfully.
+  # Runs AFTER deploy finishes. Tolerates a SKIPPED build-electron job —
+  # in that case it re-downloads the existing "latest-desktop" GitHub release
+  # so frontend/dist/downloads stays populated with the previous installer.
+  # Only fails this step if deploy failed OR build-electron actively errored.
   # ──────────────────────────────────────────────────────────────────────────
   publish-installer:
     needs: [deploy, build-electron]
+    if: |
+      always() &&
+      needs.deploy.result == 'success' &&
+      (needs.build-electron.result == 'success' || needs.build-electron.result == 'skipped')
     runs-on: [self-hosted, Linux, X64]
 
     steps:
