@@ -1,5 +1,5 @@
 /**
- * paymentMerchantAudit.js
+ * paymentMerchantAudit.ts
  *
  * Helpers for writing immutable audit entries when PaymentMerchant
  * credentials change. Never writes plaintext secrets — only flags
@@ -10,12 +10,21 @@ import prisma from '../config/postgres.js';
 
 const SECRET_FIELDS = ['spinAuthKey', 'hppAuthKey', 'transactApiKey'];
 
+type DiffEntry =
+  | { changed: true; wasSet: boolean; isSet: boolean }
+  | { from: unknown; to: unknown };
+
+export type ChangeDiff = Record<string, DiffEntry>;
+
 /**
  * Compute a safe diff between old and new data.
  * Secret fields become { changed: true/false } instead of leaking values.
  */
-export function buildChangeDiff(oldData, newData) {
-  const changes = {};
+export function buildChangeDiff(
+  oldData: Record<string, unknown> | null | undefined,
+  newData: Record<string, unknown> | null | undefined,
+): ChangeDiff | null {
+  const changes: ChangeDiff = {};
   const keys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
 
   for (const k of keys) {
@@ -40,11 +49,31 @@ export function buildChangeDiff(oldData, newData) {
   return Object.keys(changes).length ? changes : null;
 }
 
+interface MerchantAuditUser {
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
+}
+
+interface LogMerchantAuditOptions {
+  merchantId: string;
+  action: string;
+  user?: MerchantAuditUser | null;
+  changes?: ChangeDiff | null;
+  note?: string | null;
+}
+
 /**
  * Append an audit entry. Fire-and-forget: audit failures never block the
  * main operation (we log them but don't surface to the caller).
  */
-export async function logMerchantAudit({ merchantId, action, user, changes = null, note = null }) {
+export async function logMerchantAudit({
+  merchantId,
+  action,
+  user,
+  changes = null,
+  note = null,
+}: LogMerchantAuditOptions): Promise<void> {
   try {
     await prisma.paymentMerchantAudit.create({
       data: {
@@ -52,11 +81,12 @@ export async function logMerchantAudit({ merchantId, action, user, changes = nul
         action,
         changedById:   user?.id || null,
         changedByName: user?.name || user?.email || null,
-        changes,
+        changes: changes as never, // Prisma expects InputJsonValue; ChangeDiff fits but TS can't prove it
         note,
       },
     });
   } catch (err) {
-    console.warn('[paymentMerchantAudit] log failed:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[paymentMerchantAudit] log failed:', message);
   }
 }

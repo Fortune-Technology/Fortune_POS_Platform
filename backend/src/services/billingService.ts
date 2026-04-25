@@ -1,7 +1,7 @@
 /**
- * billingService.js
+ * billingService.ts
  * Core billing calculations and charge execution.
- * StoreVeu acts as the merchant for subscription and equipment payments.
+ * Storeveu acts as the merchant for subscription and equipment payments.
  */
 
 import prisma from '../config/postgres.js';
@@ -9,12 +9,12 @@ import prisma from '../config/postgres.js';
 // Renamed to STOREVEU_ORG_ID for brand consistency. Falls back to the legacy
 // STORV_ORG_ID env var so existing production deploys keep working until the
 // server's .env file is updated.
-const STOREVEU_ORG_ID = process.env.STOREVEU_ORG_ID || process.env.STORV_ORG_ID;
+const _STOREVEU_ORG_ID = process.env.STOREVEU_ORG_ID || process.env.STORV_ORG_ID;
 export const FREE_SHIPPING_THRESHOLD = 500;
 export const FLAT_SHIPPING = 25;
 
 // ── Invoice number sequence ──────────────────────────────────────────────────
-export async function nextInvoiceNumber() {
+export async function nextInvoiceNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const count = await prisma.billingInvoice.count({
     where: { invoiceNumber: { startsWith: `INV-${year}-` } },
@@ -23,7 +23,7 @@ export async function nextInvoiceNumber() {
 }
 
 // ── Equipment order number sequence ──────────────────────────────────────────
-export async function nextOrderNumber() {
+export async function nextOrderNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const count = await prisma.equipmentOrder.count({
     where: { orderNumber: { startsWith: `EQ-${year}-` } },
@@ -31,8 +31,34 @@ export async function nextOrderNumber() {
   return `EQ-${year}-${String(count + 1).padStart(5, '0')}`;
 }
 
+interface PlanLike {
+  basePrice: number | string;
+  pricePerStore: number | string;
+  pricePerRegister: number | string;
+  includedStores: number;
+  includedRegisters: number;
+  addons?: Array<{ key: string; price: number | string }> | null;
+}
+
+interface SubscriptionLike {
+  plan: PlanLike;
+  basePriceOverride?: number | string | null;
+  storeCount: number;
+  registerCount: number;
+  extraAddons?: string[] | null;
+  discountType?: string | null;
+  discountValue?: number | string | null;
+  discountExpiry?: Date | string | null;
+}
+
+export interface InvoiceAmount {
+  base: number;
+  discount: number;
+  total: number;
+}
+
 // ── Calculate monthly invoice amount ─────────────────────────────────────────
-export function calculateInvoiceAmount(subscription) {
+export function calculateInvoiceAmount(subscription: SubscriptionLike): InvoiceAmount {
   const plan = subscription.plan;
 
   // Base price (per-org override or plan default)
@@ -69,15 +95,15 @@ export function calculateInvoiceAmount(subscription) {
 }
 
 // ── Subscription + equipment charging ───────────────────────────────────────
-// Platform billing (StoreVeu-level, not merchant-level) is now unimplemented.
+// Platform billing (Storeveu-level, not merchant-level) is now unimplemented.
 // These were previously wired to CardPointe; will be replaced with Dejavoo
 // iPOS Transact (tokenized card-on-file) in a future sprint.
 // Throwing explicit "not configured" so callers fail loudly instead of silently.
 
-export async function chargeSubscription(/* subscription, amount, invoiceNumber */) {
+export async function chargeSubscription(): Promise<never> {
   throw new Error('Platform billing not configured — Dejavoo Transact integration pending');
 }
 
-export async function chargeEquipmentOrder(/* paymentToken, amount, orderNumber, customerName */) {
+export async function chargeEquipmentOrder(): Promise<never> {
   throw new Error('Platform billing not configured — Dejavoo Transact integration pending');
 }

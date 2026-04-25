@@ -25,11 +25,12 @@
  *      use User.orgId (the home org) so onboarding flows still work.
  */
 
+import type { RequestHandler } from 'express';
 import prisma from '../config/postgres.js';
 
 /* ── Core middleware ─────────────────────────────────────────────────────── */
 
-export const scopeToTenant = async (req, res, next) => {
+export const scopeToTenant: RequestHandler = async (req, res, next) => {
   const user = req.user;
   if (!user) { next(); return; }
 
@@ -50,9 +51,14 @@ export const scopeToTenant = async (req, res, next) => {
   const ORG_WIDE_ROLES = new Set(['superadmin', 'admin', 'owner']);
 
   // ── 1. Resolve active store ────────────────────────────────────────────
-  const headerStoreId = req.headers['x-store-id'] ?? null;
-  let activeStoreId = null;
-  let activeStoreOrgId = null;
+  const headerStoreIdRaw = req.headers['x-store-id'];
+  const headerStoreId =
+    typeof headerStoreIdRaw === 'string'
+      ? headerStoreIdRaw
+      : Array.isArray(headerStoreIdRaw) ? headerStoreIdRaw[0] : null;
+
+  let activeStoreId: string | null = null;
+  let activeStoreOrgId: string | null = null;
 
   if (headerStoreId) {
     // Direct match on UserStore — the most common path.
@@ -71,7 +77,7 @@ export const scopeToTenant = async (req, res, next) => {
           select: { id: true, orgId: true },
         });
         const allowed = s && (isPlatformRole || membershipOrgIds.includes(s.orgId));
-        if (allowed) {
+        if (allowed && s) {
           activeStoreId    = s.id;
           activeStoreOrgId = s.orgId;
         }
@@ -87,7 +93,7 @@ export const scopeToTenant = async (req, res, next) => {
 
   // ── 2. Resolve active org ──────────────────────────────────────────────
   // Priority: active store's orgId → UserOrg primary → User.orgId (legacy home).
-  let activeOrgId = activeStoreOrgId;
+  let activeOrgId: string | null = activeStoreOrgId;
 
   if (!activeOrgId) {
     const primary = userOrgRows.find(r => r.isPrimary);
@@ -97,7 +103,11 @@ export const scopeToTenant = async (req, res, next) => {
   // Platform superadmin override via X-Tenant-Id — handled here for consistency
   // (the dedicated allowTenantOverride middleware can still be used; this keeps
   // the behaviour identical without requiring the extra call).
-  const tenantOverride = req.headers['x-tenant-id'];
+  const tenantOverrideRaw = req.headers['x-tenant-id'];
+  const tenantOverride =
+    typeof tenantOverrideRaw === 'string'
+      ? tenantOverrideRaw
+      : Array.isArray(tenantOverrideRaw) ? tenantOverrideRaw[0] : null;
   if (tenantOverride && isPlatformRole) {
     activeOrgId = String(tenantOverride);
   }
@@ -124,20 +134,22 @@ export const scopeToTenant = async (req, res, next) => {
 
 /* ── Guard middleware ─────────────────────────────────────────────────────── */
 
-export const requireTenant = (req, res, next) => {
+export const requireTenant: RequestHandler = (req, res, next) => {
   if (!req.orgId) {
-    return res.status(403).json({
+    res.status(403).json({
       error: 'This endpoint requires an organization account. Please contact support.',
     });
+    return;
   }
   next();
 };
 
 /* ── Org existence guard ─────────────────────────────────────────────────── */
 
-export const requireActiveTenant = async (req, res, next) => {
+export const requireActiveTenant: RequestHandler = async (req, res, next) => {
   if (!req.orgId) {
-    return res.status(403).json({ error: 'No organization context.' });
+    res.status(403).json({ error: 'No organization context.' });
+    return;
   }
 
   try {
@@ -147,14 +159,16 @@ export const requireActiveTenant = async (req, res, next) => {
     });
 
     if (!org || !org.isActive) {
-      return res.status(403).json({ error: 'Organization account is inactive or suspended.' });
+      res.status(403).json({ error: 'Organization account is inactive or suspended.' });
+      return;
     }
 
     if (org.plan === 'trial' && org.trialEndsAt && org.trialEndsAt < new Date()) {
-      return res.status(402).json({
+      res.status(402).json({
         error: 'Free trial has expired. Please upgrade to continue.',
         trialEndsAt: org.trialEndsAt,
       });
+      return;
     }
 
     req.tenant = org;
@@ -171,12 +185,17 @@ export const requireActiveTenant = async (req, res, next) => {
  * (scopeToTenant already honours X-Tenant-Id for superadmins; this exists
  * so routes that want to *require* the override can be explicit.)
  */
-export const allowTenantOverride = (req, res, next) => {
-  const overrideId = req.headers['x-tenant-id'];
+export const allowTenantOverride: RequestHandler = (req, res, next) => {
+  const overrideRaw = req.headers['x-tenant-id'];
+  const overrideId =
+    typeof overrideRaw === 'string'
+      ? overrideRaw
+      : Array.isArray(overrideRaw) ? overrideRaw[0] : null;
 
   if (overrideId) {
     if (req.user?.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Tenant override requires superadmin role.' });
+      res.status(403).json({ error: 'Tenant override requires superadmin role.' });
+      return;
     }
     req.orgId        = overrideId;
     req.tenantId     = overrideId;

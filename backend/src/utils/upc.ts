@@ -1,5 +1,5 @@
 /**
- * upc.js — UPC / EAN normalization utility
+ * upc.ts — UPC / EAN normalization utility
  *
  * Industry standard: store everything as EAN-13 (13 digits, zero-padded).
  * This makes UPC-A (12), EAN-8 (8), UPC-E (6), and ITF-14 (14) all
@@ -14,15 +14,20 @@
  *   normalizeUPC('00080686006374')   → '0080686006374'  (ITF-14 → EAN-13)
  */
 
+/** Anything we accept from a caller — usually a string but JS callers pass numbers/null too. */
+export type UpcInput = string | number | null | undefined;
+
 /**
  * Expand a 6-digit UPC-E to 12-digit UPC-A.
  * Algorithm per GS1 specification.
  */
-function expandUPCE(upce) {
+function expandUPCE(upce: string): string {
   const d = String(upce).padStart(6, '0').split('');
   const last = d[5];
   switch (last) {
-    case '0': case '1': case '2':
+    case '0':
+    case '1':
+    case '2':
       return `${d[0]}${d[1]}${d[2]}${last}0000${d[3]}${d[4]}`;
     case '3':
       return `${d[0]}${d[1]}${d[2]}${d[3]}00000${d[4]}`;
@@ -46,7 +51,7 @@ function expandUPCE(upce) {
  *
  * Returns null if the input is empty or non-numeric after cleaning.
  */
-export function normalizeUPC(raw) {
+export function normalizeUPC(raw: UpcInput): string | null {
   if (raw == null || raw === '') return null;
 
   // Strip spaces, dashes, dots (common in printed/typed UPCs)
@@ -73,13 +78,13 @@ export function normalizeUPC(raw) {
  * Use this when querying so that no matter how a UPC was stored
  * in the past, the lookup still finds it.
  */
-export function upcVariants(raw) {
+export function upcVariants(raw: UpcInput): string[] {
   if (raw == null || raw === '') return [];
 
   const digits = String(raw).replace(/[\s\-\.]/g, '').replace(/\D/g, '');
   if (!digits || digits.length < 6) return [];
 
-  const set = new Set();
+  const set = new Set<string>();
 
   // Always include the raw digits-only form
   set.add(digits);
@@ -148,7 +153,7 @@ export function upcVariants(raw) {
  * Calculate GS1 check digit for a UPC/EAN string.
  * Works for UPC-A (11 digits → 12th check digit) and EAN-13 (12 digits → 13th).
  */
-export function calcCheckDigit(digits) {
+export function calcCheckDigit(digits: string): string {
   const d = String(digits).replace(/\D/g, '');
   let sum = 0;
   for (let i = 0; i < d.length; i++) {
@@ -158,13 +163,19 @@ export function calcCheckDigit(digits) {
   return String((10 - (sum % 10)) % 10);
 }
 
+export interface ExtractedSize {
+  packSize: number | null;
+  size: number | null;
+  unit: string | null;
+}
+
 /**
  * Extract size/pack info from a description string.
  * Returns { size, unit, packSize } or null.
  * Examples: "12PK 12OZ CANS" → { packSize: 12, size: 12, unit: 'oz' }
  *           "750ML" → { size: 750, unit: 'ml' }
  */
-export function extractSizeFromDescription(desc) {
+export function extractSizeFromDescription(desc: string | null | undefined): ExtractedSize | null {
   if (!desc) return null;
   const d = desc.toUpperCase();
 
@@ -191,7 +202,7 @@ export function extractSizeFromDescription(desc) {
  *   '745687273797'   → '745687273797'
  *   '0000123'        → '123'
  */
-export function stripUpc(raw) {
+export function stripUpc(raw: UpcInput): string | null {
   if (!raw) return null;
   const digits = String(raw).replace(/[^0-9]/g, '');
   if (!digits) return null;

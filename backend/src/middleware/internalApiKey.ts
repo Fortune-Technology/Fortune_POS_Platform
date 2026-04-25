@@ -1,10 +1,10 @@
 /**
- * internalApiKey.js
+ * internalApiKey.ts
  *
  * Reusable middleware for service-to-service calls using a shared secret
  * passed in the `X-Internal-Api-Key` header.
  *
- * Used by endpoints that other StoreVeu services (ecom-backend, future
+ * Used by endpoints that other Storeveu services (ecom-backend, future
  * worker processes) call directly, NOT via end-user JWT. The shared key
  * lives in `process.env.INTERNAL_API_KEY` on both ends.
  *
@@ -24,25 +24,29 @@
  */
 
 import crypto from 'crypto';
+import type { RequestHandler } from 'express';
 
-export function requireInternalApiKey(req, res, next) {
+export const requireInternalApiKey: RequestHandler = (req, res, next) => {
   const provided = req.get('x-internal-api-key') || req.get('X-Internal-Api-Key');
   const expected = process.env.INTERNAL_API_KEY;
 
   if (!expected) {
     console.error('[internalApiKey] INTERNAL_API_KEY is not set in env — refusing all internal calls');
-    return res.status(500).json({ success: false, error: 'Internal API not configured' });
+    res.status(500).json({ success: false, error: 'Internal API not configured' });
+    return;
   }
   if (!provided) {
-    return res.status(401).json({ success: false, error: 'Missing X-Internal-Api-Key header' });
+    res.status(401).json({ success: false, error: 'Missing X-Internal-Api-Key header' });
+    return;
   }
 
   // Constant-time compare to defeat timing attacks.
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    return res.status(401).json({ success: false, error: 'Invalid internal API key' });
+    res.status(401).json({ success: false, error: 'Invalid internal API key' });
+    return;
   }
 
-  return next();
-}
+  next();
+};

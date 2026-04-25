@@ -11,15 +11,30 @@
  *   2. MARKTPOS_USERNAME / MARKTPOS_PASSWORD env   (dev / fallback)
  */
 
+import type { RequestHandler } from 'express';
 import prisma from '../config/postgres.js';
 
-export const attachPOSUser = async (req, res, next) => {
+interface StorePosConfig {
+  username?: string;
+  password?: string;
+  baseURL?: string;
+  securityCode?: string;
+  accessLevel?: string;
+}
+
+export const attachPOSUser: RequestHandler = async (req, res, next) => {
   try {
+    if (!req.user) {
+      // Should not happen — `protect` runs before us. Be defensive anyway.
+      next();
+      return;
+    }
+
     const base = { ...req.user };
 
-    let username = null;
-    let password = null;
-    let config   = {
+    let username: string | null = null;
+    let password: string | null = null;
+    const config = {
       baseURL:      'https://app.marktpos.com',
       securityCode: '',
       accessLevel:  '0',
@@ -31,7 +46,7 @@ export const attachPOSUser = async (req, res, next) => {
           where: { id: req.storeId },
           select: { pos: true },
         });
-        const pos = store?.pos;
+        const pos = store?.pos as StorePosConfig | null | undefined;
         if (pos) {
           username = pos.username || username;
           password = pos.password || password;
@@ -40,7 +55,8 @@ export const attachPOSUser = async (req, res, next) => {
           if (pos.accessLevel)  config.accessLevel  = pos.accessLevel;
         }
       } catch (storeErr) {
-        console.warn('⚠️ attachPOSUser: could not load store:', storeErr.message);
+        const message = storeErr instanceof Error ? storeErr.message : String(storeErr);
+        console.warn('⚠️ attachPOSUser: could not load store:', message);
       }
     }
 
@@ -53,8 +69,17 @@ export const attachPOSUser = async (req, res, next) => {
 
     next();
   } catch (err) {
-    console.warn('⚠️ attachPOSUser error (non-fatal):', err.message);
-    req.posUser = req.user;
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('⚠️ attachPOSUser error (non-fatal):', message);
+    // Fall back to bare user — older code paths tolerate the missing pos creds.
+    if (req.user) {
+      req.posUser = {
+        ...req.user,
+        posUsername: '',
+        posPassword: '',
+        posConfig: { baseURL: 'https://app.marktpos.com', securityCode: '', accessLevel: '0' },
+      };
+    }
     next();
   }
 };

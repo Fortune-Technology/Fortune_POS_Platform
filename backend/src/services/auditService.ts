@@ -9,20 +9,31 @@
  *   await logAudit(req, 'update', 'product', product.id, { field: 'retailPrice', oldValue: 4.99, newValue: 5.49 });
  */
 
+import type { Request } from 'express';
+import type { Prisma } from '@prisma/client';
 import prisma from '../config/postgres.js';
 
 /**
  * Log an audit event. Fire-and-forget — never blocks the main request.
  *
- * @param {object} req — Express request (extracts user, org, IP)
- * @param {string} action — "create"|"update"|"delete"|"void"|"refund"|"login"|"logout"|"shift_open"|"shift_close"|"price_change"|"settings_change"
- * @param {string} entity — "product"|"transaction"|"shift"|"user"|"store"|"order"|"customer"|"label"|"settings"
- * @param {string|null} entityId — ID of the affected record
- * @param {object|null} details — { field, oldValue, newValue } or any JSON context
- * @param {string} source — "portal"|"cashier"|"admin"|"api"
+ * `req` is the Express request (extracts user, org, IP). The augmented
+ * properties (`req.orgId`, `req.storeId`, `req.user`) are typed via
+ * global.d.ts so this signature stays clean.
  */
-export async function logAudit(req, action, entity, entityId = null, details = null, source = 'portal') {
+export async function logAudit(
+  req: Request,
+  action: string,
+  entity: string,
+  entityId: string | number | null = null,
+  details: Record<string, unknown> | null = null,
+  source: string = 'portal',
+): Promise<void> {
   try {
+    const userAgent = req.headers?.['user-agent'];
+    const userAgentSample = typeof userAgent === 'string' ? userAgent.substring(0, 200) : null;
+    const xForwardedFor = req.headers?.['x-forwarded-for'];
+    const ipFromHeader = typeof xForwardedFor === 'string' ? xForwardedFor : null;
+
     await prisma.auditLog.create({
       data: {
         orgId:     req.orgId || req.user?.orgId || 'unknown',
@@ -33,16 +44,42 @@ export async function logAudit(req, action, entity, entityId = null, details = n
         action,
         entity,
         entityId:  entityId ? String(entityId) : null,
-        details:   details || undefined,
-        ipAddress: req.ip || req.headers?.['x-forwarded-for'] || null,
-        userAgent: req.headers?.['user-agent']?.substring(0, 200) || null,
+        details:   (details || undefined) as Prisma.InputJsonValue | undefined,
+        ipAddress: req.ip || ipFromHeader || null,
+        userAgent: userAgentSample,
         source,
       },
     });
   } catch (err) {
     // Never let audit logging break the main flow
-    console.warn('[AuditLog] Failed to write:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[AuditLog] Failed to write:', message);
   }
+}
+
+export interface AuditLogFilters {
+  userId?: string;
+  entity?: string;
+  action?: string;
+  source?: string;
+  module?: string;
+  from?: string;
+  to?: string;
+  search?: string;
+  page?: string | number;
+  skip?: string | number;
+  limit?: string | number;
+}
+
+interface AuditWhereClause {
+  orgId: string;
+  userId?: string;
+  entity?: string;
+  action?: string;
+  source?: string;
+  details?: { path: string[]; equals: unknown };
+  createdAt?: { gte?: Date; lte?: Date };
+  OR?: Array<Record<string, unknown>>;
 }
 
 /**
@@ -56,8 +93,8 @@ export async function logAudit(req, action, entity, entityId = null, details = n
  *   skip                                    (explicit offset; overrides page)
  *   limit                                   (default 50, max 500)
  */
-export async function queryAuditLogs(orgId, filters = {}) {
-  const where = { orgId };
+export async function queryAuditLogs(orgId: string, filters: AuditLogFilters = {}) {
+  const where: AuditWhereClause = { orgId };
 
   if (filters.userId) where.userId = filters.userId;
   if (filters.entity) where.entity = filters.entity;
@@ -84,24 +121,28 @@ export async function queryAuditLogs(orgId, filters = {}) {
     ];
   }
 
-  const limit = Math.min(parseInt(filters.limit) || 50, 500);
+  const rawLimit = typeof filters.limit === 'string' ? parseInt(filters.limit) : filters.limit;
+  const limit = Math.min((rawLimit && Number.isFinite(rawLimit) ? rawLimit : 50), 500);
+
   // Prefer explicit skip; otherwise compute from 1-based page.
   let skip = 0;
   if (filters.skip != null) {
-    skip = parseInt(filters.skip) || 0;
+    const rawSkip = typeof filters.skip === 'string' ? parseInt(filters.skip) : filters.skip;
+    skip = (rawSkip && Number.isFinite(rawSkip)) ? rawSkip : 0;
   } else if (filters.page != null) {
-    const page = Math.max(1, parseInt(filters.page) || 1);
+    const rawPage = typeof filters.page === 'string' ? parseInt(filters.page) : filters.page;
+    const page = Math.max(1, (rawPage && Number.isFinite(rawPage)) ? rawPage : 1);
     skip = (page - 1) * limit;
   }
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
-      where,
+      where: where as Prisma.AuditLogWhereInput,
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip,
     }),
-    prisma.auditLog.count({ where }),
+    prisma.auditLog.count({ where: where as Prisma.AuditLogWhereInput }),
   ]);
 
   return { logs, total, limit, skip };

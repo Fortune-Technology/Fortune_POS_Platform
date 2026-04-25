@@ -16,6 +16,7 @@
  *   - Responses with 4xx/5xx status codes when `logFailures` is false
  */
 
+import type { RequestHandler } from 'express';
 import prisma from '../config/postgres.js';
 
 // Paths to NOT auto-audit (health probes, polling endpoints, file proxies).
@@ -32,7 +33,7 @@ const SKIP_PREFIXES = [
 ];
 
 // Action inference from HTTP method.
-function actionFor(method) {
+function actionFor(method: string): string {
   switch (method.toUpperCase()) {
     case 'POST':   return 'create';
     case 'PUT':    return 'update';
@@ -46,7 +47,7 @@ function actionFor(method) {
 // /api/catalog/products/:id  -> "catalog"
 // /api/customers             -> "customers"
 // /api/roles/users/:uid/roles -> "roles"
-export function moduleFromPath(urlPath) {
+export function moduleFromPath(urlPath: string | null | undefined): string {
   if (!urlPath) return 'other';
   const m = urlPath.replace(/^\/api\//, '').split('/')[0] || 'other';
   return m.split('?')[0];
@@ -54,7 +55,7 @@ export function moduleFromPath(urlPath) {
 
 // Entity inference — second URL segment when meaningful (products, customers,
 // stores), otherwise the module itself.
-function entityFromPath(urlPath) {
+function entityFromPath(urlPath: string): string {
   const parts = urlPath.replace(/^\/api\//, '').split('/');
   // For nested routes /catalog/products/:id/upcs etc., prefer the deepest
   // named segment (products / upcs / etc.)
@@ -62,7 +63,7 @@ function entityFromPath(urlPath) {
   return namedSegments[1] || namedSegments[0] || 'other';
 }
 
-function entityIdFromPath(urlPath) {
+function entityIdFromPath(urlPath: string): string | null {
   const parts = urlPath.replace(/^\/api\//, '').split('/').map(p => p.split('?')[0]);
   // Walk from the end; first segment that looks like an id wins
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -74,15 +75,25 @@ function entityIdFromPath(urlPath) {
   return null;
 }
 
-export function autoAudit(opts = {}) {
+interface AutoAuditOptions {
+  logFailures?: boolean;
+}
+
+export function autoAudit(opts: AutoAuditOptions = {}): RequestHandler {
   const { logFailures = false } = opts;
 
   return function (req, res, next) {
     const method = (req.method || 'GET').toUpperCase();
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return next();
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      next();
+      return;
+    }
 
     const url = req.originalUrl || req.url || '';
-    if (SKIP_PREFIXES.some(p => url.startsWith(p))) return next();
+    if (SKIP_PREFIXES.some(p => url.startsWith(p))) {
+      next();
+      return;
+    }
 
     const started = Date.now();
 
@@ -99,6 +110,11 @@ export function autoAudit(opts = {}) {
         const entity   = entityFromPath(url);
         const entityId = entityIdFromPath(url);
         const module   = moduleFromPath(url);
+
+        const userAgent = req.headers?.['user-agent'];
+        const userAgentSample = typeof userAgent === 'string' ? userAgent.substring(0, 200) : null;
+        const xForwardedFor = req.headers?.['x-forwarded-for'];
+        const ipFromHeader = typeof xForwardedFor === 'string' ? xForwardedFor : null;
 
         prisma.auditLog.create({
           data: {
@@ -119,13 +135,17 @@ export function autoAudit(opts = {}) {
               auto:     true,
               ...(ok ? {} : { error: true }),
             },
-            ipAddress: req.ip || req.headers?.['x-forwarded-for'] || null,
-            userAgent: req.headers?.['user-agent']?.substring(0, 200) || null,
+            ipAddress: req.ip || ipFromHeader || null,
+            userAgent: userAgentSample,
             source:    req.get?.('X-App-Surface') === 'cashier' ? 'cashier' : 'portal',
           },
-        }).catch(err => console.warn('[autoAudit] write failed:', err.message));
+        }).catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn('[autoAudit] write failed:', message);
+        });
       } catch (err) {
-        console.warn('[autoAudit] hook threw:', err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('[autoAudit] hook threw:', message);
       }
     });
 

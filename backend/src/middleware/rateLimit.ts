@@ -8,6 +8,8 @@
  * Each limiter keeps a fixed-window counter per IP.
  */
 
+import type { RequestHandler } from 'express';
+
 // Development bypass: skip rate limiting entirely when NODE_ENV is
 // 'development' (the default when nodemon runs `npm run dev`), or when the
 // operator sets DISABLE_RATE_LIMIT=true explicitly. In production this is
@@ -21,21 +23,33 @@ if (isDevBypass) {
   console.log('⚠  Rate limiter DISABLED (NODE_ENV=' + (process.env.NODE_ENV || 'unset') + ', DISABLE_RATE_LIMIT=' + (process.env.DISABLE_RATE_LIMIT || 'unset') + ')');
 }
 
-function createLimiter({ windowMs, max, message = 'Too many requests, please try again later.' }) {
+interface LimiterOptions {
+  windowMs: number;
+  max: number;
+  message?: string;
+}
+
+interface HitEntry {
+  count: number;
+  resetAt: number;
+}
+
+function createLimiter({ windowMs, max, message = 'Too many requests, please try again later.' }: LimiterOptions): RequestHandler {
   // Dev bypass — always pass. Cheaper than maintaining counters nobody reads.
   if (isDevBypass) {
-    return (req, res, next) => next();
+    return (_req, _res, next) => next();
   }
 
-  const hits = new Map(); // key -> { count, resetAt }
+  const hits = new Map<string, HitEntry>();
 
   // Periodic cleanup to avoid unbounded memory.
-  setInterval(() => {
+  const interval = setInterval(() => {
     const now = Date.now();
     for (const [k, v] of hits.entries()) {
       if (v.resetAt <= now) hits.delete(k);
     }
-  }, windowMs).unref?.();
+  }, windowMs);
+  interval.unref?.();
 
   return function rateLimit(req, res, next) {
     const key = req.ip || req.connection?.remoteAddress || 'unknown';
@@ -56,7 +70,8 @@ function createLimiter({ windowMs, max, message = 'Too many requests, please try
     if (entry.count > max) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
       res.setHeader('Retry-After', retryAfter);
-      return res.status(429).json({ error: message, retryAfter });
+      res.status(429).json({ error: message, retryAfter });
+      return;
     }
 
     next();

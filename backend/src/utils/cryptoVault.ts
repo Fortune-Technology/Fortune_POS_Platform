@@ -1,5 +1,5 @@
 /**
- * cryptoVault.js
+ * cryptoVault.ts
  *
  * Pluggable credential vault. Encrypts sensitive values (Dejavoo SPIn auth
  * keys, HPP keys, HPP webhook secrets, Transact API keys) before storing
@@ -51,7 +51,7 @@ const ACTIVE_PROVIDER = (process.env.VAULT_PROVIDER || 'env').toLowerCase();
 // v1 — env-key AES-256-GCM (current default)
 // ═════════════════════════════════════════════════════════════════════════
 
-function loadEnvKey() {
+function loadEnvKey(): Buffer {
   const raw = process.env.DEJAVOO_VAULT_KEY || '';
   if (!raw) {
     console.warn(
@@ -69,7 +69,7 @@ function loadEnvKey() {
 
 const ENV_KEY = loadEnvKey();
 
-function encryptV1(plaintext) {
+function encryptV1(plaintext: string): string {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGO, ENV_KEY, iv);
   const encrypted = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
@@ -77,7 +77,7 @@ function encryptV1(plaintext) {
   return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-function decryptV1(blob) {
+function decryptV1(blob: string): string | null {
   const [ivHex, tagHex, dataHex] = blob.split(':');
   if (!ivHex || !tagHex || !dataHex) return null;
   const decipher = crypto.createDecipheriv(ALGO, ENV_KEY, Buffer.from(ivHex, 'hex'));
@@ -105,7 +105,7 @@ function decryptV1(blob) {
 // requests (rate-limitable, audit-loggable); a stolen DB still requires
 // KMS access per-row to decrypt.
 
-function encryptV2(/* plaintext */) {
+function encryptV2(_plaintext: string): never {
   throw new Error(
     'cryptoVault: v2 (KMS) provider is not implemented yet. ' +
     'See header comment for the upgrade path. ' +
@@ -113,7 +113,7 @@ function encryptV2(/* plaintext */) {
   );
 }
 
-function decryptV2(/* blob */) {
+function decryptV2(_blob: string): never {
   throw new Error('cryptoVault: v2 (KMS) provider is not implemented yet.');
 }
 
@@ -125,7 +125,7 @@ function decryptV2(/* blob */) {
  * Encrypt a plaintext credential. Returns versioned ciphertext.
  * Returns null for null/empty input — safe to pass optional fields directly.
  */
-export function encrypt(plaintext) {
+export function encrypt(plaintext: string | null | undefined): string | null {
   if (plaintext == null || plaintext === '') return null;
 
   if (ACTIVE_PROVIDER === 'kms') {
@@ -143,7 +143,7 @@ export function encrypt(plaintext) {
  * v1 (env-key AES-256-GCM). Anything written before this refactor still
  * decrypts cleanly.
  */
-export function decrypt(ciphertext) {
+export function decrypt(ciphertext: string | null | undefined): string | null {
   if (!ciphertext) return null;
   try {
     const versionMatch = /^(v\d+):(.*)$/s.exec(ciphertext);
@@ -160,7 +160,8 @@ export function decrypt(ciphertext) {
     // Legacy: no version prefix → assume v1
     return decryptV1(ciphertext);
   } catch (err) {
-    console.error('[cryptoVault] decrypt failed:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[cryptoVault] decrypt failed:', message);
     return null;
   }
 }
@@ -170,7 +171,7 @@ export function decrypt(ciphertext) {
  *   mask('e78wAaxNyT')        → "••••••axNyT"  (default visible=4)
  *   mask('1234567890', 6)     → "••••567890"
  */
-export function mask(plaintext, visible = 4) {
+export function mask(plaintext: string | null | undefined, visible: number = 4): string {
   if (!plaintext) return '';
   const s = String(plaintext);
   if (s.length <= visible) return '•'.repeat(s.length);
@@ -186,6 +187,6 @@ export function mask(plaintext, visible = 4) {
  *   const enc = encrypt(secret);          // store encrypted in DB
  *   url = `${BACKEND_URL}/.../webhook/${secret}`;  // give to merchant for iPOSpays
  */
-export function randomToken(bytes = 32) {
+export function randomToken(bytes: number = 32): string {
   return crypto.randomBytes(bytes).toString('hex');
 }
