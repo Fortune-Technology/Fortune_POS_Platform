@@ -1,7 +1,7 @@
 /**
  * equipmentController.js
  * Public equipment shop — product listing and order placement.
- * Payments charge through StoreVeu's own CardPointe merchant account (STORV_ORG_ID).
+ * Payments charge through Storeveu's own CardPointe merchant account (STOREVEU_ORG_ID).
  */
 
 import prisma from '../config/postgres.js';

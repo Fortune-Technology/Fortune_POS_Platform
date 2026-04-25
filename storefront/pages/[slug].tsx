@@ -11,7 +11,7 @@ import CartDrawer from '../components/cart/CartDrawer';
 import TemplateRenderer from '../components/templates/TemplateRenderer';
 import { useCart } from '../lib/cart';
 import { getStoreInfo, getPage } from '../lib/api';
-import type { Store, EcomPage, TemplateContent, TemplateSection } from '../lib/types';
+import type { Store, EcomPage, TemplateContent, TemplateSection } from '@storeveu/types';
 
 interface CmsPageProps {
   store: Store | null;

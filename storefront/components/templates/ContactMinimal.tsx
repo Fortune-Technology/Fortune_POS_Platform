@@ -1,6 +1,6 @@
 import { ContactIcon } from '../icons';
 import { ContactForm } from './ContactSplit';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 export default function ContactMinimal({ content, storeSlug }: TemplateProps) {
   const s = content?.sections || {};

@@ -13,7 +13,7 @@ import CartDrawer from '../../components/cart/CartDrawer';
 import { useCart } from '../../lib/cart';
 import { withStore } from '../../lib/resolveStore';
 import { getProduct } from '../../lib/api';
-import type { Product, Store } from '../../lib/types';
+import type { Product, Store } from '@storeveu/types';
 
 function fmt(price: number | string): string {
   return `$${Number(price).toFixed(2)}`;

@@ -75,13 +75,13 @@ async function seedForStore(posStore) {
       enabled: true,
       timezone: timezone || 'America/New_York',
       branding: {
-        logoText: name || 'Storv Shop',
+        logoText: name || 'Storeveu Shop',
         primaryColor: '#3d56b5',
         secondaryColor: '#7b95e0',
         fontFamily: 'Inter, system-ui, sans-serif',
       },
       seoDefaults: {
-        metaTitle: `${name || 'Storv Shop'} — Online Ordering`,
+        metaTitle: `${name || 'Storeveu Shop'} — Online Ordering`,
         metaDescription: `Shop ${name || 'our store'} online and pick up in-store or get delivery.`,
       },
       socialLinks: { instagram: '', facebook: '', twitter: '' },

@@ -16,7 +16,7 @@
 
 import prisma from '../../config/postgres.js';
 
-const USER_AGENT = 'Storv-POS-CatalogSync/1.0';
+const USER_AGENT = 'Storeveu-POS-CatalogSync/1.0';
 const FETCH_TIMEOUT_MS = 15_000;
 
 /**

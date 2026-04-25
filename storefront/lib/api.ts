@@ -11,7 +11,7 @@ import type {
   Department,
   EcomPage,
   CartItem,
-} from './types';
+} from '@storeveu/types';
 
 const ECOM_API_URL = process.env.ECOM_API_URL || 'http://localhost:5005/api';
 

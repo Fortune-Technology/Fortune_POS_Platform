@@ -51,6 +51,9 @@ export const PORTAL_ROUTE_PERMISSIONS = {
   '/portal/lottery':           'lottery.view',
   '/portal/fuel':              'fuel.view',
 
+  // Scan Data / Tobacco Compliance (Session 45)
+  '/portal/scan-data':         'scan_data.view',
+
   // Online Store
   '/portal/ecom/setup':        'ecom.view',
   '/portal/ecom/orders':       'ecom.view',

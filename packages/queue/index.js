@@ -13,7 +13,7 @@ try {
   Queue = null;
 }
 
-import { getRedisClient, isRedisAvailable } from '@storv/redis';
+import { getRedisClient, isRedisAvailable } from '@storeveu/redis';
 
 const _queues = {};
 

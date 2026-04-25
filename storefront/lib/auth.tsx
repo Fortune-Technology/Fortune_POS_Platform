@@ -11,7 +11,7 @@ import {
   ReactNode,
 } from 'react';
 import axios from 'axios';
-import type { Customer, AuthResponse, Order } from './types';
+import type { Customer, AuthResponse, Order } from '@storeveu/types';
 
 interface AuthState {
   token: string | null;

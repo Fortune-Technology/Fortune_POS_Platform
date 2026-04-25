@@ -1,5 +1,5 @@
 /**
- * seedExchange.js — Seeds Storv Exchange trading partnerships and wholesale
+ * seedExchange.js — Seeds Storeveu Exchange trading partnerships and wholesale
  * orders between every pair of non-system stores.
  *
  * Populates:
@@ -162,7 +162,7 @@ async function seedWholesaleOrders(sender, receiver) {
 }
 
 export async function seedExchange() {
-  console.log('\n  🤝 Seeding Storv Exchange (trading partners + wholesale orders)...');
+  console.log('\n  🤝 Seeding Storeveu Exchange (trading partners + wholesale orders)...');
 
   const stores = await prisma.store.findMany({
     where: { isActive: true, organization: { slug: { not: 'system' } } },

@@ -14,16 +14,14 @@ import type {
   PriceScenario, SystemConfig,
   ImageRehostStatus, ImageRehostResult,
   RoleSurface,
-} from './types';
+} from '@storeveu/types';
 
 /**
  * Admin-app API client.
  *
- * Return types are narrowed via ./types.ts envelopes + entity shapes.
+ * Return types are narrowed via `@storeveu/types` envelopes + entity shapes.
  * Fields that vary per-endpoint still use `unknown` or `Record<string, unknown>`
  * at the input-side (POST/PUT bodies) — the server validates shapes anyway.
- *
- * Phase 4 will lift these types into a shared `@storv/types` workspace package.
  */
 
 interface StoredAdminUser {

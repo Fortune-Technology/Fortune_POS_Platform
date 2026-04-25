@@ -1,7 +1,7 @@
 import { useState, MouseEvent, CSSProperties } from 'react';
 import Link from 'next/link';
 import { useCart } from '../../lib/cart';
-import type { Product } from '../../lib/types';
+import type { Product } from '@storeveu/types';
 
 function fmt(price: number | string | null | undefined): string {
   return `$${Number(price ?? 0).toFixed(2)}`;

@@ -38,6 +38,11 @@ export const lookupProductByUPC = (upc, storeId) =>
     params: { q: upc, storeId, limit: 1 },
   }).then(r => r.data?.data?.[0] || r.data?.[0] || null);
 
+// ── Manufacturer Coupons (Session 46) ────────────────────────────────────
+// Validate a coupon at POS — returns { valid, coupon, qualifyingLines, computedDiscount, requiresApproval, ... }
+export const validateCouponAtPOS = (body) =>
+  api.post('/coupons/validate', body).then(r => r.data);
+
 // ── Transactions ─────────────────────────────────────────────────────────
 export const submitTransaction = (tx) =>
   api.post('/pos-terminal/transactions', tx).then(r => r.data);

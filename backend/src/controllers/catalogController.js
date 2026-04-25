@@ -37,18 +37,18 @@ import { batchResolveProductImages } from '../services/globalImageService.js';
 import { queueLabelForPriceChange, queueLabelForNewProduct, queueLabelForSale } from '../services/labelQueueService.js';
 import { tryParseDate } from '../utils/safeDate.js';
 
-// E-commerce sync — optional. If Redis / @storv/queue is not installed, all emit
+// E-commerce sync — optional. If Redis / @storeveu/queue is not installed, all emit
 // functions are silent no-ops. POS operations are never blocked.
 let emitProductSync = async () => {};
 let emitDepartmentSync = async () => {};
 let emitInventorySync = async () => {};
 try {
-  const producers = await import('@storv/queue/producers');
+  const producers = await import('@storeveu/queue/producers');
   emitProductSync = producers.emitProductSync;
   emitDepartmentSync = producers.emitDepartmentSync;
   emitInventorySync = producers.emitInventorySync;
 } catch {
-  console.log('⚠ @storv/queue not available — e-commerce sync disabled (this is fine if not using e-commerce)');
+  console.log('⚠ @storeveu/queue not available — e-commerce sync disabled (this is fine if not using e-commerce)');
 }
 
 // ─────────────────────────────────────────────────

@@ -4,7 +4,7 @@
  */
 
 import { Target, Handshake, Heart } from 'lucide-react';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 const ECOM_URL = process.env.NEXT_PUBLIC_ECOM_URL || 'http://localhost:5005';
 

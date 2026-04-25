@@ -1,5 +1,5 @@
 /**
- * Prisma Seed — Storv POS Portal
+ * Prisma Seed — Storeveu POS Portal
  *
  * Seeds org-agnostic defaults for a new organization.
  * Run via: node prisma/seed.js <orgId>

@@ -29,6 +29,7 @@ import reportsRoutes     from './routes/reportsRoutes.js';
 import lotteryRoutes     from './routes/lotteryRoutes.js';
 import dailySaleRoutes   from './routes/dailySaleRoutes.js';
 import fuelRoutes        from './routes/fuelRoutes.js';
+import { scanDataRouter, couponsRouter } from './routes/scanDataRoutes.js';
 import loyaltyRoutes     from './routes/loyaltyRoutes.js';
 import dejavooPaymentRoutes from './routes/dejavooPaymentRoutes.js';
 import dejavooHppRoutes     from './routes/dejavooHppRoutes.js';
@@ -61,6 +62,7 @@ import { startBillingScheduler } from './services/billingScheduler.js';
 import { startShiftScheduler }  from './services/shiftScheduler.js';
 import { startLoyaltyScheduler } from './services/loyaltyScheduler.js';
 import { startPendingMoveScheduler } from './services/lottery/index.js';
+import { startScanDataScheduler } from './services/scanData/scanDataScheduler.js';
 import { connectPostgres, disconnectPostgres } from './config/postgres.js';
 
 dotenv.config();
@@ -140,6 +142,9 @@ app.use('/api/reports',      reportsRoutes);
 app.use('/api/lottery',      lotteryRoutes);
 app.use('/api/daily-sale',   dailySaleRoutes);
 app.use('/api/fuel',         fuelRoutes);
+// Session 45 — Scan Data / Tobacco compliance + Manufacturer Coupons
+app.use('/api/scan-data',    scanDataRouter);
+app.use('/api/coupons',      couponsRouter);
 app.use('/api/loyalty',      loyaltyRoutes);
 // HPP routes mount BEFORE SPIn — order matters because dejavooPaymentRoutes
 // applies `protect` (JWT) globally, which would block the public webhook
@@ -210,6 +215,7 @@ const startServer = async () => {
   startShiftScheduler();
   startLoyaltyScheduler();
   startPendingMoveScheduler();
+  startScanDataScheduler();
 
   // Recurring task spawner — checks every 15 minutes for tasks due
   setInterval(() => spawnRecurringTasks().catch(() => {}), 15 * 60 * 1000);

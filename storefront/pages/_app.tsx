@@ -6,7 +6,7 @@ import '../styles/templates.css';
 import { StoreProvider } from '../lib/store';
 import { CartProvider } from '../lib/cart';
 import { AuthProvider } from '../lib/auth';
-import type { Store } from '../lib/types';
+import type { Store } from '@storeveu/types';
 
 /**
  * Apply store branding (colors, fonts) as CSS custom properties.
@@ -42,7 +42,7 @@ function BrandingInjector({ store }: BrandingInjectorProps) {
       // Load Google Font dynamically
       const fontName = GOOGLE_FONT_MAP[fontFamily];
       if (fontName) {
-        const linkId = 'storv-google-font';
+        const linkId = 'storeveu-google-font';
         let link = document.getElementById(linkId) as HTMLLinkElement | null;
         if (!link) {
           link = document.createElement('link');

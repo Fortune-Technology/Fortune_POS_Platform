@@ -51,6 +51,9 @@ const ORG_MODULES = [
   { module: 'tasks',           label: 'Tasks',               actions: ['view','create','edit','delete'],                   surface: 'both' },
   { module: 'chat',            label: 'Chat',                actions: ['view','create'],                                   surface: 'both' },
   { module: 'ai_assistant',    label: 'AI Support Assistant', actions: ['view','manage'],                                   surface: 'both', desc: 'Use the AI chatbot for feature help + live-data queries. "manage" grants access to the 👎 feedback review queue.' },
+  // Session 45 — Scan Data / tobacco compliance
+  { module: 'scan_data',       label: 'Scan Data (Tobacco)', actions: ['view','enroll','submit','configure'],              surface: 'back-office', desc: 'Daily-batch reporting of tobacco transactions to Altria/RJR/ITG. "enroll" gates SFTP credential management; "submit" allows manual file resubmission; "configure" gates product mapping + coupon catalog.' },
+  { module: 'coupons',         label: 'Manufacturer Coupons', actions: ['view','redeem','manage','approve'],               surface: 'both',         desc: 'Digital coupon redemption at POS. "redeem" is the cashier-side action; "manage" gates catalog import/edit; "approve" is the manager-PIN gate when a coupon exceeds the configured threshold.' },
 ];
 
 // ─── Admin-scoped modules (superadmin panel only) ─────────────────────────
@@ -97,6 +100,12 @@ function actionLabel(a) {
   return {
     view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete',
     manage: 'Manage', receive: 'Receive / Confirm', settle: 'Record Settlement',
+    // Session 45 — Scan Data / Coupons
+    enroll: 'Enroll / Manage Credentials',
+    submit: 'Submit / Resubmit Files',
+    configure: 'Configure Mapping & Coupons',
+    redeem: 'Redeem at POS',
+    approve: 'Approve High-Value (Manager)',
   }[a] || a;
 }
 
@@ -169,6 +178,10 @@ export const SYSTEM_ROLES = [
       'chat.view','chat.create',
       'exchange.view','exchange.create','exchange.receive',
       'ai_assistant.view','ai_assistant.manage',
+      // Session 45 — Scan Data / Coupons (manager runs day-to-day mfr submissions
+      // and approves high-value coupon redemptions). Owner+ adds enroll + manage.
+      'scan_data.view','scan_data.submit','scan_data.configure',
+      'coupons.view','coupons.redeem','coupons.manage','coupons.approve',
     ],
   },
   {
@@ -183,6 +196,9 @@ export const SYSTEM_ROLES = [
       'transactions.view','shifts.view','shifts.manage',
       'chat.view','chat.create',
       'ai_assistant.view',
+      // Session 45 — cashiers can scan/redeem coupons at POS (no view of catalog
+      // or scan_data dashboard — those are manager+).
+      'coupons.redeem',
     ],
   },
   {

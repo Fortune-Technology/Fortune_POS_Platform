@@ -11,7 +11,7 @@
 
 import axios from 'axios';
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next';
-import type { Store } from './types';
+import type { Store } from '@storeveu/types';
 
 const ECOM_API = process.env.ECOM_API_URL || 'http://localhost:5005/api';
 
@@ -57,8 +57,8 @@ type ExtraFetcher = (
  *
  * Callers that need strong typing on their fetcher's return value can
  * assert at the consumer site: `const { extraThing } = props as MyProps`.
- * Phase 3 of the TS migration will replace this with a generic helper
- * once the shared @storv/types package exists.
+ * A future refactor may replace this with a generic helper now that the
+ * shared `@storeveu/types` package exists.
  */
 export async function withStore(
   ctx: GetServerSidePropsContext,

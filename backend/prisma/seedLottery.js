@@ -1,5 +1,5 @@
 /**
- * Lottery Seed — Storv POS Portal
+ * Lottery Seed — Storeveu POS Portal
  *
  * Seeds Ontario OLGC scratch ticket games + demo boxes, transactions & shift reports.
  *

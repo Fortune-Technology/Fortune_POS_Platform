@@ -189,70 +189,107 @@ export const CARD_CATEGORIES = [
 ];
 
 /**
- * Each pricing model is how the acquirer/processor charges the merchant on top
- * of (or in place of, for flat rate) the interchange + assessments.
+ * Pricing models — Storeveu's 3 own tiers + 2 industry flat-rate competitors
+ * shown for comparison. Storeveu uses interchange-plus on every plan.
  */
 export const PROCESSING_MODELS = [
+  // ── Storeveu plans (interchange-plus, transparent) ─────────────────
   {
-    id: 'ic-plus',
-    name: 'Interchange-Plus',
-    sublabel: 'Transparent — see real interchange',
+    id: 'sv-base',
+    name: 'Storeveu Base',
+    sublabel: '0.20% + $0.20 / tx',
     type: 'pass-through',
-    markup: { percent: 0.0010, fixed: 0.10 },
-    description: 'You pay actual interchange + assessments + a small transparent markup. Statement shows real interchange categories. Standard for serious merchants.',
-    transparent: true,
+    family: 'storeveu',
+    tier: 'base',
+    markup: { percent: 0.0020, fixed: 0.20 },
+    description: 'Entry-level interchange-plus. No monthly fee, no contract. Best for stores doing under 200 tx/month.',
+    color: '#7b95e0',
   },
   {
+    id: 'sv-standard',
+    name: 'Storeveu Standard',
+    sublabel: '0.10% + $0.05 / tx',
+    type: 'pass-through',
+    family: 'storeveu',
+    tier: 'standard',
+    markup: { percent: 0.0010, fixed: 0.05 },
+    description: 'Most popular. Half the percentage rate, far lower fixed fee. Most stores land here.',
+    recommended: true,
+    color: '#3d56b5',
+  },
+  {
+    id: 'sv-premium',
+    name: 'Storeveu Premium',
+    sublabel: '0.05% + $0.05 / tx',
+    type: 'pass-through',
+    family: 'storeveu',
+    tier: 'premium',
+    markup: { percent: 0.0005, fixed: 0.05 },
+    description: 'High-volume tier. Wholesale-grade pricing for stores doing 500+ tx/month.',
+    color: '#16a34a',
+  },
+  // ── Industry comparison (flat rate, opaque) ────────────────────────
+  {
     id: 'flat-square',
-    name: 'Square (in-person)',
-    sublabel: 'Flat 2.6% + $0.10',
+    name: 'Square',
+    sublabel: '2.6% + $0.10 (flat)',
     type: 'flat',
+    family: 'compare',
     flat: { percent: 0.026, fixed: 0.10 },
-    description: 'One predictable rate. Easy to budget but expensive on debit (you overpay vs Durbin) and on small tickets.',
+    description: 'Industry standard flat-rate. Same price on every card, hides interchange.',
+    color: '#64748b',
   },
   {
     id: 'flat-stripe',
-    name: 'Stripe (online)',
-    sublabel: 'Flat 2.9% + $0.30',
+    name: 'Stripe',
+    sublabel: '2.9% + $0.30 (online)',
     type: 'flat',
+    family: 'compare',
     flat: { percent: 0.029, fixed: 0.30 },
-    description: 'Online-first pricing. The $0.30 fixed fee dominates on small tickets — a $5 sale costs almost 9% in effective rate.',
-  },
-  {
-    id: 'membership',
-    name: 'Membership / Wholesale',
-    sublabel: 'IC + $0.08, monthly fee',
-    type: 'pass-through',
-    monthly: 25,
-    markup: { percent: 0, fixed: 0.08 },
-    description: 'Pay a monthly fee for wholesale interchange + a tiny per-transaction. Cheapest at high volume (Helcim, Stax).',
+    description: 'Online-first flat-rate. The $0.30 fixed fee dominates on small tickets.',
+    color: '#64748b',
   },
 ];
+
+/** Cash discount surcharge passed to the customer when cash-discount mode is on. */
+export const CASH_DISCOUNT_RATE = 0.03;
 
 /**
  * Calculate fee breakdown for a single transaction.
  *
- * For pass-through (interchange-plus, membership): merchant pays
- *   interchange + assessments + processor markup.
+ * `cashDiscount` (boolean): when true, the customer is charged an inflated
+ * amount (sale price × 1.03). All fees are calculated against the inflated
+ * amount because that's what the card actually processed. Merchant net for
+ * cash-discount mode usually exceeds the original sale price.
  *
- * For flat-rate (Square, Stripe): merchant pays a single flat fee. The
- * processor pays interchange + assessments out of that fee internally; their
- * margin is what's left. We expose all three components so merchants can see
- * who actually keeps each slice on a per-card basis.
+ * For Storeveu plans (pass-through): merchant pays interchange + assessments
+ * + Storeveu's markup. `platformRevenue` = the markup (what we earn).
+ *
+ * For flat-rate (Square, Stripe): merchant pays a single flat fee. Processor
+ * pays interchange + assessments out of that flat fee internally; their margin
+ * is what's left.
  */
-export function calculateBreakdown({ amount, cardId, modelId }) {
+export function calculateBreakdown({ amount, cardId, modelId, cashDiscount = false }) {
   const card = CARD_TYPES.find((c) => c.id === cardId);
   const model = PROCESSING_MODELS.find((m) => m.id === modelId);
   if (!card || !model || !amount || amount <= 0) return null;
 
-  // EBT bypasses every fee layer by USDA rule
+  // Customer's card is charged the original amount + surcharge if cash-discount on
+  const customerCharge = cashDiscount ? amount * (1 + CASH_DISCOUNT_RATE) : amount;
+  const cdSurcharge = cashDiscount ? customerCharge - amount : 0;
+
+  // EBT bypasses every fee layer by USDA rule (and cash discount doesn't apply to EBT)
   if (card.network === 'ebt') {
     return {
       amount,
+      customerCharge: amount,                  // EBT can't be surcharged
+      cdSurcharge: 0,
+      cashDiscount: false,
       interchange: 0,
       surcharge: 0,
       assessments: 0,
       processorMarkup: 0,
+      platformRevenue: 0,
       totalFees: 0,
       merchantNet: amount,
       effectiveRate: 0,
@@ -268,35 +305,42 @@ export function calculateBreakdown({ amount, cardId, modelId }) {
   }
 
   const network = NETWORKS[card.network];
-  const baseInterchange = amount * card.interchange.percent + card.interchange.fixed;
-  const surcharge = card.surcharge
-    ? amount * card.surcharge.percent + card.surcharge.fixed
+  const baseInterchange = customerCharge * card.interchange.percent + card.interchange.fixed;
+  const intlSurcharge = card.surcharge
+    ? customerCharge * card.surcharge.percent + card.surcharge.fixed
     : 0;
-  const interchange = baseInterchange + surcharge;
+  const interchange = baseInterchange + intlSurcharge;
 
-  const assessments = amount * network.assessment + network.perTx;
+  const assessments = customerCharge * network.assessment + network.perTx;
 
   let processorMarkup;
   let totalFees;
 
   if (model.type === 'flat') {
-    totalFees = amount * model.flat.percent + model.flat.fixed;
+    totalFees = customerCharge * model.flat.percent + model.flat.fixed;
     processorMarkup = totalFees - interchange - assessments;
   } else {
-    processorMarkup = amount * model.markup.percent + model.markup.fixed;
+    processorMarkup = customerCharge * model.markup.percent + model.markup.fixed;
     totalFees = interchange + assessments + processorMarkup;
   }
 
-  const merchantNet = amount - totalFees;
+  const merchantNet = customerCharge - totalFees;
+  // Net relative to the merchant's original list price (positive = merchant ahead)
+  const netVsListPrice = merchantNet - amount;
 
   return {
-    amount,
+    amount,                          // original sale (list) price
+    customerCharge,                  // what got charged to the card
+    cdSurcharge,                     // 3% added if cash-discount mode
+    cashDiscount,
     interchange,
-    surcharge,
+    surcharge: intlSurcharge,        // cross-border / ISA only
     assessments,
     processorMarkup,
+    platformRevenue: model.family === 'storeveu' ? processorMarkup : 0,
     totalFees,
     merchantNet,
+    netVsListPrice,
     effectiveRate: amount > 0 ? totalFees / amount : 0,
     card,
     model,
@@ -306,18 +350,23 @@ export function calculateBreakdown({ amount, cardId, modelId }) {
 }
 
 /**
- * Project annual cost from a single-tx breakdown across an estimated volume.
+ * Project annual cost + platform revenue from a single-tx breakdown.
  */
 export function projectAnnual({ breakdown, monthlyTx }) {
   if (!breakdown) return null;
   const yearlyTx = monthlyTx * 12;
   const yearlyFees = breakdown.totalFees * yearlyTx;
   const yearlyMembership = breakdown.model?.monthly ? breakdown.model.monthly * 12 : 0;
+  const yearlyPlatformRevenue = (breakdown.platformRevenue || 0) * yearlyTx;
+  // When cash-discount is on, this can be positive (merchant ahead) or negative
+  const yearlyNetVsList = (breakdown.netVsListPrice || 0) * yearlyTx;
   return {
     yearlyTx,
     yearlyFees,
     yearlyMembership,
     yearlyTotal: yearlyFees + yearlyMembership,
     yearlyVolume: breakdown.amount * yearlyTx,
+    yearlyPlatformRevenue,
+    yearlyNetVsList,
   };
 }

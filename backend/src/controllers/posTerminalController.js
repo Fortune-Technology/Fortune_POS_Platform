@@ -265,7 +265,8 @@ export const createTransaction = async (req, res) => {
     const orgId = getOrgId(req);
     const {
       storeId, stationId,
-      lineItems, lotteryItems, fuelItems, tenderLines, ageVerifications, notes,
+      lineItems, lotteryItems, fuelItems, couponRedemptions,
+      tenderLines, ageVerifications, notes,
       subtotal, taxTotal, depositTotal, ebtTotal, grandTotal, changeGiven,
       offlineCreatedAt, status,
       shiftId,
@@ -334,6 +335,32 @@ export const createTransaction = async (req, res) => {
         txId:      tx.id, txNumber,
         loyaltyPointsRedeemed: parseInt(loyaltyPointsRedeemed) || 0,
       }).catch(err => console.error('[loyalty] points error:', err.message));
+    }
+
+    // ── Save manufacturer coupon redemptions if present ───────────────────
+    // Each redemption row links back to the tx for audit + flows into the
+    // daily scan-data submission (Session 47) for mfr reimbursement.
+    if (Array.isArray(couponRedemptions) && couponRedemptions.length) {
+      try {
+        await prisma.couponRedemption.createMany({
+          data: couponRedemptions.map(r => ({
+            orgId,
+            storeId,
+            transactionId:       tx.id,
+            couponId:            r.couponId || null,
+            couponSerial:        String(r.serial || r.couponSerial || ''),
+            brandFamily:         r.brandFamily || null,
+            manufacturerId:      r.manufacturerId || null,
+            discountApplied:     parseFloat(r.discountApplied) || 0,
+            qualifyingUpc:       r.qualifyingUpc || null,
+            qualifyingQty:       r.qualifyingQty != null ? Number(r.qualifyingQty) : null,
+            cashierId:           req.user.id,
+            managerApprovedById: r.managerApprovedById || null,
+          })),
+        });
+      } catch (err) {
+        console.error('[createTransaction] coupon redemption error:', err.message);
+      }
     }
 
     // ── Save lottery transactions if present ──────────────────────────────
@@ -531,6 +558,30 @@ export const batchCreateTransactions = async (req, res) => {
           },
         });
         results.push({ localId: tx.localId, id: saved.id, txNumber: saved.txNumber });
+
+        // ── Save coupon redemptions if present ────────────────────────────
+        if (Array.isArray(tx.couponRedemptions) && tx.couponRedemptions.length) {
+          try {
+            await prisma.couponRedemption.createMany({
+              data: tx.couponRedemptions.map(r => ({
+                orgId,
+                storeId:             tx.storeId,
+                transactionId:       saved.id,
+                couponId:            r.couponId || null,
+                couponSerial:        String(r.serial || r.couponSerial || ''),
+                brandFamily:         r.brandFamily || null,
+                manufacturerId:      r.manufacturerId || null,
+                discountApplied:     parseFloat(r.discountApplied) || 0,
+                qualifyingUpc:       r.qualifyingUpc || null,
+                qualifyingQty:       r.qualifyingQty != null ? Number(r.qualifyingQty) : null,
+                cashierId:           req.user.id,
+                managerApprovedById: r.managerApprovedById || null,
+              })),
+            });
+          } catch (err) {
+            console.error('[batchCreateTransactions] coupon redemption error:', err.message);
+          }
+        }
 
         // ── Save lottery transactions if present ──────────────────────────
         if (Array.isArray(tx.lotteryItems) && tx.lotteryItems.length) {

@@ -24,7 +24,7 @@ export async function seedLoyalty(orgId = ORG_ID, storeId = STORE_ID) {
     create: {
       orgId, storeId,
       enabled:               true,
-      programName:           'Storv Rewards',
+      programName:           'Storeveu Rewards',
       pointsPerDollar:       1,
       redeemPointsPerDollar: 100,
       minPointsToRedeem:     100,

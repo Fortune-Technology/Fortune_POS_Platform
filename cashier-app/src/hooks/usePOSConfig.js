@@ -50,6 +50,12 @@ export const DEFAULT_POS_CONFIG = {
     tobacco: 21,
     alcohol: 21,
   },
+  // Manufacturer-coupon redemption thresholds (Session 46). When any limit is
+  // exceeded by a single coupon or the cumulative cart, the cashier must enter
+  // the manager PIN before the coupon is applied.
+  couponMaxValueWithoutMgr: 5,    // single-coupon $ ceiling
+  couponMaxTotalWithoutMgr: 10,   // cumulative-tx coupon $ ceiling
+  couponMaxCountWithoutMgr: 5,    // coupon-count-per-tx ceiling
   quickTender: ['card', 'cash', 'ebt'],
   vendorTenderMethods: [
     { id: 'cash',          label: 'Cash',              enabled: true  },

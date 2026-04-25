@@ -5,7 +5,7 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
 import { ContactIcon } from '../icons';
-import type { TemplateProps } from '../../lib/types';
+import type { TemplateProps } from '@storeveu/types';
 
 const ECOM_API = process.env.NEXT_PUBLIC_ECOM_API_URL || 'http://localhost:5005/api';
 

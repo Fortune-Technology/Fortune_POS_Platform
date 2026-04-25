@@ -33,7 +33,7 @@ import type {
   EquipmentOrder,
   EquipmentOrderItem as OrderItem,
   SubscriptionStatus as SubStatus,
-} from '../services/types';
+} from '@storeveu/types';
 import '../styles/admin.css';
 import './AdminBilling.css';
 

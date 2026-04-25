@@ -1,11 +1,11 @@
 /**
  * Redis client re-export for the ecom-backend.
- * Wraps the shared @storv/redis client with ecom-specific helpers.
+ * Wraps the shared @storeveu/redis client with ecom-specific helpers.
  *
  * OPTIONAL: All functions return null/no-op when Redis is unavailable.
  */
 
-import { getRedisClient, isRedisAvailable } from '@storv/redis';
+import { getRedisClient, isRedisAvailable } from '@storeveu/redis';
 
 const INVENTORY_TTL = 60; // seconds
 

@@ -23,7 +23,7 @@ import Footer from '../../components/layout/Footer';
 import { useCart } from '../../lib/cart';
 import { fetchPublicOrder, type PublicOrder } from '../../lib/api';
 import axios from 'axios';
-import type { Order } from '../../lib/types';
+import type { Order } from '@storeveu/types';
 
 function fmt(n: number | string): string {
   return `$${Number(n).toFixed(2)}`;

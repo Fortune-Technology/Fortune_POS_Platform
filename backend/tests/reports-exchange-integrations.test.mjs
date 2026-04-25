@@ -113,7 +113,7 @@ describe('Transactions browser', () => {
 });
 
 /* ─────────────────────────  EXCHANGE  ───────────────────────── */
-describe('Storv Exchange', () => {
+describe('Storeveu Exchange', () => {
   test('trading partners seeded', async () => {
     const count = await prisma.tradingPartner.count({ where: { status: 'accepted' } });
     assert.ok(count >= 1, `expected >=1 accepted partnerships, got ${count}`);

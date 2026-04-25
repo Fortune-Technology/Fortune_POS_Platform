@@ -1,5 +1,5 @@
 {
-  "name": "@storv/redis",
+  "name": "@storeveu/redis",
   "version": "1.0.0",
   "description": "Shared Redis client singleton for Storeveu POS platform",
   "type": "module",

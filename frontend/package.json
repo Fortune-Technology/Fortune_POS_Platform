@@ -27,7 +27,7 @@
     "react-router-dom": "^6.20.1",
     "react-toastify": "^11.0.5",
     "recharts": "^3.8.0",
-    "storv-pos-platform": "file:.."
+    "storeveu-pos-platform": "file:.."
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
