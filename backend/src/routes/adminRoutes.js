@@ -25,6 +25,10 @@ import {
   pingTerminal,
 } from '../controllers/adminPaymentTerminalController.js';
 import {
+  regenerateHppWebhookSecret,
+  getHppWebhookUrl,
+} from '../controllers/dejavooHppController.js';
+import {
   getDashboardStats,
   getAllUsers,
   approveUser,
@@ -161,6 +165,13 @@ router.post(  '/payment-merchants/:id/test',      testPaymentMerchant);
 router.post(  '/payment-merchants/:id/activate',  activatePaymentMerchant);
 router.post(  '/payment-merchants/:id/disable',   disablePaymentMerchant);
 router.get(   '/payment-merchants/:id/audit',     getPaymentMerchantAudit);
+
+// ── Dejavoo HPP webhook secret (per-store opaque token) ─────────────────
+// regenerate-hpp-secret returns plaintext ONCE so admin can paste the
+// resulting URL into iPOSpays. Hpp-webhook-url returns the current full
+// URL for display.
+router.post(  '/payment-merchants/:id/regenerate-hpp-secret', regenerateHppWebhookSecret);
+router.get(   '/payment-merchants/:id/hpp-webhook-url',       getHppWebhookUrl);
 
 // ── Dejavoo Payment Terminals (per-device, one per station) ───────────
 router.get(   '/payment-terminals',           listTerminals);

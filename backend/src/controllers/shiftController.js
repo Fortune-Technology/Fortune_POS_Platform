@@ -165,6 +165,68 @@ export const closeShift = async (req, res) => {
       },
     });
 
+    // ── Guarantee close_day_snapshot trail (Item 5 / Session 44b) ─────
+    // Without this, stores that don't run the EoD wizard end up with an
+    // empty snapshot trail → ticket-math reports return $0 for every
+    // day. We auto-write a snapshot per active box using the box's live
+    // currentTicket so reports always have data. This is idempotent —
+    // if the EoD wizard already wrote a snapshot for this box today,
+    // we skip (the wizard's scan-derived end ticket is more accurate).
+    //
+    // Fire-and-forget: a snapshot insert failure must not block the
+    // shift-close response. The alternative (failing the close on a
+    // best-effort audit-trail write) would prevent the cashier from
+    // ending their shift on transient DB issues.
+    try {
+      const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd   = new Date(); dayEnd.setUTCHours(23, 59, 59, 999);
+      const activeBoxes = await prisma.lotteryBox.findMany({
+        where: { orgId, storeId: shift.storeId, status: 'active' },
+        select: {
+          id: true, boxNumber: true, currentTicket: true,
+          game: { select: { id: true, name: true, gameNumber: true, ticketPrice: true } },
+        },
+      });
+      if (activeBoxes.length) {
+        // Find which boxes ALREADY have a snapshot today (skip those —
+        // the EoD wizard wrote them with scan-derived numbers).
+        const todaySnapshots = await prisma.lotteryScanEvent.findMany({
+          where: {
+            orgId, storeId: shift.storeId,
+            action: 'close_day_snapshot',
+            createdAt: { gte: dayStart, lte: dayEnd },
+            boxId: { in: activeBoxes.map(b => b.id) },
+          },
+          select: { boxId: true },
+        });
+        const haveSnapshot = new Set(todaySnapshots.map(s => s.boxId));
+
+        for (const b of activeBoxes) {
+          if (haveSnapshot.has(b.id)) continue;
+          await prisma.lotteryScanEvent.create({
+            data: {
+              orgId,
+              storeId:   shift.storeId,
+              boxId:     b.id,
+              scannedBy: req.user.id || null,
+              raw:       `shift_close:${id}:auto`,
+              parsed: {
+                gameNumber:    b.game?.gameNumber ?? null,
+                gameName:      b.game?.name       ?? null,
+                currentTicket: b.currentTicket    ?? null,
+                ticketsSold:   null,   // unknown without scan; reports use deltas
+                source:        'auto-on-close',
+              },
+              action:  'close_day_snapshot',
+              context: 'eod',
+            },
+          }).catch(e => console.warn('[closeShift] auto-snapshot insert failed', b.id, e.message));
+        }
+      }
+    } catch (snapErr) {
+      console.warn('[closeShift] snapshot guarantee failed:', snapErr.message);
+    }
+
     res.json({
       ...closed,
       openingAmount:  Number(closed.openingAmount),

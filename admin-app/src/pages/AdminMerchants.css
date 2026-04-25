@@ -275,3 +275,68 @@
   .am-term-table th:nth-child(3),
   .am-term-table td:nth-child(3) { display: none; }
 }
+
+/* ── HPP Webhook Block ─────────────────────────────────────────── */
+.am-webhook-block {
+  margin-top: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  background: #fafbff;
+}
+.am-webhook-head {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.82rem; color: #1e293b; margin-bottom: 0.6rem;
+}
+.am-webhook-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.am-webhook-row code {
+  flex: 1 1 auto; min-width: 220px;
+  padding: 0.5rem 0.7rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.78rem; color: #1e293b;
+  word-break: break-all;
+}
+.am-webhook-saved .am-field-hint { display: block; margin-top: 0.5rem; }
+
+.am-webhook-empty {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap;
+}
+.am-webhook-empty p { margin: 0; font-size: 0.82rem; color: #64748b; }
+
+/* Freshly-generated banner — green emphasis to draw attention to the
+   one-time-only nature of the secret display. */
+.am-webhook-fresh {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+}
+.am-webhook-fresh-head {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.85rem; color: #047857; margin-bottom: 0.3rem;
+}
+.am-webhook-warn {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.78rem; color: #b45309;
+}
+.am-webhook-fresh code {
+  background: #ffffff;
+  border-color: #a7f3d0;
+}
+
+.am-btn-warn {
+  background: #f59e0b; color: white; border: none;
+}
+.am-btn-warn:hover { background: #d97706; }
+.am-btn-warn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .am-webhook-row code { min-width: 0; flex-basis: 100%; }
+}

@@ -1942,9 +1942,17 @@ model LotteryOnlineTotal {
   orgId          String
   storeId        String
   date           DateTime @db.Date
+  // Core 3 (machine cashings + instant cashings + machine sales)
   instantCashing Decimal  @default(0) @db.Decimal(10, 2)
   machineSales   Decimal  @default(0) @db.Decimal(10, 2)
   machineCashing Decimal  @default(0) @db.Decimal(10, 2)
+  // Manual breakdown — back-office daily entry from machine printout.
+  // Added Apr 2026 to fix wipe-on-refresh bug where these UI fields had
+  // no persistence layer.
+  grossSales     Decimal  @default(0) @db.Decimal(10, 2)
+  cancels        Decimal  @default(0) @db.Decimal(10, 2)
+  couponCash     Decimal  @default(0) @db.Decimal(10, 2)
+  discounts      Decimal  @default(0) @db.Decimal(10, 2)
   enteredById    String?
   notes          String?
   createdAt      DateTime @default(now())
@@ -2284,6 +2292,13 @@ model PaymentTransaction {
   posTransactionId String? // FK to Transaction.id (nullable — set after POS tx saved)
   provider         String  @default("dejavoo") // "dejavoo" | future providers
 
+  // ── Source ──────────────────────────────────────────────────
+  // Which surface initiated the transaction.
+  //   "pos"  — in-person card-present via SPIn (cashier-app)
+  //   "ecom" — online via HPP (storefront)
+  txSource    String  @default("pos")
+  ecomOrderId String? // cross-DB ref to EcomOrder.id when txSource='ecom' (no FK — ecom DB is separate)
+
   // ── Processor response fields ───────────────────────────────
   retref   String? @unique // ReferenceId (Dejavoo UUID) — unique per transaction
   authCode String? // approval auth code
@@ -2322,6 +2337,8 @@ model PaymentTransaction {
   @@index([orgId, storeId])
   @@index([posTransactionId])
   @@index([retref])
+  @@index([ecomOrderId])
+  @@index([txSource, status])
   @@map("payment_transactions")
 }
 
@@ -2343,9 +2360,15 @@ model PaymentMerchant {
   spinBaseUrl String?
 
   // ── Dejavoo HPP (online checkout) ──
-  hppMerchantId String?
-  hppAuthKey    String? // encrypted
-  hppBaseUrl    String?
+  // hppEnabled gates the storefront ecom flow. Even with credentials filled in,
+  // HPP won't process until both hppEnabled=true AND hppLastTestResult='ok'.
+  hppMerchantId      String?
+  hppAuthKey         String?   // encrypted (the iPOSpays HPP JWT / API token)
+  hppBaseUrl         String?
+  hppEnabled         Boolean   @default(false)
+  hppWebhookSecret   String?   // encrypted; opaque per-store token embedded in webhook URL
+  hppLastTestedAt    DateTime?
+  hppLastTestResult  String?
 
   // ── Dejavoo iPOS Transact (card-on-file) ──
   transactApiKey  String? // encrypted

@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   CreditCard, Plus, Edit3, Trash2, Play, X, Shield, RefreshCw,
   CheckCircle, History, Cpu, Wifi, Lock, AlertTriangle,
+  Globe, Copy, Check, KeyRound,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -29,6 +30,8 @@ import {
   updatePaymentTerminal,
   deletePaymentTerminal,
   pingPaymentTerminal,
+  getHppWebhookUrl,
+  regenerateHppWebhookSecret,
   getAdminOrganizations,
   getAdminStores,
 } from '../services/api';
@@ -48,6 +51,7 @@ interface MerchantForm {
   hppMerchantId: string;
   hppAuthKey: string;
   hppBaseUrl: string;
+  hppEnabled: boolean;
   transactApiKey: string;
   transactBaseUrl: string;
   ebtEnabled: boolean;
@@ -60,6 +64,7 @@ interface MerchantForm {
   spinAuthKeyPreview?: string;
   hppAuthKeySet?: boolean;
   hppAuthKeyPreview?: string;
+  hppWebhookSecretSet?: boolean;
   transactApiKeySet?: boolean;
   transactApiKeyPreview?: string;
 }
@@ -76,6 +81,7 @@ interface Merchant {
   spinBaseUrl?: string;
   hppMerchantId?: string;
   hppBaseUrl?: string;
+  hppEnabled?: boolean;
   transactBaseUrl?: string;
   ebtEnabled?: boolean;
   debitEnabled?: boolean;
@@ -88,6 +94,7 @@ interface Merchant {
   spinAuthKeyPreview?: string;
   hppAuthKeySet?: boolean;
   hppAuthKeyPreview?: string;
+  hppWebhookSecretSet?: boolean;
   transactApiKeySet?: boolean;
   transactApiKeyPreview?: string;
 }
@@ -148,6 +155,7 @@ const BLANK_FORM: MerchantForm = {
   hppMerchantId: '',
   hppAuthKey: '',
   hppBaseUrl: '',
+  hppEnabled: false,
   transactApiKey: '',
   transactBaseUrl: '',
   ebtEnabled: false,
@@ -235,6 +243,16 @@ export default function AdminMerchants() {
   const [termEditing, setTermEditing] = useState<string | number | null>(null);
   const [termForm, setTermForm]       = useState<TerminalForm>(BLANK_TERMINAL);
 
+  // ── HPP webhook state ──
+  // savedWebhookUrl: the URL we already have on record (fetched on Edit open)
+  // freshWebhook: the URL+secret returned ONCE by regenerate; shown in a banner
+  //                until the modal is closed (the secret is never recoverable
+  //                from the server after this — only the URL stays).
+  const [savedWebhookUrl, setSavedWebhookUrl] = useState<string | null>(null);
+  const [freshWebhook, setFreshWebhook] = useState<{ url: string; secret: string } | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [copied, setCopied] = useState<'url' | 'fresh' | null>(null);
+
   // ── Load merchants + scope ──
   const load = useCallback(async () => {
     setLoading(true);
@@ -260,6 +278,8 @@ export default function AdminMerchants() {
   const openCreate = () => {
     setEditingId(null);
     setForm(BLANK_FORM);
+    setSavedWebhookUrl(null);
+    setFreshWebhook(null);
     setModalOpen(true);
   };
 
@@ -277,6 +297,7 @@ export default function AdminMerchants() {
       hppMerchantId:   merchant.hppMerchantId || '',
       hppAuthKey:      '',
       hppBaseUrl:      merchant.hppBaseUrl    || '',
+      hppEnabled:      !!merchant.hppEnabled,
       transactApiKey:  '',
       transactBaseUrl: merchant.transactBaseUrl || '',
       ebtEnabled:      !!merchant.ebtEnabled,
@@ -288,10 +309,63 @@ export default function AdminMerchants() {
       spinAuthKeyPreview: merchant.spinAuthKeyPreview,
       hppAuthKeySet:     merchant.hppAuthKeySet,
       hppAuthKeyPreview: merchant.hppAuthKeyPreview,
+      hppWebhookSecretSet: merchant.hppWebhookSecretSet,
       transactApiKeySet:    merchant.transactApiKeySet,
       transactApiKeyPreview: merchant.transactApiKeyPreview,
     });
+    setFreshWebhook(null);
+    setSavedWebhookUrl(null);
     setModalOpen(true);
+    // Load the existing webhook URL (best effort; failures don't block editing)
+    if (merchant.hppWebhookSecretSet) {
+      getHppWebhookUrl(merchant.id)
+        .then(res => { if (res.configured && res.webhookUrl) setSavedWebhookUrl(res.webhookUrl); })
+        .catch(() => { /* silent */ });
+    }
+  };
+
+  // ── Regenerate the per-store HPP webhook secret ──
+  // Returns plaintext URL + secret ONCE — admin must copy them now and
+  // paste into iPOSpays. After this modal closes, only the encrypted
+  // ciphertext lives in the DB; the plaintext is gone for good.
+  const handleRegenerateWebhook = async () => {
+    if (!editingId) {
+      toast.warn('Save the merchant first, then regenerate the webhook secret');
+      return;
+    }
+    const isFirstTime = !form.hppWebhookSecretSet;
+    const verb = isFirstTime ? 'generate' : 'regenerate';
+    if (!isFirstTime) {
+      const ok = window.confirm(
+        'Regenerate the HPP webhook secret?\n\n' +
+        'The OLD URL will stop working immediately. iPOSpays will fail to deliver ' +
+        'callbacks until you paste the new URL into the merchant settings there.\n\n' +
+        'Only do this if you suspect the secret was leaked or want to rotate it.'
+      );
+      if (!ok) return;
+    }
+    setRegenerating(true);
+    try {
+      const res = await regenerateHppWebhookSecret(editingId);
+      setFreshWebhook({ url: res.webhookUrl, secret: res.webhookSecret });
+      setSavedWebhookUrl(res.webhookUrl);
+      setForm(prev => ({ ...prev, hppWebhookSecretSet: true }));
+      toast.success(`Webhook ${verb}d — copy the URL now and paste into iPOSpays`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || err?.message);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, which: 'url' | 'fresh') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(which);
+      setTimeout(() => setCopied(c => (c === which ? null : c)), 1500);
+    } catch {
+      toast.warn('Copy failed — please select and copy manually');
+    }
   };
 
   const handleSave = async () => {
@@ -709,17 +783,33 @@ export default function AdminMerchants() {
 
               {/* HPP */}
               <div className="am-section">
-                <div className="am-section-title">HPP — Online Checkout (optional)</div>
+                <div className="am-section-title">HPP — Online Checkout (Storefront)</div>
+
+                <div className="am-checkbox-row">
+                  <input
+                    type="checkbox" id="hppEnabled"
+                    checked={form.hppEnabled}
+                    onChange={e => setForm({ ...form, hppEnabled: e.target.checked })}
+                  />
+                  <label htmlFor="hppEnabled">
+                    <strong>Enable HPP for online checkout</strong>
+                    <span className="am-field-hint" style={{ marginLeft: 6 }}>
+                      Storefront orders will redirect to Dejavoo's hosted page.
+                    </span>
+                  </label>
+                </div>
+
                 <div className="am-grid">
                   <div className="am-field">
                     <label>HPP Merchant ID</label>
                     <input
                       value={form.hppMerchantId}
                       onChange={e => setForm({ ...form, hppMerchantId: e.target.value })}
+                      placeholder="From iPOSpays HPP onboarding"
                     />
                   </div>
                   <div className="am-field">
-                    <label>HPP Auth Key</label>
+                    <label>HPP Auth Key (or JWT token)</label>
                     <input
                       type="password"
                       value={form.hppAuthKey}
@@ -727,8 +817,102 @@ export default function AdminMerchants() {
                       placeholder={form.hppAuthKeySet ? '•••• (leave blank to keep)' : 'Enter key'}
                       autoComplete="new-password"
                     />
+                    {form.hppAuthKeySet && (
+                      <span className="am-field-hint">Already saved. Leave blank to keep.</span>
+                    )}
+                  </div>
+                  <div className="am-field am-grid-full">
+                    <label>HPP Base URL (optional override)</label>
+                    <input
+                      value={form.hppBaseUrl}
+                      onChange={e => setForm({ ...form, hppBaseUrl: e.target.value })}
+                      placeholder="Leave blank to use env default (DEJAVOO_HPP_BASE_UAT/PROD)"
+                    />
                   </div>
                 </div>
+
+                {/* ── Webhook URL section ──
+                    Visible only when editing an existing merchant. The URL embeds an
+                    opaque per-store secret; admin pastes it into iPOSpays so payment
+                    callbacks land scoped to this store. */}
+                {editingId && (
+                  <div className="am-webhook-block">
+                    <div className="am-webhook-head">
+                      <Globe size={14} />
+                      <strong>Webhook URL for iPOSpays</strong>
+                    </div>
+
+                    {freshWebhook ? (
+                      <div className="am-webhook-fresh">
+                        <div className="am-webhook-fresh-head">
+                          <CheckCircle size={14} />
+                          <strong>New webhook URL — copy NOW and paste into iPOSpays</strong>
+                        </div>
+                        <p className="am-webhook-warn">
+                          The plaintext secret is shown ONCE and cannot be recovered after
+                          you close this modal. The old URL is now invalid.
+                        </p>
+                        <div className="am-webhook-row">
+                          <code>{freshWebhook.url}</code>
+                          <button
+                            type="button"
+                            className="am-btn am-btn-primary"
+                            onClick={() => copyToClipboard(freshWebhook.url, 'fresh')}
+                          >
+                            {copied === 'fresh' ? <Check size={14} /> : <Copy size={14} />}
+                            {copied === 'fresh' ? 'Copied' : 'Copy URL'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : savedWebhookUrl ? (
+                      <div className="am-webhook-saved">
+                        <div className="am-webhook-row">
+                          <code>{savedWebhookUrl}</code>
+                          <button
+                            type="button"
+                            className="am-btn"
+                            onClick={() => copyToClipboard(savedWebhookUrl, 'url')}
+                          >
+                            {copied === 'url' ? <Check size={14} /> : <Copy size={14} />}
+                            {copied === 'url' ? 'Copied' : 'Copy'}
+                          </button>
+                          <button
+                            type="button"
+                            className="am-btn am-btn-warn"
+                            onClick={handleRegenerateWebhook}
+                            disabled={regenerating}
+                          >
+                            <KeyRound size={14} />
+                            {regenerating ? 'Working…' : 'Regenerate'}
+                          </button>
+                        </div>
+                        <span className="am-field-hint">
+                          Paste this URL into the iPOSpays HPP merchant's "Webhook" /
+                          "Notify URL" field. Regenerate if you suspect the secret was leaked.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="am-webhook-empty">
+                        <p>No webhook secret configured for this merchant yet.</p>
+                        <button
+                          type="button"
+                          className="am-btn am-btn-primary"
+                          onClick={handleRegenerateWebhook}
+                          disabled={regenerating}
+                        >
+                          <KeyRound size={14} />
+                          {regenerating ? 'Generating…' : 'Generate Webhook Secret'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!editingId && (
+                  <div className="am-field-hint" style={{ marginTop: 8 }}>
+                    Save the merchant first, then re-open it to generate the webhook URL.
+                  </div>
+                )}
               </div>
 
               {/* Features */}

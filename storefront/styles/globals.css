@@ -1174,7 +1174,16 @@ button {
 .oc-icon {
   font-size: 72px;
   margin-bottom: 16px;
+  color: var(--sf-success, #16a34a);
 }
+.oc-icon--pending { color: var(--sf-warning, #d97706); }
+.oc-icon--failed  { color: var(--sf-error,   #dc2626); }
+.oc-spinner       { animation: oc-spin 1.1s linear infinite; }
+@keyframes oc-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.oc-details--compact { padding: 18px; max-width: 360px; margin: 0 auto; }
 
 .oc-title {
   font-size: 32px;

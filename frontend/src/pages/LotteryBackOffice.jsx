@@ -92,6 +92,9 @@ export default function LotteryBackOffice() {
   const [inventory, setInventory]       = useState(null);
   const [snapIsToday, setSnapIsToday]   = useState(true);    // date === today?
   const [online, setOnline]             = useState({ instantCashing: 0, machineSales: 0, machineCashing: 0, notes: '' });
+  // manualSales fields persist alongside `online` in LotteryOnlineTotal:
+  //   gross → grossSales, cancels, coupon → couponCash, discounts
+  // (Field names diverge for legacy reasons; mapping happens in load + save.)
   const [manualSales, setManualSales]   = useState({ gross: 0, cancels: 0, coupon: 0, discounts: 0 });
   const [cashBalance, setCashBalance]   = useState(0);
   const [settings, setSettings]         = useState(null);
@@ -144,6 +147,12 @@ export default function LotteryBackOffice() {
       machineSales:   Number(ot?.machineSales   || 0),
       machineCashing: Number(ot?.machineCashing || 0),
       notes:          ot?.notes || '',
+    });
+    setManualSales({
+      gross:     Number(ot?.grossSales || 0),
+      cancels:   Number(ot?.cancels    || 0),
+      coupon:    Number(ot?.couponCash || 0),
+      discounts: Number(ot?.discounts  || 0),
     });
     setSettings(sets);
     setGames(Array.isArray(gs) ? gs : gs?.games || []);
@@ -272,11 +281,22 @@ export default function LotteryBackOffice() {
   };
 
   // ── Machine totals save ─────────────────────────────────────────────
+  // Sends BOTH `online` (the 3 core lottery numbers) AND `manualSales` (the
+  // 4 manual breakdown fields) so they all persist via LotteryOnlineTotal.
+  // Re-loads after save so the form reflects the canonical DB state.
   const saveOnline = async () => {
     setSaving(true);
     try {
-      await upsertLotteryOnlineTotal({ date, ...online });
+      await upsertLotteryOnlineTotal({
+        date,
+        ...online,
+        grossSales: manualSales.gross,
+        cancels:    manualSales.cancels,
+        couponCash: manualSales.coupon,
+        discounts:  manualSales.discounts,
+      });
       showToast('Machine totals saved', 'ok');
+      await load();
     } catch (e) {
       showToast(e?.response?.data?.error || e.message, 'error');
     } finally {
@@ -289,7 +309,14 @@ export default function LotteryBackOffice() {
     if (!window.confirm(`Close the lottery day for ${date}?`)) return;
     setSaving(true);
     try {
-      await upsertLotteryOnlineTotal({ date, ...online }).catch(() => {});
+      await upsertLotteryOnlineTotal({
+        date,
+        ...online,
+        grossSales: manualSales.gross,
+        cancels:    manualSales.cancels,
+        couponCash: manualSales.coupon,
+        discounts:  manualSales.discounts,
+      }).catch(() => {});
       await closeLotteryDay({ date });
       showToast('Lottery day closed', 'ok');
       await load();

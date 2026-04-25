@@ -738,6 +738,7 @@ export const getLotteryDashboard = async (req, res) => {
       totalPayouts: Math.round(totalPayouts * 100) / 100,
       netRevenue, commission,
       activeBoxes, inventoryBoxes,
+      salesSource: real.source,   // 'snapshot' | 'live' | 'pos_fallback' | 'mixed' | 'empty'
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -779,18 +780,59 @@ export const getLotteryReport = async (req, res) => {
     const unreported   = Math.max(0, Math.round((totalSales - posSales) * 100) / 100);
     const netAmount    = Math.round((totalSales - totalPayouts) * 100) / 100;
 
-    // Chart: per-day buckets — sales from ticket math, payouts from txns
+    // Chart: per-day buckets with FIVE series so the UI can render a
+    // multi-line graph with checkbox toggles. Series:
+    //   sales            — instant ticket sales (ticket-math, with fallback)
+    //   payouts          — instant scratch payouts (LotteryTransaction)
+    //   machineSales     — daily online machine draw sales
+    //   machineCashing   — daily online machine draw cashings
+    //   instantCashing   — daily instant ticket cashings recorded online
+    //   net              — sales − payouts
     const dayMap = {};
     real.byDay.forEach(d => {
-      dayMap[d.date] = { date: d.date, sales: d.sales, payouts: 0, net: d.sales };
+      dayMap[d.date] = {
+        date: d.date,
+        sales: d.sales, payouts: 0, net: d.sales,
+        machineSales: 0, machineCashing: 0, instantCashing: 0,
+      };
     });
     txns.filter(t => t.type === 'payout').forEach(t => {
       const key = t.createdAt.toISOString().slice(0, 10);
-      if (!dayMap[key]) dayMap[key] = { date: key, sales: 0, payouts: 0, net: 0 };
+      if (!dayMap[key]) dayMap[key] = {
+        date: key, sales: 0, payouts: 0, net: 0,
+        machineSales: 0, machineCashing: 0, instantCashing: 0,
+      };
       dayMap[key].payouts += Number(t.amount || 0);
       dayMap[key].net = dayMap[key].sales - dayMap[key].payouts;
     });
-    const chart = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    // Online totals (machine draws + cashings) — one row per day
+    const onlineRows = await prisma.lotteryOnlineTotal.findMany({
+      where: { orgId, storeId, date: { gte: startDate, lte: endDate } },
+      select: { date: true, machineSales: true, machineCashing: true, instantCashing: true },
+    });
+    onlineRows.forEach(o => {
+      const key = o.date.toISOString().slice(0, 10);
+      if (!dayMap[key]) dayMap[key] = {
+        date: key, sales: 0, payouts: 0, net: 0,
+        machineSales: 0, machineCashing: 0, instantCashing: 0,
+      };
+      dayMap[key].machineSales   = Number(o.machineSales   || 0);
+      dayMap[key].machineCashing = Number(o.machineCashing || 0);
+      dayMap[key].instantCashing = Number(o.instantCashing || 0);
+    });
+
+    const chart = Object.values(dayMap)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(d => ({
+        date:           d.date,
+        sales:          Math.round(d.sales          * 100) / 100,
+        payouts:        Math.round(d.payouts        * 100) / 100,
+        net:            Math.round(d.net            * 100) / 100,
+        machineSales:   Math.round(d.machineSales   * 100) / 100,
+        machineCashing: Math.round(d.machineCashing * 100) / 100,
+        instantCashing: Math.round(d.instantCashing * 100) / 100,
+      }));
 
     // Per-game breakdown — sales from ticket math (real.byGame), payouts from txns
     const gameMap = {};
@@ -819,6 +861,7 @@ export const getLotteryReport = async (req, res) => {
       totalSales, posSales, unreported, totalPayouts,
       netRevenue: netAmount, transactionCount: txns.length,
       byGame, chart,
+      salesSource: real.source,   // 'snapshot' | 'live' | 'pos_fallback' | 'mixed' | 'empty'
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -1575,15 +1618,26 @@ export const getLotteryOnlineTotal = async (req, res) => {
 
 /**
  * PUT /api/lottery/online-total
- * Body: { date: 'YYYY-MM-DD', instantCashing?, machineSales?, machineCashing?, notes? }
+ * Body: { date: 'YYYY-MM-DD',
+ *         instantCashing?, machineSales?, machineCashing?,
+ *         grossSales?, cancels?, couponCash?, discounts?,
+ *         notes? }
  * Upserts the per-day row. Only fields provided are overwritten.
+ *
+ * grossSales / cancels / couponCash / discounts were added Apr 2026 to fix
+ * the wipe-on-refresh bug — these UI fields previously had no persistence.
  */
 export const upsertLotteryOnlineTotal = async (req, res) => {
   try {
     const orgId   = getOrgId(req);
     const storeId = getStore(req);
     const userId  = req.user?.id || null;
-    const { date: dateStr, instantCashing, machineSales, machineCashing, notes } = req.body || {};
+    const {
+      date: dateStr,
+      instantCashing, machineSales, machineCashing,
+      grossSales, cancels, couponCash, discounts,
+      notes,
+    } = req.body || {};
     const date = parseDate(dateStr);
     if (!date) return res.status(400).json({ success: false, error: 'date is required (YYYY-MM-DD)' });
 
@@ -1591,6 +1645,10 @@ export const upsertLotteryOnlineTotal = async (req, res) => {
       ...(instantCashing != null && { instantCashing: Number(instantCashing) }),
       ...(machineSales   != null && { machineSales:   Number(machineSales) }),
       ...(machineCashing != null && { machineCashing: Number(machineCashing) }),
+      ...(grossSales     != null && { grossSales:     Number(grossSales) }),
+      ...(cancels        != null && { cancels:        Number(cancels) }),
+      ...(couponCash     != null && { couponCash:     Number(couponCash) }),
+      ...(discounts      != null && { discounts:      Number(discounts) }),
       ...(notes          != null && { notes }),
       enteredById: userId,
     };
@@ -1602,6 +1660,10 @@ export const upsertLotteryOnlineTotal = async (req, res) => {
         instantCashing: instantCashing != null ? Number(instantCashing) : 0,
         machineSales:   machineSales   != null ? Number(machineSales)   : 0,
         machineCashing: machineCashing != null ? Number(machineCashing) : 0,
+        grossSales:     grossSales     != null ? Number(grossSales)     : 0,
+        cancels:        cancels        != null ? Number(cancels)        : 0,
+        couponCash:     couponCash     != null ? Number(couponCash)     : 0,
+        discounts:      discounts      != null ? Number(discounts)      : 0,
         notes: notes || null,
         enteredById: userId,
       },
@@ -1709,6 +1771,152 @@ async function _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd }) {
 }
 
 /**
+ * Best-effort sales for a single day, with two fallback tiers when the
+ * close_day_snapshot trail is incomplete. Real-world cashiers don't always
+ * run the EoD wizard, so the snapshot trail can be sparse. This wrapper
+ * returns the best available data:
+ *
+ *   1. SNAPSHOT (truth):  ticket-math from close_day_snapshot deltas
+ *   2. LIVE (today only): yesterday's snapshot vs box.currentTicket
+ *      → catches today's in-progress sales BEFORE the EoD wizard runs
+ *   3. POS_FALLBACK:      sum of LotteryTransaction.amount for the day
+ *      → catches days where the cashier rang sales up but never scanned
+ *        the EoD wizard (so no snapshot was written)
+ *
+ * Returns the same shape as _realSalesFromSnapshots plus a `source` field
+ * the caller can surface in the API response.
+ *
+ * @param {{ orgId, storeId, dayStart, dayEnd, isToday? }} args
+ * @returns {Promise<{ totalSales, byBox: Map, byGame: Map, source: 'snapshot'|'live'|'pos_fallback'|'empty' }>}
+ */
+async function _bestEffortDailySales({ orgId, storeId, dayStart, dayEnd, isToday = false }) {
+  // Tier 1 — snapshot delta (the authoritative source)
+  const snap = await _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd });
+  if (snap.totalSales > 0) {
+    return { ...snap, byGame: new Map(), source: 'snapshot' };
+  }
+
+  // Tier 2 — TODAY ONLY: compute live ticket-math from yesterdayClose snapshot
+  // vs current box.currentTicket. The cashier hasn't run the EoD wizard yet
+  // (today isn't done), but their scans during the day update box.currentTicket
+  // so we can still derive in-progress sold values.
+  if (isToday) {
+    const live = await _liveSalesFromCurrentTickets({ orgId, storeId, dayStart });
+    if (live.totalSales > 0) {
+      return { ...live, byGame: new Map(), source: 'live' };
+    }
+  }
+
+  // Tier 3 — POS fallback. No snapshot trail, no live deltas → use whatever
+  // the cashier rang up via LotteryTransaction. Less precise (won't catch
+  // unreported tickets) but at least surfaces non-zero numbers when reality
+  // says sales happened.
+  const posTxs = await prisma.lotteryTransaction.findMany({
+    where: {
+      orgId, storeId,
+      type: 'sale',
+      createdAt: { gte: dayStart, lte: dayEnd },
+    },
+    select: { amount: true, gameId: true, boxId: true },
+  });
+  if (!posTxs.length) {
+    return { totalSales: 0, byBox: new Map(), byGame: new Map(), source: 'empty' };
+  }
+  const byGame = new Map();
+  const byBox  = new Map();
+  let totalSales = 0;
+  for (const t of posTxs) {
+    const amt = Number(t.amount || 0);
+    totalSales += amt;
+    if (t.gameId) {
+      const cur = byGame.get(t.gameId) || { sales: 0, count: 0 };
+      cur.sales += amt;
+      cur.count += 1;
+      byGame.set(t.gameId, cur);
+    }
+    if (t.boxId) {
+      const cur = byBox.get(t.boxId) || { sold: 0, price: 0, amount: 0 };
+      cur.amount += amt;
+      cur.sold += 1;   // count of tx, not actual ticket count (we don't know)
+      byBox.set(t.boxId, cur);
+    }
+  }
+  return {
+    totalSales: Math.round(totalSales * 100) / 100,
+    byBox,
+    byGame,
+    source: 'pos_fallback',
+  };
+}
+
+/**
+ * For a TODAY view, derive in-progress sold values by comparing each active
+ * box's last close_day_snapshot (if any, otherwise box.startTicket) against
+ * its CURRENT live box.currentTicket. This is what the cashier-app's POS
+ * scan flow updates as tickets sell, so we can show non-zero sales even
+ * before the EoD wizard runs.
+ */
+async function _liveSalesFromCurrentTickets({ orgId, storeId, dayStart }) {
+  const activeBoxes = await prisma.lotteryBox.findMany({
+    where: { orgId, storeId, status: 'active' },
+    select: {
+      id: true, ticketPrice: true, totalTickets: true,
+      currentTicket: true, startTicket: true, gameId: true,
+    },
+  });
+  if (!activeBoxes.length) return { totalSales: 0, byBox: new Map() };
+
+  // Latest close_day_snapshot per box BEFORE today's start
+  const priorEvents = await prisma.lotteryScanEvent.findMany({
+    where: {
+      orgId, storeId,
+      action: 'close_day_snapshot',
+      createdAt: { lt: dayStart },
+      boxId: { in: activeBoxes.map(b => b.id) },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { boxId: true, parsed: true },
+  });
+  const priorByBox = new Map();
+  for (const ev of priorEvents) {
+    if (!priorByBox.has(ev.boxId)) {
+      const t = ev.parsed?.currentTicket;
+      priorByBox.set(ev.boxId, t != null ? Number(t) : null);
+    }
+  }
+
+  const settings = await prisma.lotterySettings.findUnique({
+    where: { storeId },
+    select: { sellDirection: true },
+  }).catch(() => null);
+  const sellDir = settings?.sellDirection || 'desc';
+
+  let totalSales = 0;
+  const byBox = new Map();
+  for (const b of activeBoxes) {
+    const cur = b.currentTicket != null ? Number(b.currentTicket) : null;
+    if (!Number.isFinite(cur)) continue;
+
+    let prev = priorByBox.get(b.id);
+    if (prev == null && b.startTicket != null) prev = Number(b.startTicket);
+    if (prev == null) {
+      const total = Number(b.totalTickets || 0);
+      if (!total) continue;
+      prev = sellDir === 'asc' ? 0 : total - 1;
+    }
+    if (!Number.isFinite(prev)) continue;
+
+    const sold = Math.abs(prev - cur);
+    if (sold === 0) continue;
+    const price = Number(b.ticketPrice || 0);
+    const amount = sold * price;
+    totalSales += amount;
+    byBox.set(b.id, { sold, price, amount });
+  }
+  return { totalSales: Math.round(totalSales * 100) / 100, byBox };
+}
+
+/**
  * Aggregate ticket-math sales across a date range. Walks day-by-day and
  * sums close_day_snapshot deltas. Returns totalSales + per-day buckets
  * + per-game breakdown. Used by dashboard, reports, commission report
@@ -1738,31 +1946,61 @@ async function _realSalesRange({ orgId, storeId, from, to }) {
   const byDay = [];
   const byGame = new Map();   // gameId → { sales, count }
   let totalSales = 0;
+  // Track which fallback tier fired across the range. UI can use this to
+  // hint when reports are computed from POS data instead of snapshot truth.
+  const sourcesUsed = new Set();
+  // Detect today's UTC midnight so we know which iteration is the live day
+  const now = new Date(); now.setUTCHours(0, 0, 0, 0);
 
   let safety = 0;
   const cursor = new Date(start);
   while (cursor <= end && safety++ < 366) {
     const dayStart = new Date(cursor); dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd   = new Date(cursor); dayEnd.setUTCHours(23, 59, 59, 999);
-    const day      = await _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd });
+    const isToday  = dayStart.getTime() === now.getTime();
 
-    byDay.push({ date: dayStart.toISOString().slice(0, 10), sales: day.totalSales });
+    const day = await _bestEffortDailySales({ orgId, storeId, dayStart, dayEnd, isToday });
+    sourcesUsed.add(day.source);
+
+    byDay.push({ date: dayStart.toISOString().slice(0, 10), sales: day.totalSales, source: day.source });
     totalSales += day.totalSales;
 
-    for (const [boxId, info] of day.byBox.entries()) {
-      const gameId = boxToGame.get(boxId) || '_unknown';
-      const cur = byGame.get(gameId) || { sales: 0, count: 0 };
-      cur.sales += info.amount;
-      cur.count += info.sold;
-      byGame.set(gameId, cur);
+    // Per-game breakdown — prefer the fallback's byGame (which has direct
+    // gameId mapping from LotteryTransaction). Fall back to byBox→game
+    // resolution for snapshot/live tiers (where byGame is empty).
+    if (day.byGame && day.byGame.size > 0) {
+      for (const [gameId, info] of day.byGame.entries()) {
+        const cur = byGame.get(gameId) || { sales: 0, count: 0 };
+        cur.sales += info.sales;
+        cur.count += info.count;
+        byGame.set(gameId, cur);
+      }
+    } else {
+      for (const [boxId, info] of day.byBox.entries()) {
+        const gameId = boxToGame.get(boxId) || '_unknown';
+        const cur = byGame.get(gameId) || { sales: 0, count: 0 };
+        cur.sales += info.amount;
+        cur.count += info.sold;
+        byGame.set(gameId, cur);
+      }
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
+
+  // Pick the "primary" source for the response. Snapshot wins, then live,
+  // then pos_fallback. Mixed = data spans multiple tiers (e.g. some days
+  // had snapshots, others fell back to POS).
+  let source = 'empty';
+  if (sourcesUsed.has('snapshot') && sourcesUsed.size > 1) source = 'mixed';
+  else if (sourcesUsed.has('snapshot')) source = 'snapshot';
+  else if (sourcesUsed.has('live')) source = 'live';
+  else if (sourcesUsed.has('pos_fallback')) source = 'pos_fallback';
 
   return {
     totalSales: Math.round(totalSales * 100) / 100,
     byDay,
     byGame,
+    source,
   };
 }
 
@@ -1843,12 +2081,23 @@ export const getDailyLotteryInventory = async (req, res) => {
     // The cashier-app's LotteryTransaction rows are unreliable: cashiers
     // sometimes skip ringing up tickets. We expose this as a SEPARATE
     // metric so managers can see the variance vs ticket-math truth.
-    const posSold    = saleTxs.reduce((s, t) => s + Number(t.amount || 0), 0);
+    const posSold    = Math.round(saleTxs.reduce((s, t) => s + Number(t.amount || 0), 0) * 100) / 100;
 
-    // Truth: ticket-math sales from close_day_snapshot deltas.
-    const real = await _realSalesFromSnapshots({ orgId, storeId, dayStart, dayEnd });
+    // Best-effort sales — tries snapshots first, then live ticket-math
+    // (today only), then POS LotteryTransaction sum. The `salesSource`
+    // field tells the UI which tier produced the value.
+    const todayMidnight = new Date(); todayMidnight.setUTCHours(0, 0, 0, 0);
+    const isToday = dayStart.getTime() === todayMidnight.getTime();
+    const real = await _bestEffortDailySales({ orgId, storeId, dayStart, dayEnd, isToday });
     const sold = real.totalSales;
-    const unreported = Math.max(0, sold - posSold);  // diff = "didn't ring up"
+    const salesSource = real.source;   // 'snapshot' | 'live' | 'pos_fallback' | 'empty'
+
+    // Variance only makes sense when ticket-math truth is available.
+    // When falling back to POS sums, sold===posSold by construction
+    // → unreported is 0 by definition (and meaningless).
+    const unreported = (salesSource === 'snapshot' || salesSource === 'live')
+      ? Math.max(0, Math.round((sold - posSold) * 100) / 100)
+      : 0;
 
     const returnPart = returnsToday
       .filter((b) => Number(b.ticketsSold || 0) > 0)
@@ -1866,9 +2115,10 @@ export const getDailyLotteryInventory = async (req, res) => {
         begin:        Math.round(begin * 100) / 100,
         received:     Math.round(received * 100) / 100,
         activated,
-        sold:         Math.round(sold * 100) / 100,         // ticket-math truth
+        sold:         Math.round(sold * 100) / 100,         // best-effort sales
         posSold:      Math.round(posSold * 100) / 100,      // what cashier rang up
         unreported:   Math.round(unreported * 100) / 100,   // diff (audit signal)
+        salesSource,                                         // 'snapshot' | 'live' | 'pos_fallback' | 'empty'
         returnPart:   Math.round(returnPart * 100) / 100,
         returnFull:   Math.round(returnFull * 100) / 100,
         end:          Math.round(end * 100) / 100,
