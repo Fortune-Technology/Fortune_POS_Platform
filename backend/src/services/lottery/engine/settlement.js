@@ -196,6 +196,7 @@ export async function computeSettlement({ orgId, storeId, weekStart, weekEnd, st
   // use the same source of truth: the close_day_snapshot trail.
   const eligibleBoxIds = [...settled, ...returned, ...unsettled].map((b) => b.id);
   let instantSales = 0;
+  let instantSalesSource = 'empty';   // 'snapshot' | 'pos_fallback' | 'empty'
   if (eligibleBoxIds.length) {
     const weekClosingEvents = await prisma.lotteryScanEvent.findMany({
       where: {
@@ -260,6 +261,27 @@ export async function computeSettlement({ orgId, storeId, weekStart, weekEnd, st
         instantSales += Math.abs(cursor - today) * price;
         cursor = today;
       }
+    }
+    if (instantSales > 0) instantSalesSource = 'snapshot';
+  }
+
+  // POS-fallback for instantSales when the snapshot trail is empty for
+  // this week. Mirrors the same fallback in the controller's
+  // _bestEffortDailySales — use LotteryTransaction.amount as a last-resort
+  // signal so settlement reports show non-zero numbers when the cashier
+  // rang sales up but never ran the EoD wizard.
+  if (instantSales === 0) {
+    const saleTxs = await prisma.lotteryTransaction.findMany({
+      where: {
+        orgId, storeId,
+        type: 'sale',
+        createdAt: { gte: dayStart, lte: dayEnd },
+      },
+      select: { amount: true },
+    });
+    if (saleTxs.length) {
+      instantSales = saleTxs.reduce((s, t) => s + Number(t.amount || 0), 0);
+      instantSalesSource = 'pos_fallback';
     }
   }
 
@@ -328,6 +350,7 @@ export async function computeSettlement({ orgId, storeId, weekStart, weekEnd, st
     instantPayouts:      round2(scratchPayouts + instantCashingDrawer),
     instantSalesComm:    round2(instantSalesComm),
     instantCashingComm:  round2(instantCashingComm),
+    instantSalesSource,           // 'snapshot' | 'pos_fallback' | 'empty'
 
     // Returns + totals
     returnsDeduction:    round2(returnsDeduction),

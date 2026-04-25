@@ -85,10 +85,21 @@ export async function updateCart(
 
 /* ── Checkout ───────────────────────────────────────────────────────────── */
 
+/**
+ * Response from POST /store/:slug/checkout.
+ *
+ * - For card payments (Dejavoo HPP), `paymentUrl` is the iPOSpays hosted-page
+ *   URL the storefront must redirect the shopper to. `paymentStatus` will be
+ *   `'pending'` until the webhook confirms.
+ * - For cash-on-pickup, `paymentUrl` is omitted and the order is `confirmed`
+ *   immediately.
+ */
 export interface CheckoutResponse {
-  orderId: string;
+  id: string;
   orderNumber?: string;
   status: string;
+  paymentStatus?: string;
+  paymentUrl?: string;
   [key: string]: unknown;
 }
 
@@ -97,5 +108,32 @@ export async function submitCheckout(
   orderData: Record<string, unknown>
 ): Promise<CheckoutResponse> {
   const { data } = await api.post(`/store/${slug}/checkout`, orderData);
+  return data.data;
+}
+
+/**
+ * Public order lookup, scoped by email. Used by the order confirmation
+ * page to poll for payment status after the shopper returns from the
+ * iPOSpays hosted page.
+ */
+export interface PublicOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod?: string;
+  grandTotal?: number | string;
+  fulfillmentType?: string;
+  lineItems?: unknown[];
+  cancelReason?: string;
+  [key: string]: unknown;
+}
+
+export async function fetchPublicOrder(
+  slug: string,
+  orderId: string,
+  email: string
+): Promise<PublicOrder> {
+  const { data } = await api.get(`/store/${slug}/order/${orderId}`, { params: { email } });
   return data.data;
 }

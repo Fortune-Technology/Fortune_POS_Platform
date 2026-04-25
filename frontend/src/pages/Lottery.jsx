@@ -19,6 +19,10 @@ import {
   ChevronUp, ChevronDown, Bell, BookOpen, Layers,
   ScanLine,
 } from 'lucide-react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 import {
   getLotteryGames, createLotteryGame, updateLotteryGame, deleteLotteryGame,
@@ -89,7 +93,7 @@ function StatCard({ label, value, sub, color = 'var(--accent-primary)' }) {
   );
 }
 
-/* ── Simple SVG bar chart ─────────────────────────────────────────────────── */
+/* ── Simple SVG bar chart (legacy — kept for back-compat) ───────────────── */
 function SimpleBarChart({ data, width = 600, height = 200 }) {
   if (!data?.length) return <div className="lt-empty">No data for selected range</div>;
   const maxVal = Math.max(...data.map(d => Math.max(d.sales || 0, d.payouts || 0)), 1);
@@ -118,6 +122,106 @@ function SimpleBarChart({ data, width = 600, height = 200 }) {
         <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#16a34a', borderRadius: 2, marginRight: 4 }} />Sales</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#d97706', borderRadius: 2, marginRight: 4 }} />Payouts</span>
       </div>
+    </div>
+  );
+}
+
+/* ── Multi-line Reports chart (Recharts) ──────────────────────────────────
+ *
+ * Replaces SimpleBarChart on the Reports tab. Five toggleable series so the
+ * user can isolate any combination:
+ *   sales            — instant ticket sales (ticket-math, with POS fallback)
+ *   payouts          — instant scratch payouts (LotteryTransaction)
+ *   machineSales     — daily online machine draw sales
+ *   machineCashing   — daily online machine cashings
+ *   instantCashing   — daily instant ticket cashings (recorded online)
+ *
+ * Per-series toggle state is kept here so the parent doesn't need to rebuild
+ * the chart on every checkbox click.
+ */
+const REPORT_SERIES = [
+  { key: 'sales',          label: 'Instant Sales',      color: '#16a34a', defaultOn: true  },
+  { key: 'payouts',        label: 'Scratch Payouts',    color: '#d97706', defaultOn: true  },
+  { key: 'machineSales',   label: 'Machine Sales',      color: '#0ea5e9', defaultOn: true  },
+  { key: 'machineCashing', label: 'Machine Cashing',    color: '#dc2626', defaultOn: false },
+  { key: 'instantCashing', label: 'Instant Cashing',    color: '#7c3aed', defaultOn: false },
+];
+
+function LotteryReportsChart({ data, height = 320 }) {
+  const [visible, setVisible] = useState(() =>
+    Object.fromEntries(REPORT_SERIES.map(s => [s.key, s.defaultOn]))
+  );
+  const toggle = (k) => setVisible(v => ({ ...v, [k]: !v[k] }));
+
+  if (!data?.length) {
+    return <div className="lt-empty">No data for selected range</div>;
+  }
+
+  // Display dates as MM-DD when range > 7 days, else MMM-DD for clarity
+  const fmtTickDate = (s) => (s || '').slice(5);
+  const fmtTooltip  = (val, name) => [`$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, name];
+
+  return (
+    <div>
+      {/* Series toggle row — checkbox per series with a colored dot */}
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 14, fontSize: '0.82rem' }}>
+        {REPORT_SERIES.map(s => (
+          <label
+            key={s.key}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              cursor: 'pointer', userSelect: 'none',
+              padding: '4px 10px', borderRadius: 999,
+              background: visible[s.key] ? 'rgba(0,0,0,0.04)' : 'transparent',
+              border: `1px solid ${visible[s.key] ? s.color : 'var(--border-color)'}`,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={visible[s.key]}
+              onChange={() => toggle(s.key)}
+              style={{ accentColor: s.color, cursor: 'pointer' }}
+            />
+            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: s.color }} />
+            <span style={{ color: 'var(--text-primary)' }}>{s.label}</span>
+          </label>
+        ))}
+      </div>
+
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+          <XAxis
+            dataKey="date"
+            tickFormatter={fmtTickDate}
+            tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+          />
+          <YAxis
+            tickFormatter={(v) => `$${v}`}
+            tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+            width={64}
+          />
+          <Tooltip
+            formatter={fmtTooltip}
+            labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
+            contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 6, fontSize: '0.82rem' }}
+          />
+          <Legend wrapperStyle={{ fontSize: '0.78rem', paddingTop: 4 }} />
+          {REPORT_SERIES.map(s => visible[s.key] && (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              name={s.label}
+              stroke={s.color}
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+              isAnimationActive={false}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -1813,7 +1917,18 @@ function LotteryBody({ urlTab } = {}) {
   /* ── CSV Download ─────────────────────────────────────────────────────── */
   const downloadReportCSV = () => {
     if (!reportData) return;
-    const rows = [['Date', 'Sales', 'Payouts', 'Net'], ...(reportData.chart || []).map(d => [d.date, d.sales?.toFixed(2), d.payouts?.toFixed(2), d.net?.toFixed(2)])];
+    // Include all 5 chart series + net so the spreadsheet matches what
+    // the on-screen multi-line chart can show.
+    const header = ['Date', 'Sales', 'Payouts', 'Net', 'MachineSales', 'MachineCashing', 'InstantCashing'];
+    const rows = [header, ...(reportData.chart || []).map(d => [
+      d.date,
+      Number(d.sales          || 0).toFixed(2),
+      Number(d.payouts        || 0).toFixed(2),
+      Number(d.net            || 0).toFixed(2),
+      Number(d.machineSales   || 0).toFixed(2),
+      Number(d.machineCashing || 0).toFixed(2),
+      Number(d.instantCashing || 0).toFixed(2),
+    ])];
     const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `lottery-${dateFrom}-${dateTo}.csv` });
     a.click(); URL.revokeObjectURL(a.href);
@@ -2216,8 +2331,18 @@ function LotteryBody({ urlTab } = {}) {
               </div>
               {report.chart?.length > 0 && (
                 <div className="lt-card" style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>Daily Sales vs Payouts</div>
-                  <SimpleBarChart data={report.chart} width={700} height={200} />
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Daily Activity</div>
+                    {report.salesSource && report.salesSource !== 'snapshot' && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {report.salesSource === 'pos_fallback' && '⚠ Computed from POS transactions (no shift-end scans)'}
+                        {report.salesSource === 'mixed'        && '⚠ Mixed sources — some days missing shift-end scans'}
+                        {report.salesSource === 'live'         && '⚡ Live (in-progress today)'}
+                        {report.salesSource === 'empty'        && 'No data'}
+                      </span>
+                    )}
+                  </div>
+                  <LotteryReportsChart data={report.chart} height={320} />
                 </div>
               )}
               {report.byGame?.length > 0 && (

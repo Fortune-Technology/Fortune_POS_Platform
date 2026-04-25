@@ -13,6 +13,7 @@ import Pricing from './pages/marketing/Pricing';
 import Contact from './pages/marketing/Contact';
 import About from './pages/marketing/About';
 import Download from './pages/marketing/Download';
+import PaymentSimulator from './pages/marketing/PaymentSimulator';
 
 // Auth / Onboarding Pages
 import Login from './pages/Login';
@@ -194,6 +195,7 @@ function App() {
         <Route path="/contact"  element={<Contact />} />
         <Route path="/about"    element={<About />} />
         <Route path="/download" element={<Download />} />
+        <Route path="/payment-simulator" element={<PaymentSimulator />} />
         <Route path="/careers"      element={<Careers />} />
         <Route path="/careers/:id"  element={<CareerDetail />} />
         <Route path="/support"      element={<Support />} />

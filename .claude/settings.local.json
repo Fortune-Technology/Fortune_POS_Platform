@@ -104,7 +104,9 @@
       "Bash(env)",
       "Read(//c/Users/nishn/**)",
       "Bash(git config *)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "WebSearch",
+      "WebFetch(domain:docs.ipospays.com)"
     ]
   }
 }

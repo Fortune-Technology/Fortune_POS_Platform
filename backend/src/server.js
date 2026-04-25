@@ -31,6 +31,7 @@ import dailySaleRoutes   from './routes/dailySaleRoutes.js';
 import fuelRoutes        from './routes/fuelRoutes.js';
 import loyaltyRoutes     from './routes/loyaltyRoutes.js';
 import dejavooPaymentRoutes from './routes/dejavooPaymentRoutes.js';
+import dejavooHppRoutes     from './routes/dejavooHppRoutes.js';
 import adminRoutes       from './routes/adminRoutes.js';
 import priceScenarioRoutes from './routes/priceScenarioRoutes.js';
 import stateRoutes        from './routes/stateRoutes.js';
@@ -93,7 +94,14 @@ app.use(cors({
   // server-provided filename + rowCount from CSV/PDF/XLSX exports
   exposedHeaders: ['Content-Disposition', 'X-Row-Count'],
 }));
-app.use(express.json({ limit: '15mb' }));
+// Body parser. The `verify` callback stashes the raw byte buffer on req.rawBody
+// so HMAC-signed webhooks (Dejavoo HPP, future webhook providers) can verify
+// signatures against the exact bytes received — JSON.stringify(req.body) is
+// NOT byte-identical to the original payload (key order, whitespace differ).
+app.use(express.json({
+  limit: '15mb',
+  verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); },
+}));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Static files — re-hosted product images
@@ -133,7 +141,12 @@ app.use('/api/lottery',      lotteryRoutes);
 app.use('/api/daily-sale',   dailySaleRoutes);
 app.use('/api/fuel',         fuelRoutes);
 app.use('/api/loyalty',      loyaltyRoutes);
-app.use('/api/payment/dejavoo', dejavooPaymentRoutes);
+// HPP routes mount BEFORE SPIn — order matters because dejavooPaymentRoutes
+// applies `protect` (JWT) globally, which would block the public webhook
+// and the internal-API-key create-session call. Mounting the more-specific
+// path first lets Express match HPP requests before they reach the SPIn router.
+app.use('/api/payment/dejavoo/hpp', dejavooHppRoutes);
+app.use('/api/payment/dejavoo',     dejavooPaymentRoutes);
 app.use('/api/admin',        adminRoutes);
 app.use('/api/price-scenarios', priceScenarioRoutes);
 app.use('/api/states',          stateRoutes);

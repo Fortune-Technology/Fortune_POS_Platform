@@ -23,6 +23,7 @@ import manageRoutes from './routes/manageRoutes.js';
 import customerAuthRoutes from './routes/customerAuthRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import syncRoutes from './routes/syncRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import internalRoutes from './routes/internalRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,6 +60,9 @@ app.use('/api', customerAuthRoutes);     // Customer auth (signup/login/profile)
 app.use('/api/manage', manageRoutes);    // Portal management API
 app.use('/api/manage', uploadRoutes);    // Image upload
 app.use('/api/internal', syncRoutes);    // Direct sync (POS → ecom, no Redis)
+// Payment-status webhook callback — POS backend → ecom-backend (X-Internal-Api-Key auth).
+// Mounted at /api/internal/orders so the URL becomes /api/internal/orders/payment-status.
+app.use('/api/internal/orders', paymentRoutes);
 app.use('/', internalRoutes);            // Health check
 
 // ── Error handler ───────────────────────────────────────────────────────

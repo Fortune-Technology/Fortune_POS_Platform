@@ -3,53 +3,41 @@
  *
  * Single source of truth for the /portal/lottery tab navigation. Used by
  * both LotteryBackOffice (the Daily 3-column view) and Lottery.jsx (the
- * "advanced" / legacy tabs — Shift Reports, Weekly Settlement, Reports,
- * Commission, Settings, Ticket Catalog).
+ * "advanced" tabs — Shift Reports, Weekly Settlement, Reports, Commission).
  *
- * Each tab is a URL search param (`?tab=daily`, `?tab=settings`, etc.) so
+ * Each tab is a URL search param (`?tab=daily`, `?tab=reports`, etc.) so
  * a page refresh preserves the user's selected tab — fixing the UX bug
  * reported April 23. Deep links like /portal/lottery?tab=reports&from=...
  * work too.
  *
- * The PERMISSION_DEFS filters tabs by user role — admin-only tabs like
- * Ticket Catalog don't show up for cashier accounts.
+ * NOTE (April 2026 — Session 44b): removed `catalog` and `settings` tabs.
+ *   • Ticket Catalog is superadmin-managed (Admin → States) and adds no
+ *     value to store users; cataloged tickets surface automatically when
+ *     receiving books.
+ *   • Settings (state, commission, sellDirection) moved to Account → Store
+ *     Settings → Lottery section so all store-level config lives in one
+ *     place. The /portal/lottery?tab=settings|catalog deep-links now
+ *     redirect to ?tab=daily via LotteryRouter.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Ticket, FileText, ListChecks, Settings2, BookOpen, Receipt, BarChart2,
+  Ticket, FileText, ListChecks, Receipt, BarChart2,
 } from 'lucide-react';
-import { usePermissions } from '../hooks/usePermissions';
 import './LotteryTabBar.css';
 
-// Tab registry. `admin: true` means the tab only renders for users with
-// `lottery.manage` (admin/owner/superadmin). Everything else is visible
-// to any user with `lottery.view`.
-//
-// NOTE (April 2026): removed 'Games' — store-level games are managed via
-// the Ticket Catalog (admin) + Receive Books flow. A standalone Games
-// view would duplicate functionality that already exists elsewhere.
 const TABS = [
-  { key: 'daily',            label: 'Daily',             icon: Ticket,      admin: false },
-  { key: 'shift-reports',    label: 'Shift Reports',     icon: FileText,    admin: false },
-  { key: 'weekly',           label: 'Weekly Settlement', icon: ListChecks,  admin: false },
-  { key: 'reports',          label: 'Reports',           icon: BarChart2,   admin: false },
-  { key: 'commission',       label: 'Commission',        icon: Receipt,     admin: false },
-  { key: 'catalog',          label: 'Ticket Catalog',    icon: BookOpen,    admin: true  },
-  { key: 'settings',         label: 'Settings',          icon: Settings2,   admin: false },
+  { key: 'daily',            label: 'Daily',             icon: Ticket     },
+  { key: 'shift-reports',    label: 'Shift Reports',     icon: FileText   },
+  { key: 'weekly',           label: 'Weekly Settlement', icon: ListChecks },
+  { key: 'reports',          label: 'Reports',           icon: BarChart2  },
+  { key: 'commission',       label: 'Commission',        icon: Receipt    },
 ];
 
 export default function LotteryTabBar({ active }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeKey = active || searchParams.get('tab') || 'daily';
-  const { can } = usePermissions();
-  const isAdmin = can('lottery.manage');
-
-  const visible = useMemo(
-    () => TABS.filter(t => !t.admin || isAdmin),
-    [isAdmin]
-  );
 
   const switchTo = (key) => {
     // When switching tabs, keep the store/date if they were set, but drop
@@ -66,7 +54,7 @@ export default function LotteryTabBar({ active }) {
 
   return (
     <div className="lotabs" role="tablist" aria-label="Lottery sections">
-      {visible.map(t => {
+      {TABS.map(t => {
         const Icon = t.icon;
         const isActive = t.key === activeKey;
         return (

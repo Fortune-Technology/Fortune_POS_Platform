@@ -20,8 +20,18 @@ import { encrypt, decrypt, mask } from '../utils/cryptoVault.js';
 import { loadMerchant, checkTerminalStatus } from '../services/paymentProviderFactory.js';
 import { buildChangeDiff, logMerchantAudit } from '../services/paymentMerchantAudit.js';
 
-// Fields that hold encrypted secrets. Stripped from list/get responses.
-const SECRET_FIELDS = ['spinAuthKey', 'hppAuthKey', 'transactApiKey'];
+// Fields that hold encrypted secrets. Stripped from list/get responses and
+// replaced with `${field}Set: bool` + `${field}Preview: "••••last4"` markers.
+//
+// hppWebhookSecret is in this list so sanitize() masks it in responses, but
+// it is NOT writable through buildWriteData() — it can only be set via
+// /payment-merchants/:id/regenerate-hpp-secret. That endpoint is the only
+// place the secret is ever returned to the admin in plaintext (once).
+const SECRET_FIELDS = ['spinAuthKey', 'hppAuthKey', 'hppWebhookSecret', 'transactApiKey'];
+
+// Subset of SECRET_FIELDS that admin can set/update via the create-edit modal.
+// `hppWebhookSecret` is deliberately excluded.
+const USER_WRITABLE_SECRETS = new Set(['spinAuthKey', 'hppAuthKey', 'transactApiKey']);
 
 /** Replace encrypted secret fields with `{fieldSet, fieldPreview}` markers. */
 function sanitize(merchant) {
@@ -52,7 +62,7 @@ function buildWriteData(body) {
   const passthrough = [
     'orgId', 'storeId', 'provider', 'environment',
     'spinTpn', 'spinBaseUrl',
-    'hppMerchantId', 'hppBaseUrl',
+    'hppMerchantId', 'hppBaseUrl', 'hppEnabled',
     'transactBaseUrl',
     'ebtEnabled', 'debitEnabled', 'tokenizeEnabled',
     'status', 'notes',
@@ -60,7 +70,10 @@ function buildWriteData(body) {
   for (const f of passthrough) {
     if (body[f] !== undefined) data[f] = body[f];
   }
+  // Only encrypt + write the secrets that are user-settable via the modal.
+  // hppWebhookSecret is excluded — set only via the regenerate endpoint.
   for (const f of SECRET_FIELDS) {
+    if (!USER_WRITABLE_SECRETS.has(f)) continue;
     const val = body[f];
     if (val === null) data[f] = null;
     else if (val !== undefined && val !== '') data[f] = encrypt(String(val));

@@ -1,10 +1,20 @@
 /**
  * Order controller — handles cart operations, checkout, and order management.
+ *
+ * Card payments use Dejavoo / iPOSpays HPP (Hosted Payment Page). Flow:
+ *   1. Storefront → checkout()      → create EcomOrder (pending) + ask POS to start HPP session
+ *   2. checkout() returns paymentUrl → storefront redirects shopper to iPOSpays
+ *   3. Shopper enters card on iPOSpays' hosted page (PCI scope is theirs)
+ *   4. iPOSpays redirects shopper back to our returnUrl (the order page)
+ *   5. iPOSpays POSTs webhook → POS backend → ecom-backend /api/internal/orders/payment-status
+ *   6. EcomOrder flips to confirmed; confirmation email sent
+ *   7. Order page polls /store/:slug/order/:id until paymentStatus !== 'pending'
  */
 
 import prisma from '../config/postgres.js';
 import { nanoid } from 'nanoid';
 import { checkStockWithPOS } from '../services/stockCheckService.js';
+import { createHppSession } from '../services/paymentService.js';
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -77,21 +87,17 @@ export const checkout = async (req, res) => {
       customerPhone,
       fulfillmentType,
       shippingAddress,
-      paymentMethod,
-      paymentToken,    // CardPointe token from CardSecure.js
-      paymentExpiry,   // MMYY — card expiry
+      paymentMethod,        // 'card' (HPP redirect) | 'cash_on_pickup'
       scheduledAt,
       notes,
       tipAmount,
+      // Storefront origin so we can build the return URL iPOSpays redirects
+      // the shopper to after payment. Storefront passes window.location.origin.
+      returnBaseUrl,
     } = req.body;
 
     if (!sessionId || !customerName || !customerEmail || !fulfillmentType) {
       return res.status(400).json({ error: 'sessionId, customerName, customerEmail, fulfillmentType required' });
-    }
-
-    // Require token when paying by card
-    if (paymentMethod === 'card' && !paymentToken) {
-      return res.status(400).json({ error: 'paymentToken is required for card payments' });
     }
 
     // 1. Load cart
@@ -99,7 +105,6 @@ export const checkout = async (req, res) => {
     if (!cart || !cart.items?.length) {
       return res.status(400).json({ error: 'Cart is empty or expired' });
     }
-
     const items = cart.items;
 
     // 2. Stock check with POS backend
@@ -107,9 +112,7 @@ export const checkout = async (req, res) => {
       posProductId: i.posProductId || i.productId,
       requestedQty: i.qty,
     }));
-
     const stockResult = await checkStockWithPOS(req.storeId, stockItems);
-
     if (!stockResult.available) {
       const outOfStock = stockResult.items.filter(i => !i.available);
       return res.status(409).json({
@@ -123,92 +126,120 @@ export const checkout = async (req, res) => {
     }
 
     // 3. Calculate totals
-    const subtotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    const taxTotal = 0; // TODO: implement tax calculation
-    const deliveryFee = fulfillmentType === 'delivery' ? 0 : 0; // TODO: from fulfillmentConfig
-    const tip = Number(tipAmount) || 0;
-    const grandTotal = subtotal + taxTotal + deliveryFee + tip;
+    const subtotal    = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const taxTotal    = 0;                                                  // TODO: tax calculation
+    const deliveryFee = fulfillmentType === 'delivery' ? 0 : 0;             // TODO: from fulfillmentConfig
+    const tip         = Number(tipAmount) || 0;
+    const grandTotal  = subtotal + taxTotal + deliveryFee + tip;
 
-    // 4. Process card payment BEFORE creating order (fail fast)
-    let paymentExternalId = null;
-    let resolvedPayStatus = paymentMethod === 'cash_on_pickup' ? 'pending' : 'pending';
-    let cardLastFour = null;
-    let cardAcctType = null;
+    // 4. Create the EcomOrder up front. For card payments we leave it
+    //    `pending` until the HPP webhook confirms; for cash-on-pickup we
+    //    confirm immediately (the cashier collects payment in person).
+    const orderNumber = generateOrderNumber();
+    const isCard = paymentMethod === 'card';
 
-    if (paymentMethod === 'card') {
-      let chargeResult;
-      const orderRef = `ECOM-${Date.now().toString(36).toUpperCase()}`;
+    const orderData = {
+      orgId:          req.orgId,
+      storeId:        req.storeId,
+      orderNumber,
+      status:         isCard ? 'pending'  : 'confirmed',
+      fulfillmentType,
+      customerName,
+      customerEmail,
+      customerPhone:  customerPhone || null,
+      shippingAddress: shippingAddress || null,
+      lineItems: items.map(i => ({
+        productId:    i.productId,
+        posProductId: i.posProductId || i.productId,
+        name:  i.name,
+        qty:   i.qty,
+        price: i.price,
+        total: i.price * i.qty,
+        imageUrl: i.imageUrl,
+      })),
+      subtotal, taxTotal, deliveryFee,
+      tipAmount: tip,
+      grandTotal,
+      paymentStatus: 'pending',
+      paymentMethod: paymentMethod || 'cash_on_pickup',
+      scheduledAt:   scheduledAt ? new Date(scheduledAt) : null,
+      notes:         notes || null,
+      confirmedAt:   isCard ? null : new Date(),
+    };
 
+    const order = await prisma.ecomOrder.create({ data: orderData });
 
+    // 5a. Card payment → ask POS backend to create an HPP session.
+    //     We DO NOT clear the cart yet — keep it until payment succeeds so
+    //     the user can retry without re-entering everything if iPOSpays fails.
+    if (isCard) {
+      // Build the URL iPOSpays will redirect the shopper to after payment.
+      const slug    = req.ecomStore?.slug;
+      const baseUrl = (returnBaseUrl || '').replace(/\/$/, '');
+      if (!baseUrl || !slug) {
+        // Roll back the order so we don't leave a half-baked one in the DB
+        await prisma.ecomOrder.delete({ where: { id: order.id } }).catch(() => {});
+        return res.status(400).json({
+          error: 'returnBaseUrl is required for card checkout',
+        });
+      }
+      const returnUrl = `${baseUrl}/order/${order.id}?store=${encodeURIComponent(slug)}&email=${encodeURIComponent(customerEmail)}`;
 
-      if (!chargeResult.approved) {
-        return res.status(402).json({
-          error: chargeResult.resptext || 'Card declined',
-          respcode: chargeResult.respcode,
+      const hpp = await createHppSession({
+        storeId:       req.storeId,
+        orderId:       order.id,
+        amount:        grandTotal,
+        returnUrl,
+        failureUrl:    returnUrl,                    // same page; it polls payment status
+        cancelUrl:     `${baseUrl}/checkout?store=${encodeURIComponent(slug)}&cancelled=1`,
+        customerEmail,
+        customerName,
+        customerPhone: customerPhone || undefined,
+        description:   `Order ${orderNumber}`,
+        merchantName:  req.ecomStore?.storeName || undefined,
+        logoUrl:       req.ecomStore?.branding?.logoUrl || undefined,
+        themeColor:    req.ecomStore?.branding?.primaryColor || undefined,
+      });
+
+      if (!hpp.success || !hpp.paymentUrl) {
+        // Roll back the pending order — it was never paid for
+        await prisma.ecomOrder.delete({ where: { id: order.id } }).catch(() => {});
+        return res.status(502).json({
+          error: hpp.error || 'Could not start payment session — please try again',
         });
       }
 
-      paymentExternalId = chargeResult.retref || null;
-      resolvedPayStatus = 'paid';
-      cardLastFour = chargeResult.lastFour || null;
-      cardAcctType = chargeResult.acctType || null;
+      // Stash the iPOSpays reference on the order so support can correlate
+      // logs across systems if anything goes wrong.
+      await prisma.ecomOrder.update({
+        where: { id: order.id },
+        data:  { paymentExternalId: hpp.transactionReferenceId },
+      }).catch(() => {});
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          id:           order.id,
+          orderNumber:  order.orderNumber,
+          status:       order.status,
+          paymentStatus: order.paymentStatus,
+          paymentUrl:   hpp.paymentUrl,        // ← storefront redirects here
+        },
+      });
     }
 
-    // 5. Create order (payment already approved)
-    const orderNumber = generateOrderNumber();
-    const order = await prisma.ecomOrder.create({
-      data: {
-        orgId: req.orgId,
-        storeId: req.storeId,
-        orderNumber,
-        status: 'confirmed',
-        fulfillmentType,
-        customerName,
-        customerEmail,
-        customerPhone: customerPhone || null,
-        shippingAddress: shippingAddress || null,
-        lineItems: items.map(i => ({
-          productId: i.productId,
-          posProductId: i.posProductId || i.productId,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-          total: i.price * i.qty,
-          imageUrl: i.imageUrl,
-        })),
-        subtotal,
-        taxTotal,
-        deliveryFee,
-        tipAmount: tip,
-        grandTotal,
-        paymentStatus: resolvedPayStatus,
-        paymentMethod: paymentMethod || 'cash_on_pickup',
-        paymentExternalId: paymentExternalId,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        notes: notes || null,
-        confirmedAt: new Date(),
-      },
-    });
+    // 5b. Cash on pickup → no online payment; just confirm the order.
+    await prisma.ecomCart.delete({ where: { sessionId } }).catch(() => {});
 
-    // 6. Clean up cart
-    await prisma.ecomCart.delete({ where: { sessionId } }).catch(() => { });
-
-    // 7. Confirmation email (non-blocking)
+    // Confirmation email (non-blocking)
     import('../services/emailService.js').then(({ sendOrderConfirmationEmail }) => {
       const storeName = req.ecomStore?.storeName || 'Store';
       sendOrderConfirmationEmail(storeName, order);
-    }).catch(() => { });
+    }).catch(() => {});
 
-    // 8. Return order + masked card info for receipt display
-    return res.status(201).json({
-      success: true,
-      data: {
-        ...order,
-        ...(cardLastFour ? { cardLastFour, cardAcctType } : {}),
-      },
-    });
-
+    return res.status(201).json({ success: true, data: order });
   } catch (err) {
+    console.error('[checkout]', err);
     res.status(500).json({ error: err.message });
   }
 };

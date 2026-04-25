@@ -125,20 +125,30 @@ export interface PaymentMerchant {
   environment: MerchantEnvironment;
   spinTpn?: string;
   spinBaseUrl?: string;
+  // ── HPP (online checkout) ──
   hppMerchantId?: string;
   hppBaseUrl?: string;
+  hppEnabled?: boolean;
+  hppLastTestedAt?: string;
+  hppLastTestResult?: 'ok' | 'fail' | null;
+  // ── Card-on-file ──
   transactBaseUrl?: string;
+  // ── Feature flags ──
   ebtEnabled?: boolean;
   debitEnabled?: boolean;
   tokenizeEnabled?: boolean;
+  // ── Status / audit ──
   status?: MerchantStatus;
   notes?: string;
   lastTestedAt?: string;
   lastTestResult?: 'ok' | 'fail';
+  // ── Encrypted-field markers (server populates; never plaintext) ──
   spinAuthKeySet?: boolean;
   spinAuthKeyPreview?: string;
   hppAuthKeySet?: boolean;
   hppAuthKeyPreview?: string;
+  hppWebhookSecretSet?: boolean;
+  hppWebhookSecretPreview?: string;
   transactApiKeySet?: boolean;
   transactApiKeyPreview?: string;
 }

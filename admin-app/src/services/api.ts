@@ -100,6 +100,12 @@ export const activatePaymentMerchant  = (id: string | number):                  
 export const disablePaymentMerchant   = (id: string | number, reason?: string):              Promise<{ merchant: PaymentMerchant }> => api.post(`/admin/payment-merchants/${id}/disable`, { reason }).then(r => r.data);
 export const getPaymentMerchantAudit  = (id: string | number):                              Promise<{ entries?: PaymentMerchantAuditEntry[]; audit?: PaymentMerchantAuditEntry[] }> => api.get(`/admin/payment-merchants/${id}/audit`).then(r => r.data);
 
+// ── Dejavoo HPP webhook (per-store opaque token in URL) ─────────────────────
+// `regenerate` returns the plaintext secret + full URL ONCE — admin must
+// paste the URL into iPOSpays before navigating away.
+export const getHppWebhookUrl           = (id: string | number): Promise<{ success: boolean; configured: boolean; webhookUrl: string | null; preview?: string }> => api.get(`/admin/payment-merchants/${id}/hpp-webhook-url`).then(r => r.data);
+export const regenerateHppWebhookSecret = (id: string | number): Promise<{ success: boolean; webhookSecret: string; webhookUrl: string; preview: string }> => api.post(`/admin/payment-merchants/${id}/regenerate-hpp-secret`).then(r => r.data);
+
 // ── Dejavoo Payment Terminals (per-device, one per station) ─────────────────
 export const listPaymentTerminals    = (params?: Params):                                Promise<{ terminals: PaymentTerminal[] }> => api.get('/admin/payment-terminals', { params }).then(r => r.data);
 export const createPaymentTerminal   = (data: unknown):                                   Promise<{ terminal: PaymentTerminal }> => api.post('/admin/payment-terminals', data).then(r => r.data);
