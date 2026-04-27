@@ -30,6 +30,7 @@ import {
   updatePaymentTerminal,
   deletePaymentTerminal,
   pingPaymentTerminal,
+  listStationsForStore,
   getHppWebhookUrl,
   regenerateHppWebhookSecret,
   getAdminOrganizations,
@@ -146,6 +147,16 @@ interface TerminalForm {
   notes: string;
 }
 
+interface StationOption {
+  id: string;
+  name: string;
+  lastSeenAt?: string | null;
+  paired: boolean;
+  pairedTerminalId: string | null;
+  pairedTerminalNickname: string | null;
+  pairedTerminalModel: string | null;
+}
+
 const BLANK_FORM: MerchantForm = {
   orgId: '',
   storeId: '',
@@ -245,6 +256,7 @@ export default function AdminMerchants() {
   const [termLoading, setTermLoading] = useState(false);
   const [termEditing, setTermEditing] = useState<string | number | null>(null);
   const [termForm, setTermForm]       = useState<TerminalForm>(BLANK_TERMINAL);
+  const [stationOptions, setStationOptions] = useState<StationOption[]>([]);
 
   // ── HPP webhook state ──
   // savedWebhookUrl: the URL we already have on record (fetched on Edit open)
@@ -464,15 +476,35 @@ export default function AdminMerchants() {
   };
 
   // ── Terminals drawer ──
+  // Loads terminals AND the station picker options. Stations are fetched
+  // separately because the picker needs to know which stations are already
+  // paired to disable those entries.
+  const loadStations = async (storeId: string) => {
+    try {
+      const res = await listStationsForStore(storeId);
+      setStationOptions(res.stations || []);
+    } catch (err: any) {
+      // Non-fatal — terminal form still works with manual entry as a fallback
+      // if the dropdown can't load. We just won't show a curated list.
+      console.warn('[loadStations]', err?.response?.data?.error || err?.message);
+      setStationOptions([]);
+    }
+  };
+
   const openTerminals = async (merchant: Merchant) => {
     setTermFor(merchant);
     setTerminals([]);
+    setStationOptions([]);
     setTermEditing(null);
     setTermForm({ ...BLANK_TERMINAL, merchantId: String(merchant.id) });
     setTermLoading(true);
     try {
-      const res = await listPaymentTerminals({ merchantId: merchant.id });
-      setTerminals(res.terminals || []);
+      // Load terminals + stations in parallel — both are scoped to this merchant's store
+      const [termRes] = await Promise.all([
+        listPaymentTerminals({ merchantId: merchant.id }),
+        loadStations(merchant.storeId),
+      ]);
+      setTerminals(termRes.terminals || []);
     } catch (err: any) {
       toast.error('Failed to load terminals: ' + (err?.response?.data?.error || err?.message));
     } finally {
@@ -483,7 +515,11 @@ export default function AdminMerchants() {
   const refreshTerminals = async () => {
     if (!termFor) return;
     try {
-      const res = await listPaymentTerminals({ merchantId: termFor.id });
+      const [res] = await Promise.all([
+        listPaymentTerminals({ merchantId: termFor.id }),
+        // Re-fetch stations too so paired-status reflects the latest pairing
+        loadStations(termFor.storeId),
+      ]);
       setTerminals(res.terminals || []);
     } catch (err: any) {
       toast.error('Failed to refresh: ' + (err?.response?.data?.error || err?.message));
@@ -1101,13 +1137,36 @@ export default function AdminMerchants() {
                     />
                   </div>
                   <div className="am-field">
-                    <label>Station ID</label>
-                    <input
+                    <label>Station</label>
+                    {/*
+                      Dropdown of stations belonging to this merchant's store.
+                      Already-paired stations are disabled (a station can only own
+                      one terminal). The currently-edited terminal's station stays
+                      selectable so the existing binding doesn't break.
+                    */}
+                    <select
                       value={termForm.stationId}
                       onChange={e => setTermForm({ ...termForm, stationId: e.target.value })}
-                      placeholder="station ID (optional)"
-                    />
-                    <span className="am-field-hint">Bind this device to a specific cashier station.</span>
+                    >
+                      <option value="">— Unassigned (set later) —</option>
+                      {stationOptions.map(s => {
+                        // Allow selecting a paired station only if it's the one we're
+                        // currently editing (so save doesn't change anything).
+                        const editingThisStation = !!termEditing
+                          && terminals.find(t => t.id === termEditing)?.stationId === s.id;
+                        const disabled = s.paired && !editingThisStation;
+                        return (
+                          <option key={s.id} value={s.id} disabled={disabled}>
+                            {s.name}{disabled ? ` — paired with ${s.pairedTerminalNickname || s.pairedTerminalModel || 'terminal'}` : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <span className="am-field-hint">
+                      {stationOptions.length === 0
+                        ? 'No stations registered for this store yet — pair one in the cashier app first.'
+                        : 'Bind this device to a specific cashier station. Greyed-out stations already have a terminal.'}
+                    </span>
                   </div>
                   <div className="am-field">
                     <label>Device Model</label>
