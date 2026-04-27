@@ -23,6 +23,7 @@ import {
   updateTerminal,
   deleteTerminal,
   pingTerminal,
+  listStationsForStore,
 } from '../controllers/adminPaymentTerminalController.js';
 import {
   regenerateHppWebhookSecret,
@@ -174,11 +175,14 @@ router.post(  '/payment-merchants/:id/regenerate-hpp-secret', regenerateHppWebho
 router.get(   '/payment-merchants/:id/hpp-webhook-url',       getHppWebhookUrl);
 
 // ── Dejavoo Payment Terminals (per-device, one per station) ───────────
-router.get(   '/payment-terminals',           listTerminals);
-router.post(  '/payment-terminals',           createTerminal);
-router.put(   '/payment-terminals/:id',       updateTerminal);
-router.delete('/payment-terminals/:id',       deleteTerminal);
-router.post(  '/payment-terminals/:id/ping',  pingTerminal);
+router.get(   '/payment-terminals',                listTerminals);
+// Station picker for the Add Terminal modal — scoped by ?storeId=... and
+// returns each station's pairing status so the UI can disable already-paired ones.
+router.get(   '/payment-terminals/stations',       listStationsForStore);
+router.post(  '/payment-terminals',                createTerminal);
+router.put(   '/payment-terminals/:id',            updateTerminal);
+router.delete('/payment-terminals/:id',            deleteTerminal);
+router.post(  '/payment-terminals/:id/ping',       pingTerminal);
 
 // ── Admin Billing — Plans ──────────────────────────────────────────────────
 router.get('/billing/plans',                adminListPlans);
