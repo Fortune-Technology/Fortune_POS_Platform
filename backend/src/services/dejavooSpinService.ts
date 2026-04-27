@@ -479,10 +479,15 @@ export async function terminalStatus(
 ): Promise<{ connected: boolean; message: string; _raw: unknown }> {
   const client = createClient(merchant);
   const probeRef = generateReferenceId();
-  const body = {
+  const body: Record<string, unknown> = {
     ...buildBasePayload(merchant),
     ReferenceId: probeRef,
   };
+
+  // Log the OUTGOING request (with credentials redacted) so we can see what
+  // we actually sent to Dejavoo — invaluable during initial cert.
+  const redacted = { ...body, Authkey: body.Authkey ? '••••' : '(missing)' };
+  console.warn('[dejavooSpin.terminalStatus] →', getBaseUrl(merchant), '/v2/Payment/Status body:', JSON.stringify(redacted));
 
   try {
     const { data, status: httpStatus } = await client.post('/v2/Payment/Status', body);
@@ -522,11 +527,21 @@ export async function terminalStatus(
     const httpStatus = ax?.response?.status;
     const respBody  = ax?.response?.data as Record<string, unknown> | undefined;
     const respGen   = (respBody?.GeneralResponse as Record<string, unknown>) || {};
-    const respText  = (respGen.Message as string)
-                  || (respGen.DetailedMessage as string)
-                  || (respBody?.message as string)
-                  || (respBody?.error as string)
-                  || (typeof respBody === 'string' ? respBody : '');
+    // Build a rich diagnostic string from all three Dejavoo fields. Their
+    // top-level Message is often a generic "Error"; the useful info is in
+    // ResultCode + DetailedMessage.
+    const resultCode = (respGen.ResultCode as string) || (respGen.StatusCode as string) || '';
+    const message1   = (respGen.Message  as string) || '';
+    const detailed   = (respGen.DetailedMessage as string) || '';
+    const fallback   = (respBody?.message as string)
+                    || (respBody?.error   as string)
+                    || (typeof respBody === 'string' ? respBody : '');
+    const parts: string[] = [];
+    if (resultCode) parts.push(`[${resultCode}]`);
+    if (message1 && message1 !== 'Error') parts.push(message1);
+    if (detailed && detailed !== message1) parts.push(detailed);
+    if (!parts.length && fallback) parts.push(fallback);
+    const respText = parts.join(' ');
 
     let message: string;
     if (httpStatus === 404) {
@@ -536,7 +551,7 @@ export async function terminalStatus(
     } else if (httpStatus === 400) {
       message = respText
         ? `Dejavoo rejected the request (HTTP 400): ${respText}`
-        : 'Dejavoo rejected the request (HTTP 400). Most common cause: TPN/Auth Key mismatch, or the TPN belongs to a different device profile than the one you intended.';
+        : 'Dejavoo rejected the request (HTTP 400). Most common cause: TPN/Auth Key/RegisterId mismatch.';
     } else if (ax?.code === 'ECONNREFUSED' || ax?.code === 'ENOTFOUND') {
       message = 'Cannot reach Dejavoo — DNS or network unreachable.';
     } else if (ax?.code === 'ECONNABORTED') {
@@ -545,12 +560,14 @@ export async function terminalStatus(
       message = errMsg(err) || 'Terminal unreachable';
     }
 
-    // Always log the FULL response on the server so we have a forensic trail
-    // even if the admin-facing message is short. Helps support diagnose
-    // without asking the user to grep logs.
-    if (respBody) {
-      console.warn('[dejavooSpin.terminalStatus] HTTP %s body:', httpStatus, JSON.stringify(respBody).slice(0, 500));
-    }
+    // Always log a forensic line — even if respBody is empty / undefined.
+    // No conditional: we want a visible "← HTTP X" entry for every failed test.
+    console.warn(
+      '[dejavooSpin.terminalStatus] ← HTTP', httpStatus,
+      'body:', respBody ? JSON.stringify(respBody).slice(0, 1000) : '(empty)',
+      'headers:', JSON.stringify(ax?.response?.headers ?? {}).slice(0, 300),
+      'url:', ax?.config?.url ?? ax?.config?.baseURL ?? '(unknown)',
+    );
 
     return { connected: false, message, _raw: respBody ?? null };
   }
