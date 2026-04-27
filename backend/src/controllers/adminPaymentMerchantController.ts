@@ -46,10 +46,34 @@ function sanitize(merchant: Record<string, unknown> | null): Record<string, unkn
 }
 
 /**
+ * Trim a string value pasted from an admin form. Returns:
+ *   undefined → undefined (skip — don't include in update)
+ *   null      → null      (clear the field)
+ *   string    → trimmed string (or null if trimmed value is empty)
+ *   other     → value as-is
+ *
+ * Whitespace from copy-paste (e.g. iPOSpays portal cells with leading
+ * spaces) is the #1 source of "auth failed" errors against the SPIn API.
+ * Strip it server-side so the admin UI doesn't have to be careful.
+ */
+function cleanString(val: unknown): unknown {
+  if (val === undefined) return undefined;
+  if (val === null) return null;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    return trimmed === '' ? null : trimmed;
+  }
+  return val;
+}
+
+/**
  * Build Prisma write data from request body.
  */
 function buildWriteData(body: Record<string, unknown>): Record<string, unknown> {
   const data: Record<string, unknown> = {};
+
+  // Pass-through fields. Strings get trimmed (most are credential-adjacent —
+  // TPN, merchant ID, base URLs — where stray whitespace causes auth failures).
   const passthrough = [
     'orgId', 'storeId', 'provider', 'environment',
     'spinTpn', 'spinBaseUrl',
@@ -59,14 +83,20 @@ function buildWriteData(body: Record<string, unknown>): Record<string, unknown> 
     'status', 'notes',
   ];
   for (const f of passthrough) {
-    if (body[f] !== undefined) data[f] = body[f];
+    if (body[f] !== undefined) data[f] = cleanString(body[f]);
   }
+
   // Only encrypt + write the secrets that are user-settable via the modal.
+  // Trim before encrypting so a stray trailing newline doesn't poison the cipher.
   for (const f of SECRET_FIELDS) {
     if (!USER_WRITABLE_SECRETS.has(f)) continue;
     const val = body[f];
-    if (val === null) data[f] = null;
-    else if (val !== undefined && val !== '') data[f] = encrypt(String(val));
+    if (val === null) {
+      data[f] = null;
+    } else if (val !== undefined && val !== '') {
+      const trimmed = String(val).trim();
+      if (trimmed) data[f] = encrypt(trimmed);
+    }
   }
   return data;
 }
