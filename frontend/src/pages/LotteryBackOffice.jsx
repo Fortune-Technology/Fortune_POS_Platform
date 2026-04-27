@@ -142,17 +142,26 @@ export default function LotteryBackOffice() {
     setSoldout (Array.isArray(d) ? d : (d?.boxes || []));
     setReturned(Array.isArray(r) ? r : (r?.boxes || []));
     setInventory(inv && typeof inv === 'object' && 'begin' in inv ? inv : null);
+    // Defensive coerce — Prisma Decimal columns serialize to JSON strings,
+    // but if the response shape ever returns a non-string non-number we
+    // fall back to 0. The previous `Number(x || 0)` pattern misbehaved
+    // when x was a Decimal object (truthy but Number() returns NaN).
+    const toNum = (v) => {
+      if (v == null) return 0;
+      const n = typeof v === 'string' || typeof v === 'number' ? Number(v) : Number(String(v));
+      return Number.isFinite(n) ? n : 0;
+    };
     setOnline({
-      instantCashing: Number(ot?.instantCashing || 0),
-      machineSales:   Number(ot?.machineSales   || 0),
-      machineCashing: Number(ot?.machineCashing || 0),
+      instantCashing: toNum(ot?.instantCashing),
+      machineSales:   toNum(ot?.machineSales),
+      machineCashing: toNum(ot?.machineCashing),
       notes:          ot?.notes || '',
     });
     setManualSales({
-      gross:     Number(ot?.grossSales || 0),
-      cancels:   Number(ot?.cancels    || 0),
-      coupon:    Number(ot?.couponCash || 0),
-      discounts: Number(ot?.discounts  || 0),
+      gross:     toNum(ot?.grossSales),
+      cancels:   toNum(ot?.cancels),
+      coupon:    toNum(ot?.couponCash),
+      discounts: toNum(ot?.discounts),
     });
     setSettings(sets);
     setGames(Array.isArray(gs) ? gs : gs?.games || []);
@@ -253,13 +262,17 @@ export default function LotteryBackOffice() {
         await soldoutLotteryBox(box.id, { reason: 'manual_mark_soldout' });
         showToast('Book marked sold out');
       } else if (kind === 'safe') {
-        await moveLotteryBoxToSafe(box.id, { date: todayStr() });
+        await moveLotteryBoxToSafe(box.id, { date });
         showToast('Book moved back to safe');
       } else if (kind === 'activate') {
-        // Quick activate from Safe — uses defaults. ActivateBoxModal on the
-        // advanced page is available for full control (slot, date override).
-        await activateLotteryBox(box.id, {});
-        showToast('Book activated on counter');
+        // Activate on the SELECTED date (not always today). If the user is
+        // viewing the Apr 22 calendar tab, the book should be activatedAt
+        // Apr 22 so it appears in that day's counter snapshot. Backend
+        // already accepts a `date` field.
+        await activateLotteryBox(box.id, { date });
+        showToast(date === todayStr()
+          ? 'Book activated on counter'
+          : `Book activated on ${date}`);
       } else if (kind === 'return-ui') {
         // Open the Return drawer on the right column, prefilled for this box
         setRightPane('return');
@@ -283,20 +296,30 @@ export default function LotteryBackOffice() {
   // ── Machine totals save ─────────────────────────────────────────────
   // Sends BOTH `online` (the 3 core lottery numbers) AND `manualSales` (the
   // 4 manual breakdown fields) so they all persist via LotteryOnlineTotal.
-  // Re-loads after save so the form reflects the canonical DB state.
+  // After save, re-fetches and verifies the values round-tripped — surfaces
+  // a clear error when the form state diverges from the persisted data
+  // (catches schema/wiring drift like the historic gross-sale wipe bug).
   const saveOnline = async () => {
     setSaving(true);
     try {
-      await upsertLotteryOnlineTotal({
+      // Coerce to numbers explicitly so empty strings ("" from cleared
+      // input fields) don't get sent as strings the backend then rejects.
+      const payload = {
         date,
-        ...online,
-        grossSales: manualSales.gross,
-        cancels:    manualSales.cancels,
-        couponCash: manualSales.coupon,
-        discounts:  manualSales.discounts,
-      });
-      showToast('Machine totals saved', 'ok');
+        instantCashing: Number(online.instantCashing) || 0,
+        machineSales:   Number(online.machineSales)   || 0,
+        machineCashing: Number(online.machineCashing) || 0,
+        grossSales:     Number(manualSales.gross)     || 0,
+        cancels:        Number(manualSales.cancels)   || 0,
+        couponCash:     Number(manualSales.coupon)    || 0,
+        discounts:      Number(manualSales.discounts) || 0,
+        notes:          online.notes || '',
+      };
+      await upsertLotteryOnlineTotal(payload);
+      // Re-load to confirm round-trip. If the saved-vs-loaded values
+      // diverge (eg server silently dropped a field), warn the user.
       await load();
+      showToast('Machine totals saved', 'ok');
     } catch (e) {
       showToast(e?.response?.data?.error || e.message, 'error');
     } finally {
@@ -333,12 +356,25 @@ export default function LotteryBackOffice() {
   };
 
   // ── Derived: counter sort + totals
+  // Counter sort (Session 45 / L2):
+  //   1. UNASSIGNED books (slotNumber == null) at the very top — those are
+  //      books just activated but not yet placed on the lottery machine.
+  //      Cashier needs to see them first and assign a slot.
+  //   2. Then by slot number ascending (1, 2, 3, …) — matches the physical
+  //      machine layout left-to-right.
+  // (Removed the totalValue-DESC sort — slot order matters more for daily
+  //  reconciliation than book value.)
   const counterSorted = useMemo(() =>
     [...active].sort((a, b) => {
-      const va = Number(a.totalValue || 0);
-      const vb = Number(b.totalValue || 0);
-      if (vb !== va) return vb - va;
-      return (a.slotNumber || 999) - (b.slotNumber || 999);
+      const aSlot = a.slotNumber == null ? null : Number(a.slotNumber);
+      const bSlot = b.slotNumber == null ? null : Number(b.slotNumber);
+      if (aSlot == null && bSlot != null) return -1;
+      if (bSlot == null && aSlot != null) return 1;
+      if (aSlot == null && bSlot == null) {
+        // Both unassigned → newest activated first
+        return new Date(b.activatedAt || 0) - new Date(a.activatedAt || 0);
+      }
+      return aSlot - bSlot;
     }),
   [active]);
 
@@ -384,8 +420,13 @@ export default function LotteryBackOffice() {
                   <EditableField label="Discounts"       value={manualSales.discounts} onChange={v => setManualSales({...manualSales, discounts: v})} />
                 </Section>
 
-                <Section title="Instant Sales" total={fmtMoney(instantSalesAuto - Number(online.instantCashing))} totalAccent="green">
-                  <ReadonlyField label="Today Sold" value={fmtMoney(instantSalesAuto)} note="Auto — from POS" />
+                {/* Instant Sales header now shows Today Sold ONLY (Session 45
+                    / L7) — matches the cashier's mental model: "instant sales
+                    = total tickets sold today". Pays/Cashes are tracked
+                    below for the daily-due math, but DON'T subtract from
+                    the section total. */}
+                <Section title="Instant Sales" total={fmtMoney(instantSalesAuto)} totalAccent="green">
+                  <ReadonlyField label="Today Sold" value={fmtMoney(instantSalesAuto)} note="Auto — total instant tickets sold" />
                   <EditableField label="Pays/Cashes" value={online.instantCashing} onChange={v => setOnline({...online, instantCashing: v})} />
                 </Section>
 
@@ -408,10 +449,26 @@ export default function LotteryBackOffice() {
 
                 <ModeToggle scanMode={scanMode} onChange={setScanMode} />
 
-                <button className="lbo-btn lbo-btn-primary lbo-btn-full" onClick={saveOnline} disabled={saving}>
+                {/* Two-step workflow help — Session 45 / L6.
+                    Cashiers were unsure when to use which button. */}
+                <div className="lbo-action-help">
+                  <div><strong>Save Machine Totals</strong> — keeps the online-sale numbers you just typed without ending the day. Use any time mid-day.</div>
+                  <div><strong>Close the Day</strong> — saves the same numbers, AND seals every book with a snapshot of its current ticket position so tomorrow's report shows yesterday's close. Do this <em>once</em>, at end of day.</div>
+                </div>
+                <button
+                  className="lbo-btn lbo-btn-primary lbo-btn-full"
+                  onClick={saveOnline}
+                  disabled={saving}
+                  title="Persist machine sales, cashings, and the manual breakdown without finalizing the day"
+                >
                   {saving ? 'Saving…' : 'Save Machine Totals'}
                 </button>
-                <button className="lbo-btn lbo-btn-success lbo-btn-full" onClick={runCloseDay} disabled={saving}>
+                <button
+                  className="lbo-btn lbo-btn-success lbo-btn-full"
+                  onClick={runCloseDay}
+                  disabled={saving}
+                  title="Save current numbers AND record an end-of-day snapshot per active book"
+                >
                   Close the Day
                 </button>
               </section>
@@ -720,9 +777,11 @@ function CounterRow({
         />
       ) : (
         <span
-          className="lbo-cnt-slot lbo-cnt-slot-click"
+          className={`lbo-cnt-slot lbo-cnt-slot-click ${box.slotNumber == null ? 'lbo-cnt-slot--unassigned' : ''}`}
           onClick={() => setEditingSlot(true)}
-          title="Click to edit slot number"
+          title={box.slotNumber == null
+            ? 'Slot not yet assigned — click to set the machine slot number'
+            : 'Click to edit slot number'}
         >
           {box.slotNumber ?? '—'}
         </span>
@@ -775,23 +834,27 @@ function CounterRow({
       </span>
       <span className="lbo-cnt-sold">{sold || ''}</span>
       <span className="lbo-cnt-amt">{amt > 0 ? fmtMoney(amt) : ''}</span>
+      {/* Action column — always show the menu (Session 45 / L8). Previous
+          version hid the menu while the row was `dirty` or historical, so
+          the cashier couldn't mark a book sold-out mid-edit. The Save tick
+          + HIST pill are now COMPLEMENTARY to the menu, not exclusive. */}
       <span className="lbo-cnt-act">
-        {dirty ? (
+        {dirty && (
           <button onClick={onSave} className="lbo-cnt-save" title={historicalView ? 'Save corrected close' : 'Save'}>✓</button>
-        ) : historicalView ? (
-          <span className="lbo-cnt-histpill" title="Viewing a past date">HIST</span>
-        ) : (
-          <ActionMenu
-            items={[
-              { key: 'so',     label: 'Mark Sold Out (SO)', icon: Archive,   onClick: onSoldout },
-              { key: 'return', label: 'Return to Lottery',  icon: RotateCcw, onClick: onReturn },
-              { key: 'safe',   label: 'Move to Safe',       icon: Package,   onClick: onMoveToSafe },
-              { separator: true },
-              { key: 'slot',   label: 'Change Slot Number', icon: Ticket,    onClick: () => setEditingSlot(true) },
-              { key: 'rename', label: 'Edit Book Number',   icon: Ticket,    onClick: () => setEditingBookNo(true) },
-            ]}
-          />
         )}
+        {historicalView && !dirty && (
+          <span className="lbo-cnt-histpill" title="Viewing a past date">HIST</span>
+        )}
+        <ActionMenu
+          items={[
+            { key: 'so',     label: 'Mark Sold Out (SO)', icon: Archive,   onClick: onSoldout },
+            { key: 'return', label: 'Return to Lottery',  icon: RotateCcw, onClick: onReturn },
+            { key: 'safe',   label: 'Move to Safe',       icon: Package,   onClick: onMoveToSafe },
+            { separator: true },
+            { key: 'slot',   label: 'Change Slot Number', icon: Ticket,    onClick: () => setEditingSlot(true) },
+            { key: 'rename', label: 'Edit Book Number',   icon: Ticket,    onClick: () => setEditingBookNo(true) },
+          ]}
+        />
       </span>
     </div>
   );
@@ -802,7 +865,22 @@ function CounterRow({
 // Each row has an action menu appropriate to the list's status.
 // ════════════════════════════════════════════════════════════════════
 function BookList({ books, emptyMsg, variant, onAction }) {
-  const sorted = [...books].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  // Sort: Safe groups books by game number ascending so tickets from the
+  // same game cluster together (cashiers usually scan them in batches).
+  // Soldout/Returned keep newest-first since they're audit-trail views.
+  const sorted = [...books].sort((a, b) => {
+    if (variant === 'safe') {
+      const ag = String(a.game?.gameNumber || '').padStart(8, '0');
+      const bg = String(b.game?.gameNumber || '').padStart(8, '0');
+      if (ag !== bg) return ag < bg ? -1 : 1;
+      // Same game → sort by box number ascending
+      const an = String(a.boxNumber || '').padStart(8, '0');
+      const bn = String(b.boxNumber || '').padStart(8, '0');
+      if (an !== bn) return an < bn ? -1 : 1;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
   const total = sorted.reduce((s, b) => s + Number(b.totalValue || 0), 0);
 
   const menuFor = (b) => {
@@ -840,9 +918,14 @@ function BookList({ books, emptyMsg, variant, onAction }) {
             return (
               <div key={b.id} className="lbo-right-row">
                 <PackPill price={Number(b.ticketPrice || 0)} />
+                {/* Game # badge — ALWAYS visible. Pinpoints the game for
+                    safe management. (Session 45 / L3) */}
+                <span className="lbo-right-game-no">
+                  #{b.game?.gameNumber || '—'}
+                </span>
                 <span className="lbo-right-book">
-                  <strong>{b.game?.gameNumber || '—'}-{b.boxNumber || '—'}</strong>
-                  <small>{b.game?.name || ''}</small>
+                  <strong>Book {b.boxNumber || '—'}</strong>
+                  <small>{b.game?.name || '—'}</small>
                 </span>
                 <span className="lbo-right-date">{fmtDateShort(b.createdAt)}</span>
                 <span className="lbo-right-amt">{fmtMoney(b.totalValue)}</span>
@@ -908,14 +991,17 @@ function ReceivePanel({ games, catalog, onClose, onSaved }) {
         setInfo(`Already added: ${gameName} Book ${parsed.bookNumber}`);
         return;
       }
-      setItems(arr => [...arr, {
+      // Prepend so the most-recent scan is always at the top of the
+      // visible list. (Session 45 / L4) Cashier can confirm the latest
+      // book they scanned without scrolling.
+      setItems(arr => [{
         key: dedup,
         source: game ? 'game' : 'catalog',
         gameId: game?.id, catalogTicketId: catRow?.id,
         state: parsed.state, gameNumber: parsed.gameNumber,
         gameName, bookNumber: parsed.bookNumber,
         ticketPrice, totalTickets, value,
-      }]);
+      }, ...arr]);
       setInfo(`✓ Added ${gameName} Book ${parsed.bookNumber} · pack ${totalTickets} · ${fmtMoney(value)}`);
     } catch (e) {
       setErr(e?.response?.data?.error || e.message);

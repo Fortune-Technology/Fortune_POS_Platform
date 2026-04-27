@@ -186,11 +186,24 @@ export default function LotteryShiftModal({
   const handleConfirm = async () => {
     setSaving(true); setErr('');
     try {
-      // 1. Save each soldout flag → flip box to depleted
+      // 1. Save each soldout flag → flip box to depleted. Surface
+      // failures (Session 45 / L8) — the previous swallow-all-errors
+      // catch hid cases where the API rejected the soldout (e.g. the
+      // book was already depleted/returned/settled).
+      const soldoutErrors = [];
       for (const b of boxData) {
         if (b.isSoldout) {
-          await soldoutLotteryBox(b.id, { reason: 'eod_so_button' }).catch(() => {});
+          try {
+            await soldoutLotteryBox(b.id, { reason: 'eod_so_button' });
+          } catch (e) {
+            soldoutErrors.push(`${b.gameNumber || b.gameName || b.id}: ${e?.response?.data?.error || e.message}`);
+          }
         }
+      }
+      if (soldoutErrors.length) {
+        // Don't block the rest of the EoD save — but warn the user.
+        console.warn('[LotteryShiftModal] some soldout calls failed:', soldoutErrors);
+        setErr(`Some soldouts didn't apply:\n${soldoutErrors.slice(0, 3).join('\n')}`);
       }
 
       // 2. Save online totals for today

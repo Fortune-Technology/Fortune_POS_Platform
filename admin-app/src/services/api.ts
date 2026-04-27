@@ -46,6 +46,39 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor — when the server says 401 (token expired or
+// invalid), wipe the superadmin session and redirect to /login. Without
+// this, an expired JWT keeps the user "logged in" in localStorage but
+// every API call silently fails — pages render empty with no clue why.
+//
+// Skip the redirect when the failing request IS /auth/login itself (so
+// the login page can show "Wrong password" without an immediate refresh)
+// or /auth/verify-password (the InactivityLock unlock check).
+api.interceptors.response.use(
+  (resp) => resp,
+  (error) => {
+    const status   = error?.response?.status;
+    const url      = error?.config?.url || '';
+    const isAuthEp = url.includes('/auth/login') || url.includes('/auth/verify-password');
+    if (status === 401 && !isAuthEp) {
+      try {
+        localStorage.removeItem('admin_user');
+        // Also wipe the inactivity-lock keys so the login page renders
+        // cleanly. (These are portal-side keys but if the user was using
+        // both apps in the same browser they'll get cleared together.)
+        localStorage.removeItem('storv:il:locked');
+        localStorage.removeItem('storv:il:lastActive');
+      } catch { /* ignore */ }
+      // Avoid redirect loops if we're already on /login
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?session=expired&returnTo=${returnTo}`;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 type Params = Record<string, unknown>;
 type Headers = Record<string, string>;
 

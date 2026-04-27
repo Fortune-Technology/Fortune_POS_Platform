@@ -516,6 +516,19 @@
   color: var(--brand-primary, #3d56b5);
 }
 
+/* Unassigned slot — amber pulse to draw attention until cashier assigns one. */
+.lbo-cnt-slot--unassigned {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px dashed #f59e0b;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.lbo-cnt-slot--unassigned:hover {
+  background: #fde68a;
+  color: #92400e;
+}
+
 .lbo-cnt-slot-edit {
   width: 100%;
   max-width: 28px;
@@ -675,7 +688,8 @@
 
 .lbo-right-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 54px 62px 24px;
+  /* PackPill | Game# badge | Book + name | Date | Amount | Action menu */
+  grid-template-columns: 36px 56px minmax(0, 1fr) 54px 62px 24px;
   gap: 6px;
   align-items: center;
   padding: 5px 7px;
@@ -685,6 +699,19 @@
   font-size: 0.76rem;
 }
 .lbo-right-row:hover { background: #f9fafb; }
+
+.lbo-right-game-no {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--brand-primary, #3d56b5);
+  background: rgba(61, 86, 181, 0.08);
+  border: 1px solid rgba(61, 86, 181, 0.18);
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
 .lbo-right-book {
   display: flex; flex-direction: column; min-width: 0;
 }
@@ -713,20 +740,23 @@
 
 /* ── Receive / Return panel body ─────────────────────────────────── */
 .lbo-pane-body {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .lbo-pane-foot {
-  padding: 8px 12px;
+  /* Tightened from 8px/12px so the Confirm button isn't pushed off-screen
+     when the receive list is long. (Session 45 / L4) */
+  padding: 6px 10px;
   border-top: 1px solid var(--border-color, #f3f4f6);
   background: var(--bg-tertiary, #fafafa);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 .lbo-pane-total {
@@ -737,6 +767,24 @@
 .lbo-pane-total strong { color: #16a34a; font-size: 1rem; font-variant-numeric: tabular-nums; }
 .lbo-pane-actions { display: flex; gap: 6px; }
 .lbo-pane-actions .lbo-btn { flex: 1; }
+
+/* Inline help under "Save / Close the Day" — explains when to click which.
+   (Session 45 / L6) */
+.lbo-action-help {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-secondary, #4b5563);
+  margin-top: 6px;
+}
+.lbo-action-help strong { color: var(--text-primary, #0f172a); }
+.lbo-action-help em { color: #b45309; font-style: normal; font-weight: 700; }
 
 .lbo-inline-err {
   padding: 7px 10px;
@@ -793,13 +841,19 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Scroll the list internally so the Confirm button below stays in view
+     regardless of how many books were scanned. (Session 45 / L4) */
+  max-height: calc(100vh - 360px);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;   /* Reserve gutter for the scrollbar */
 }
 .lbo-receive-row {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) 70px 24px;
   gap: 8px;
   align-items: center;
-  padding: 6px 8px;
+  padding: 4px 7px;     /* Tighter rows so more fit on screen (Session 45 / L4) */
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 6px;
   background: #ffffff;
