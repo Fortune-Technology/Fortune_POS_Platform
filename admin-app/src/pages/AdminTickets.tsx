@@ -12,6 +12,9 @@ import {
   deleteAdminTicket,
   addAdminTicketReply,
 } from '../services/api';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — useConfirmDialog is a shared .jsx file
+import { useConfirm } from '../hooks/useConfirmDialog.jsx';
 import '../styles/admin.css';
 import './AdminTickets.css';
 
@@ -195,7 +198,12 @@ const DetailPanel = ({ ticket, onClose, onUpdated, onDeleted }: DetailPanelProps
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
+    if (!await confirm({
+      title: 'Delete this ticket?',
+      message: 'This cannot be undone. The full conversation thread, replies, and any internal notes will be permanently removed.',
+      confirmLabel: 'Delete',
+      danger: true,
+    })) return;
     try {
       await deleteAdminTicket(local.id);
       toast.success('Ticket deleted');
@@ -298,6 +306,7 @@ const DetailPanel = ({ ticket, onClose, onUpdated, onDeleted }: DetailPanelProps
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 const AdminTickets = () => {
+  const confirm = useConfirm();
   const [tickets, setTickets]   = useState<SupportTicket[]>([]);
   const [total, setTotal]       = useState(0);
   const [loading, setLoading]   = useState(true);

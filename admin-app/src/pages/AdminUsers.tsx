@@ -11,6 +11,9 @@ import {
   approveAdminUser, suspendAdminUser, rejectAdminUser,
   impersonateUser, getAdminOrganizations,
 } from '../services/api';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — useConfirmDialog is a shared .jsx file
+import { useConfirm } from '../hooks/useConfirmDialog.jsx';
 import '../styles/admin.css';
 
 const STATUS_TABS = [

@@ -9,6 +9,9 @@ import {
   deleteAdminStore,
   getAdminOrganizations,
 } from '../services/api';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — useConfirmDialog is a shared .jsx file
+import { useConfirm } from '../hooks/useConfirmDialog.jsx';
 import '../styles/admin.css';
 
 interface StoreForm {
@@ -48,6 +51,7 @@ const EMPTY_FORM: StoreForm = {
 };
 
 const AdminStores = () => {
+  const confirm = useConfirm();
   const [stores, setStores] = useState<AdminStore[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -126,7 +130,12 @@ const AdminStores = () => {
   };
 
   const handleDelete = async (store: AdminStore) => {
-    if (!window.confirm(`Deactivate "${store.name}"? This will disable the store.`)) return;
+    if (!await confirm({
+      title: `Deactivate "${store.name}"?`,
+      message: 'Soft delete — the store is disabled and hidden from active lists. Historical sales + reports stay intact.',
+      confirmLabel: 'Deactivate',
+      danger: true,
+    })) return;
     try {
       await deleteAdminStore(store.id);
       toast.success(`${store.name} deactivated`);
