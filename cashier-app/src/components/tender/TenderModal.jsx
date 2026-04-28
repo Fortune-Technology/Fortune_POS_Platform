@@ -31,6 +31,7 @@ import * as posApi from '../../api/pos.js';
 import { fmt$, fmtDate, fmtTime, fmtTxNumber } from '../../utils/formatters.js';
 import { getSmartCashPresets, applyRounding } from '../../utils/cashPresets.js';
 import { describeDejavooError } from '../../utils/dejavooErrorCodes.js';
+import { buildDejavooCart } from '../../utils/dejavooCart.js';
 import { nanoid } from 'nanoid';
 import { useHardware, loadHardwareConfig } from '../../hooks/useHardware.js';
 import { useStationStore } from '../../stores/useStationStore.js';
@@ -377,6 +378,17 @@ export default function TenderModal({
           const r = (Math.random() * 16) | 0;
           return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
         }));
+      // Build the customer-facing cart payload so the P17 displays line
+      // items + cart amounts during the card prompt. Dejavoo's terminal
+      // shows this as a scrollable list — much better trust UX than a
+      // bare total. We pass `chargeAmount` separately so split-tender
+      // partials show "Charging Now: $X" alongside the cart's grand total.
+      // Falls back to null on empty / malformed cart, in which case the
+      // request omits the Cart object and the terminal falls back to its
+      // default "Sale $X.XX" prompt.
+      const cartForTerminal = buildDejavooCart(items, totals, {
+        chargeAmount: Math.abs(chargeAmount),
+      });
       try {
         const resp = await posApi.dejavooSale({
           stationId:     station?.id,
@@ -385,6 +397,7 @@ export default function TenderModal({
           paymentType,
           referenceId:   refId,
           captureSignature: Number(chargeAmount) >= Number(signatureThreshold),
+          ...(cartForTerminal ? { cart: cartForTerminal } : {}),
         });
         const result = resp?.result || resp || {};
         const raw    = result._raw || {};

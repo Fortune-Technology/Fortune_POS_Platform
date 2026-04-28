@@ -23,5 +23,14 @@ export {
 // Customer phone-number lookup via terminal prompt
 export { dejavooLookupCustomer } from './lookup.js';
 
+// Customer-facing display (live cart push + welcome / thank-you / receipt)
+export {
+  dejavooPushCart,
+  dejavooPushWelcome,
+  dejavooPushThankYou,
+  dejavooPushBrandedReceipt,
+  dejavooClearDisplay,
+} from './customerDisplay.js';
+
 // Read-only merchant configuration for the portal
 export { dejavooMerchantStatus } from './status.js';

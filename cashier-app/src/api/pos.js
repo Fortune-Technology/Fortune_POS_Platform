@@ -425,6 +425,34 @@ export const dejavooTransactionStatus = (body) =>
 export const dejavooSettle = (body) =>
   api.post('/payment/dejavoo/settle', body, { timeout: TERMINAL_TIMEOUT_MS }).then(r => r.data);
 
+// ── Customer-facing display ─────────────────────────────────────────────────
+// Display methods route to /payment/dejavoo/display/* on the backend. They
+// push cart state / branded messages to the P17's customer-facing screen
+// and printer. None of them move money so they're shorter-timeout (15s) and
+// callers should treat their failures as fire-and-forget — display flakes
+// must never block a sale or surface as a cashier error.
+const DISPLAY_TIMEOUT_MS = 15_000;
+
+/** Push live cart updates so the customer sees items on the terminal screen. */
+export const dejavooPushCart = (body) =>
+  api.post('/payment/dejavoo/display/cart', body, { timeout: DISPLAY_TIMEOUT_MS }).then(r => r.data);
+
+/** Print a "Welcome to <Store>" banner on the terminal printer. */
+export const dejavooPushWelcome = (body) =>
+  api.post('/payment/dejavoo/display/welcome', body, { timeout: DISPLAY_TIMEOUT_MS }).then(r => r.data);
+
+/** Print a "Thank You" message on the terminal printer after a sale. */
+export const dejavooPushThankYou = (body) =>
+  api.post('/payment/dejavoo/display/thank-you', body, { timeout: DISPLAY_TIMEOUT_MS }).then(r => r.data);
+
+/** Print a full branded transaction receipt on the terminal printer. */
+export const dejavooPushBrandedReceipt = (body) =>
+  api.post('/payment/dejavoo/display/receipt', body, { timeout: DISPLAY_TIMEOUT_MS }).then(r => r.data);
+
+/** Reset the customer-facing display to empty between transactions. */
+export const dejavooClearDisplay = (body) =>
+  api.post('/payment/dejavoo/display/clear', body, { timeout: DISPLAY_TIMEOUT_MS }).then(r => r.data);
+
 /**
  * Get read-only merchant status for THIS cashier's store.
  *

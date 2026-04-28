@@ -18,6 +18,12 @@ import {
   dejavooSettle,
   dejavooMerchantStatus,
   dejavooLookupCustomer,
+  // Customer-facing display methods (cosmetic UX — failures non-fatal).
+  dejavooPushCart,
+  dejavooPushWelcome,
+  dejavooPushThankYou,
+  dejavooPushBrandedReceipt,
+  dejavooClearDisplay,
 } from '../controllers/dejavooPaymentController.js';
 
 const router = Router();
@@ -41,6 +47,17 @@ router.post('/cancel',          dejavooCancel);
 router.post('/terminal-status', dejavooTerminalStatus);
 router.post('/status',          dejavooTransactionStatus);
 router.post('/settle',          dejavooSettle);
+
+// ── Customer-facing display (cosmetic UX) ────────────────────────────────────
+// Routes mounted under /display/ so the cashier-app can blanket-apply
+// fire-and-forget error handling to all of them. None of these affect
+// money movement — they only push display state to the customer-facing
+// screen / printer on the P17.
+router.post('/display/cart',     dejavooPushCart);            // live cart push
+router.post('/display/welcome',  dejavooPushWelcome);         // "Welcome to <store>"
+router.post('/display/thank-you', dejavooPushThankYou);       // post-sale ack
+router.post('/display/receipt',  dejavooPushBrandedReceipt);  // full branded receipt
+router.post('/display/clear',    dejavooClearDisplay);        // reset display
 
 // ── Read-only status for portal (no secrets exposed) ─────────────────────────
 router.get('/merchant-status',  dejavooMerchantStatus);
