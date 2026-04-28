@@ -40,6 +40,24 @@ interface SaleBody {
   // approved transaction (terminal approved, POS doesn't know). When
   // omitted, backend generates its own (legacy behaviour preserved).
   referenceId?: string;
+  // Optional cart payload — itemised cart for customer-facing display on
+  // the terminal during the card prompt. Already in Dejavoo's case-correct
+  // format (Amounts / Items / CashPrices / etc.) — see Theneo spec
+  // POST /v2/Payment/Sale → "Cart" body parameter. The cashier-app builds
+  // this from useCartStore items via buildDejavooCart().
+  cart?: {
+    Amounts?: Array<{ Name: string; Value: number | null }>;
+    CashPrices?: Array<{ Name: string; Value: number | null }>;
+    Items?: Array<{
+      Name: string;
+      Price?: number | null;
+      UnitPrice?: number | null;
+      Quantity?: number | null;
+      AdditionalInfo?: string;
+      CustomInfos?: Array<{ Name: string; Value: number | null }>;
+      Modifiers?: Array<unknown>;
+    }>;
+  };
 }
 
 /** POST /api/payment/dejavoo/sale */
@@ -47,7 +65,7 @@ export const dejavooSale = async (req: Request, res: Response): Promise<void> =>
   try {
     const orgId   = getOrgId(req) as string;
     const storeId = getStoreId(req);
-    const { stationId, amount, paymentType, invoiceNumber, posTransactionId, captureSignature, referenceId } = req.body as SaleBody;
+    const { stationId, amount, paymentType, invoiceNumber, posTransactionId, captureSignature, referenceId, cart } = req.body as SaleBody;
 
     if (!stationId || !amount) {
       res.status(400).json({ success: false, error: 'stationId and amount are required' });
@@ -63,6 +81,11 @@ export const dejavooSale = async (req: Request, res: Response): Promise<void> =>
       registerId:       station.name || stationId,
       captureSignature: captureSignature || false,
       ...(referenceId ? { referenceId } : {}),
+      // Customer-facing line items shown on the P17 during the card prompt.
+      // Already validated to be a plain object by the SaleBody type — pass
+      // through verbatim. SPIn's Sale endpoint accepts this as an optional
+      // `Cart` param; when missing the prompt just shows the total amount.
+      ...(cart && typeof cart === 'object' ? { cart } : {}),
     } as Parameters<typeof processSale>[1]) as ProviderResult;
 
     // Always record — approved or declined. Audit trail.

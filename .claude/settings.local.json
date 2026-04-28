@@ -59,7 +59,8 @@
       "Bash(sed -n '8,12p' src/controllers/loyaltyController.ts)",
       "Bash(grep -nE \"^}$|^export const getDailyLotteryInventory\" src/controllers/lotteryController.ts)",
       "Bash(mv tests/reconciliation_shift_compute.test.mjs tests/reconciliation_shift_compute.test.ts)",
-      "Bash(mv tests/_smoke_reconcile_live.mjs tests/_smoke_reconcile_live.ts)"
+      "Bash(mv tests/_smoke_reconcile_live.mjs tests/_smoke_reconcile_live.ts)",
+      "mcp__code-review-graph__semantic_search_nodes_tool"
     ]
   }
 }

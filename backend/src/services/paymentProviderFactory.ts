@@ -278,3 +278,46 @@ export async function promptUserInput(merchant: DecryptedPaymentMerchant, opts: 
     { ...opts, referenceId } as Parameters<typeof provider.userInput>[1],
   );
 }
+
+// ── Customer-facing display (cosmetic UX) ────────────────────────────────────
+// Display methods route through the same provider shim as transactional calls
+// but with one important distinction: callers SHOULD treat their results as
+// fire-and-forget. A failed cart-push or printer call must never bubble back
+// up and block a sale. The wrappers here surface the result so the cashier-
+// app can show "couldn't reach terminal display" toasts when relevant, but
+// nothing in the sale path waits on them.
+
+/**
+ * Push cart line items + amounts to the customer-facing screen on the
+ * terminal. Use to show the customer what's being scanned in real time
+ * before the card prompt.
+ */
+export async function pushDisplayCart(
+  merchant: DecryptedPaymentMerchant,
+  cart: ReturnType<typeof dejavooSpin.pushCart> extends Promise<infer _> ? Parameters<typeof dejavooSpin.pushCart>[1] : never,
+) {
+  const provider = getProvider(merchant);
+  return provider.pushCart(merchant, cart);
+}
+
+/**
+ * Push formatted markup to the terminal's built-in printer (welcome banner,
+ * thank-you message, branded receipt, etc.). Uses Dejavoo's printer markup
+ * format — see services/dejavoo/spin/receiptMarkup.ts for builders.
+ */
+export async function pushDisplayReceipt(
+  merchant: DecryptedPaymentMerchant,
+  printerMarkup: string,
+) {
+  const provider = getProvider(merchant);
+  return provider.pushReceipt(merchant, printerMarkup);
+}
+
+/**
+ * Reset the customer-facing display to empty (no items, no amounts). Use
+ * between transactions or at end of shift.
+ */
+export async function clearDisplayCart(merchant: DecryptedPaymentMerchant) {
+  const provider = getProvider(merchant);
+  return provider.clearCart(merchant);
+}

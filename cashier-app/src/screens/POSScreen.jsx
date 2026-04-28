@@ -74,6 +74,7 @@ import { usePOSConfig }      from '../hooks/usePOSConfig.js';
 import { useFuelSettings }   from '../hooks/useFuelSettings.js';
 import { useHardware }       from '../hooks/useHardware.js';
 import { useCustomerDisplayPublisher } from '../hooks/useBroadcastSync.js';
+import { useTerminalCartSync } from '../hooks/useTerminalCartSync.js';
 import { useCartStore, selectTotals, computeEffectiveDiscount } from '../stores/useCartStore.js';
 import { useManagerStore }   from '../stores/useManagerStore.js';
 import { useShiftStore }     from '../stores/useShiftStore.js';
@@ -152,6 +153,11 @@ export default function POSScreen() {
   // triggers a temporal-dead-zone ReferenceError on first render.
   const [terminalLookupBusy, setTerminalLookupBusy] = useState(false);
   const [dejavooEbtEnabled, setDejavooEbtEnabled]   = useState(false);
+  // Whether a Dejavoo terminal is configured + active for this store. Drives
+  // the customer-display features (live cart push, welcome banner, thank-you
+  // print). Distinct from `dejavooEbtEnabled` because we want Cart push even
+  // when the merchant is credit-only.
+  const [hasDejavooConfigured, setHasDejavooConfigured] = useState(false);
   const [ebtBalanceResult, setEbtBalanceResult]     = useState(null); // { amount, type } or null
 
   // ── Shared receipt print helper — used by auto-print, ask-prompt, reprint, history ──
@@ -291,12 +297,23 @@ export default function POSScreen() {
     }
   }, [terminalLookupBusy, station, setCustomer]);
 
-  // Load Dejavoo merchant status once so we know whether to show EBT button
+  // Load Dejavoo merchant status — drives EBT button visibility AND the
+  // customer-display features (cart sync, welcome banner, thank-you print).
+  // Pass storeId via header so the backend can resolve the right merchant.
+  // Without it, /merchant-status returns { configured: false } and we'd
+  // mistakenly treat the terminal as not configured.
   useEffect(() => {
-    posApi.dejavooMerchantStatus()
-      .then(s => setDejavooEbtEnabled(!!(s?.configured && s?.provider === 'dejavoo' && s?.ebtEnabled)))
-      .catch(() => setDejavooEbtEnabled(false));
-  }, []);
+    posApi.dejavooMerchantStatus(storeId)
+      .then(s => {
+        const configured = !!(s?.configured && s?.provider === 'dejavoo' && s?.hasTpn);
+        setHasDejavooConfigured(configured);
+        setDejavooEbtEnabled(configured && !!s?.ebtEnabled);
+      })
+      .catch(() => {
+        setHasDejavooConfigured(false);
+        setDejavooEbtEnabled(false);
+      });
+  }, [storeId]);
 
   // ── EBT Balance check — prompts customer on terminal to swipe EBT card ───
   const handleEbtBalance = useCallback(async () => {
@@ -577,6 +594,20 @@ export default function POSScreen() {
   } : null;
   const totals       = selectTotals(items, taxRules, effectiveDiscount, bagFeeInfo);
   const selectedItem = items.find(i => i.lineId === selectedLineId);
+
+  // ── Live cart push to customer-facing terminal screen ───────────────────
+  // Debounced (500ms by default), gated on having a Dejavoo terminal
+  // configured + online + station paired. Shows line items + totals on
+  // the P17 customer-facing screen as the cashier scans, so the customer
+  // can verify the order in real time before the card prompt fires.
+  // All failures are silent — terminal display flakes never block a sale.
+  useTerminalCartSync({
+    items,
+    totals,
+    stationId: station?.id,
+    hasDejavoo: hasDejavooConfigured,
+    isOnline,
+  });
 
   // ── Broadcast to customer display ───────────────────────────────────────
   useEffect(() => {
@@ -970,7 +1001,44 @@ export default function POSScreen() {
     // the canonical default view. Cashier may have drilled into the Catalog
     // during the sale; this resets them for the next customer.
     if (hasQuickButtons) setQuickTab('buttons');
-  }, [hasCashDrawer, hasReceiptPrinter, openDrawer, publishDisplay, storeBranding, handlePrintTx, hasQuickButtons]);
+
+    // ── Customer-facing terminal: thank-you message + clear cart ─────────
+    // Push a "Thank You, <Customer>!" banner to the P17 printer so the
+    // customer gets an immediate branded acknowledgement, then clear the
+    // cart display so the next customer sees a fresh "Listening" screen
+    // instead of stale line items. Both are fire-and-forget; failures
+    // surface in console only and never block / toast the cashier.
+    if (hasDejavooConfigured && station?.id && isOnline) {
+      // Find the integrated card line so we can show last-4 + auth code
+      // on the thank-you slip. Manual / cash tenders won't have these.
+      const cardLine = (tx.tenderLines || []).find(
+        l => l.provider === 'dejavoo' || l.provider === 'pax' || l.lastFour
+      );
+      // Extract a friendly first name when a customer is attached.
+      const firstName = (tx.customer?.firstName || tx.customer?.name || '')
+        .toString()
+        .trim()
+        .split(/\s+/)[0] || undefined;
+
+      posApi.dejavooPushThankYou({
+        stationId:    station.id,
+        customerName: firstName,
+        total:        Number(tx.grandTotal),
+        lastFour:     cardLine?.lastFour,
+        authCode:     cardLine?.authCode,
+      }).catch(err => {
+        console.warn('[POSScreen] thank-you push failed', err?.message);
+      });
+
+      // Clear the cart display ~3s later so the thank-you message has time
+      // to register before the screen resets.
+      setTimeout(() => {
+        posApi.dejavooClearDisplay({ stationId: station.id }).catch(err => {
+          console.warn('[POSScreen] clear display failed', err?.message);
+        });
+      }, 3000);
+    }
+  }, [hasCashDrawer, hasReceiptPrinter, openDrawer, publishDisplay, storeBranding, handlePrintTx, hasQuickButtons, hasDejavooConfigured, station?.id, isOnline]);
 
   // Quick-cash submit — bypasses TenderModal entirely.
   // Used by on-screen quick-cash buttons and the plain CASH button (exact total).

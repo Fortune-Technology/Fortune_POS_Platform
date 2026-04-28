@@ -67,6 +67,14 @@ export async function sale(
     if (v === 'gift')                           return 'Gift';
     return raw; // unknown — pass through and let Dejavoo reject with a clear error
   };
+  // Cart object — when provided, Dejavoo shows the itemised cart on the
+  // P17 screen during the card prompt. Full customer transparency: they
+  // see the line items + amounts + totals before tapping. Per Theneo spec,
+  // the Cart object goes alongside Amount/PaymentType/etc. The opts.cart
+  // shape we accept is already in Dejavoo's expected case-sensitive format
+  // (built by the caller — see helpers in posSpin/transactions.ts).
+  const cart = (opts as Record<string, unknown>).cart;
+
   const body: Record<string, unknown> = {
     ...buildBasePayload(merchant, opts),
     Amount:           opts.amount,
@@ -75,6 +83,7 @@ export async function sale(
     InvoiceNumber:    opts.invoiceNumber || '',
     CaptureSignature: opts.captureSignature || false,
     GetExtendedData:  true,
+    ...(cart && typeof cart === 'object' ? { Cart: cart } : {}),
   };
 
   // Verbose log — same pattern as terminalStatus. Lets us see in PM2 logs
