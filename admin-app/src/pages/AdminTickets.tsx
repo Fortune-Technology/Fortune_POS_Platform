@@ -198,7 +198,12 @@ const DetailPanel = ({ ticket, onClose, onUpdated, onDeleted }: DetailPanelProps
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
+    if (!await confirm({
+      title: 'Delete this ticket?',
+      message: 'This cannot be undone. The full conversation thread, replies, and any internal notes will be permanently removed.',
+      confirmLabel: 'Delete',
+      danger: true,
+    })) return;
     try {
       await deleteAdminTicket(local.id);
       toast.success('Ticket deleted');
