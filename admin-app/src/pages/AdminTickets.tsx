@@ -12,6 +12,9 @@ import {
   deleteAdminTicket,
   addAdminTicketReply,
 } from '../services/api';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — useConfirmDialog is a shared .jsx file
+import { useConfirm } from '../hooks/useConfirmDialog.jsx';
 import '../styles/admin.css';
 import './AdminTickets.css';
 

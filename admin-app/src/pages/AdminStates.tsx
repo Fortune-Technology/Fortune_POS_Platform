@@ -12,6 +12,9 @@ import { Plus, Edit2, Trash2, Search, MapPin, Loader, X, Save, Check } from 'luc
 import {
   listAdminStates, createAdminState, updateAdminState, deleteAdminState,
 } from '../services/api';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — useConfirmDialog is a shared .jsx file
+import { useConfirm } from '../hooks/useConfirmDialog.jsx';
 import './AdminStates.css';
 
 interface DepositRule {
@@ -119,6 +122,7 @@ const DEFAULT_US_PACK_RULES: PackSizeRule[] = [
 ];
 
 export default function AdminStates() {
+  const confirm = useConfirm();
   const [states,      setStates]   = useState<UsState[]>([]);
   const [loading,     setLoading]  = useState(true);
   const [search,      setSearch]   = useState('');
@@ -266,7 +270,12 @@ export default function AdminStates() {
   };
 
   const handleDelete = async (s: UsState) => {
-    if (!window.confirm(`Delete ${s.name} (${s.code})?`)) return;
+    if (!await confirm({
+      title: `Delete ${s.name} (${s.code})?`,
+      message: 'Stores already configured with this state will lose their default-source on next sync. Existing tax + deposit + age + lottery configurations on those stores stay intact.',
+      confirmLabel: 'Delete',
+      danger: true,
+    })) return;
     try {
       await deleteAdminState(s.code);
       toast.success('State deleted');
