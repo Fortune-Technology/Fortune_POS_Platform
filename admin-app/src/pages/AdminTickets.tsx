@@ -301,6 +301,7 @@ const DetailPanel = ({ ticket, onClose, onUpdated, onDeleted }: DetailPanelProps
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 const AdminTickets = () => {
+  const confirm = useConfirm();
   const [tickets, setTickets]   = useState<SupportTicket[]>([]);
   const [total, setTotal]       = useState(0);
   const [loading, setLoading]   = useState(true);
